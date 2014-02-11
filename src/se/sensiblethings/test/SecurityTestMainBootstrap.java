@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.Date;
 
 import se.sensiblethings.disseminationlayer.communication.Communication;
 import se.sensiblethings.disseminationlayer.communication.rudp.RUDPCommunication;
@@ -24,6 +25,8 @@ public class SecurityTestMainBootstrap implements SensibleThingsListener{
 	public static void main(String arg[]){
 		SecurityTestMainBootstrap application = new SecurityTestMainBootstrap();
 		application.run();
+		
+		
 	}
 	
 	public SecurityTestMainBootstrap(){

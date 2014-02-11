@@ -6,6 +6,7 @@ import se.sensiblethings.addinlayer.extensions.publishsubscribe.StartSubscribeMe
 import se.sensiblethings.disseminationlayer.communication.Communication;
 import se.sensiblethings.disseminationlayer.communication.DestinationNotReachableException;
 import se.sensiblethings.disseminationlayer.communication.Message;
+import se.sensiblethings.disseminationlayer.communication.ssl.SslCommunication;
 import se.sensiblethings.disseminationlayer.disseminationcore.DisseminationCore;
 import se.sensiblethings.disseminationlayer.disseminationcore.MessageListener;
 import se.sensiblethings.interfacelayer.SensibleThingsNode;
@@ -17,10 +18,10 @@ public class SecurityExtension implements Extension, MessageListener{
 	DisseminationCore core = null;
 	Communication communication = null;
 	
-	SecurityListener listener = null;
+	SecurityListener securityListener = null;
 	
 	public SecurityExtension(SecurityListener listener){
-		this.listener = listener;
+		this.securityListener = listener;
 	}
 	
 
@@ -32,11 +33,15 @@ public class SecurityExtension implements Extension, MessageListener{
 		
 		//Register our own message types in the post office
 		communication.registerMessageListener(SslConnectionRequestMessage.class.getName(), this);
-		//communication.registerMessageListener(SslConnectionResponseMessage.class.getName(), this);
+		communication.registerMessageListener(RegistrationRequestMessage.class.getName(), this);
+		
+		
 	}
 
 	@Override
 	public void startAddIn() {
+		// check if it already has two key store : permanent and temporary
+		
 		
 	}
 
@@ -55,25 +60,30 @@ public class SecurityExtension implements Extension, MessageListener{
 	@Override
 	public void handleMessage(Message message) {
 		if(message instanceof SslConnectionRequestMessage) {
-			platform.changeCommunicationTo(communication.SSL);
+			// change connection type
+			transformToSslConnection();
+			SslConnectionRequestMessage requestMessage = (SslConnectionRequestMessage)message;
+			securityListener.sslConnectionRequestEvent(requestMessage.uci, requestMessage.getFromNode());
+		}else if(message instanceof RegistrationRequestMessage){
+			//1, check if the permanent store has the public key
+			//2, if not, create Public/Private key pair
+			//3, use the private key sign the registration request message and send the public
+			//4, 
 		}
 	}
 
+	/**
+	 * Create a SSL connection with bootstrap node
+	 * @param uci the uci who own the bootstrap node
+	 * @param node the node that SSL connection is established with 
+	 */
 	public void createSslConnection(String uci, SensibleThingsNode node){
 		//Send out the SslConnectionRequestMessage Message
 		SslConnectionRequestMessage message = new SslConnectionRequestMessage(uci, node, communication.getLocalSensibleThingsNode());
 		
 		try {
 			communication.sendMessage(message);
-			
-			if(platform.isBehindNat()){
-				platform.changeCommunicationTo(communication.PROXY_SSL);
-			}else{
-				platform.changeCommunicationTo(communication.SSL);
-			}
-			
-			this.core = platform.getDisseminationCore();
-			this.communication = core.getCommunication();
+			transformToSslConnection();
 		}
 		catch(DestinationNotReachableException e) {
 			//Do nothing
@@ -81,11 +91,37 @@ public class SecurityExtension implements Extension, MessageListener{
 		}
 	}
 	
+	
+	public void register(String uci, SensibleThingsNode node){
+		RegistrationRequestMessage message = new RegistrationRequestMessage(uci, node, communication.getLocalSensibleThingsNode());
+		
+		try {
+			communication.sendMessage(message);
+		} catch (DestinationNotReachableException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	
+	
 	public SecurityListener getSecurityListener() {
-		return listener;
+		return securityListener;
 	}
 
 	public void setSecurityListener(SecurityListener listener) {
-		this.listener = listener;
+		this.securityListener = listener;
+	}
+	
+	private void transformToSslConnection(){
+		if(platform.isBehindNat()){
+			platform.changeCommunicationTo(communication.PROXY_SSL);
+		}else{
+			SslCommunication.initCommunicationPort = 9009;
+			platform.changeCommunicationTo(communication.SSL);
+		}
+		
+		this.core = platform.getDisseminationCore();
+		this.communication = core.getCommunication();
 	}
 }
