@@ -7,6 +7,7 @@ public class RegistrationResponseMessage extends Message{
 
 
 	private static final long serialVersionUID = -455090768499986394L;
+	private byte[] publicKey;
 	
 	public String uci;
 	

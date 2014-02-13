@@ -47,14 +47,24 @@ public class RSAEncryption {
         }   
 	}
 	*/
+	KeyPair keyPair = null;
+	
 	public KeyPair generateKey() throws NoSuchAlgorithmException {   
         KeyPairGenerator keyPairGen = KeyPairGenerator.getInstance("RSA");   
         keyPairGen.initialize(1024, new SecureRandom());   
   
-        KeyPair keyPair = keyPairGen.generateKeyPair();   
+        keyPair = keyPairGen.generateKeyPair();   
         return keyPair;   
     }   
-  
+	
+	public byte[] getPublicKey(){
+		return keyPair.getPublic().getEncoded();
+	}
+	
+	public byte[] getPrivateKey(){
+		return keyPair.getPrivate().getEncoded();
+	}
+	
     public void saveKey(KeyPair keyPair, String publicKeyFile,   
             String privateKeyFile) throws ConfigurationException {   
         PublicKey pubkey = keyPair.getPublic();   
@@ -76,7 +86,7 @@ public class RSAEncryption {
   
     /**  
      * @param filename  
-     * @param type???  
+     * @param type  
      *            1-public 0-private  
      * @return  
      * @throws ConfigurationException  

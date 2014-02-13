@@ -32,7 +32,6 @@ public class SQLiteDatabase implements DatabaseOperations{
 			Class.forName(JDBC_DRIVER);
 			connection = DriverManager.getConnection(databaseURL);
 			
-			
 		    System.out.println("[SqliteDB] Opened database successfully");
 		   
 		} catch (Exception e) {

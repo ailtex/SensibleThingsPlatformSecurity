@@ -38,13 +38,13 @@ public class SecurityExtension implements Extension, MessageListener{
 		communication.registerMessageListener(SslConnectionRequestMessage.class.getName(), this);
 		communication.registerMessageListener(RegistrationRequestMessage.class.getName(), this);
 		
-		
 	}
 
 	@Override
 	public void startAddIn() {
 		db = new SQLiteDatabase();
 		db.getConnection(SQLiteDatabase.PKS_DB_URL);
+		db.configureAndInitialize();
 	}
 
 	@Override
@@ -67,7 +67,7 @@ public class SecurityExtension implements Extension, MessageListener{
 			SslConnectionRequestMessage requestMessage = (SslConnectionRequestMessage)message;
 			securityListener.sslConnectionRequestEvent(requestMessage.uci, requestMessage.getFromNode());
 		}else if(message instanceof RegistrationRequestMessage){
-			 
+			
 		}
 	}
 
