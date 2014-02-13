@@ -6,6 +6,9 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Date;
 
+import se.sensiblethings.addinlayer.AddInManager;
+import se.sensiblethings.addinlayer.extensions.security.SecurityExtension;
+import se.sensiblethings.addinlayer.extensions.security.SecurityListener;
 import se.sensiblethings.disseminationlayer.communication.Communication;
 import se.sensiblethings.disseminationlayer.communication.rudp.RUDPCommunication;
 import se.sensiblethings.disseminationlayer.communication.ssl.SslCommunication;
@@ -18,15 +21,14 @@ import se.sensiblethings.interfacelayer.SensibleThingsPlatform;
 
 
 
-public class SecurityTestMainBootstrap implements SensibleThingsListener{
+public class SecurityTestMainBootstrap implements SensibleThingsListener, SecurityListener{
 	
-	SensibleThingsPlatform platform;
+	SensibleThingsPlatform platform = null;
+	SecurityExtension secureExt = null;
 	
 	public static void main(String arg[]){
 		SecurityTestMainBootstrap application = new SecurityTestMainBootstrap();
 		application.run();
-		
-		
 	}
 	
 	public SecurityTestMainBootstrap(){
@@ -37,13 +39,20 @@ public class SecurityTestMainBootstrap implements SensibleThingsListener{
 		KelipsLookup.bootstrapIp = getLocalHostAddress();
 		
     	RUDPCommunication.initCommunicationPort = 9009;
+    	platform = new SensibleThingsPlatform(LookupService.KELIPS, Communication.RUDP, this);
+    	
+    	AddInManager addInManager = platform.getAddInManager();
+    	
+    	secureExt = new SecurityExtension(this);
+    	addInManager.loadAddIn(secureExt);
+    	
     	//SslCommunication.initCommunicationPort = 9009;
     	
     	//Create the platform itself with a SensibleThingsListener      
         //platform = new SensibleThingsPlatform(this);
     	//platform = new SensibleThingsPlatform(LookupService.KELIPS, Communication.RUDP, this);
     	
-    	platform = new SensibleThingsPlatform(LookupService.KELIPS, Communication.RUDP, this);
+    	
     	//platform_ssl = new SensibleThingsPlatform(LookupService.KELIPS, Communication.SSL, this);
     	
 	}
@@ -123,6 +132,13 @@ public class SecurityTestMainBootstrap implements SensibleThingsListener{
 		}
     	
 		return address.getHostAddress();
+	}
+
+	@Override
+	public void sslConnectionRequestEvent(String uci,
+			SensibleThingsNode fromNode) {
+		// TODO Auto-generated method stub
+		
 	}
 }
 

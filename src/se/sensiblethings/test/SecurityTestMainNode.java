@@ -5,6 +5,9 @@ import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
+import se.sensiblethings.addinlayer.AddInManager;
+import se.sensiblethings.addinlayer.extensions.security.SecurityExtension;
+import se.sensiblethings.addinlayer.extensions.security.SecurityListener;
 import se.sensiblethings.disseminationlayer.communication.Communication;
 import se.sensiblethings.disseminationlayer.lookupservice.LookupService;
 import se.sensiblethings.disseminationlayer.lookupservice.kelips.KelipsLookup;
@@ -13,9 +16,9 @@ import se.sensiblethings.interfacelayer.SensibleThingsNode;
 import se.sensiblethings.interfacelayer.SensibleThingsPlatform;
 
 
-public class SecurityTestMainNode implements SensibleThingsListener{
-	SensibleThingsPlatform platform;
-	
+public class SecurityTestMainNode implements SensibleThingsListener, SecurityListener{
+	SensibleThingsPlatform platform = null;
+	SecurityExtension secureExt = null;
 	
 	public static void main(String[] args) {
 		
@@ -34,6 +37,10 @@ public class SecurityTestMainNode implements SensibleThingsListener{
 		
 		platform = new SensibleThingsPlatform(LookupService.KELIPS, Communication.RUDP, this);
 		
+		AddInManager addInManager = platform.getAddInManager();
+    	
+    	secureExt = new SecurityExtension(this);
+    	addInManager.loadAddIn(secureExt);
 		//platform = new SensibleThingsPlatform(LookupService.KELIPS, Communication.SSL, this);
 
 	}
@@ -101,5 +108,12 @@ public class SecurityTestMainNode implements SensibleThingsListener{
 		}
     	
 		return address.getHostAddress();
+	}
+
+	@Override
+	public void sslConnectionRequestEvent(String uci,
+			SensibleThingsNode fromNode) {
+		// TODO Auto-generated method stub
+		
 	}
 }

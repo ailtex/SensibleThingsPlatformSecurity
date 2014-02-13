@@ -1,8 +1,8 @@
 package se.sensiblethings.addinlayer.extensions.security;
 
 import se.sensiblethings.addinlayer.extensions.Extension;
-import se.sensiblethings.addinlayer.extensions.authentication.AuthenticationListener;
-import se.sensiblethings.addinlayer.extensions.publishsubscribe.StartSubscribeMessage;
+import se.sensiblethings.addinlayer.extensions.security.keystore.DatabaseOperations;
+import se.sensiblethings.addinlayer.extensions.security.keystore.SQLiteDatabase;
 import se.sensiblethings.disseminationlayer.communication.Communication;
 import se.sensiblethings.disseminationlayer.communication.DestinationNotReachableException;
 import se.sensiblethings.disseminationlayer.communication.Message;
@@ -19,6 +19,9 @@ public class SecurityExtension implements Extension, MessageListener{
 	Communication communication = null;
 	
 	SecurityListener securityListener = null;
+	DatabaseOperations db = null;
+	
+	public SecurityExtension(){}
 	
 	public SecurityExtension(SecurityListener listener){
 		this.securityListener = listener;
@@ -40,9 +43,8 @@ public class SecurityExtension implements Extension, MessageListener{
 
 	@Override
 	public void startAddIn() {
-		// check if it already has two key store : permanent and temporary
-		
-		
+		db = new SQLiteDatabase();
+		db.getConnection(SQLiteDatabase.PKS_DB_URL);
 	}
 
 	@Override
@@ -65,10 +67,7 @@ public class SecurityExtension implements Extension, MessageListener{
 			SslConnectionRequestMessage requestMessage = (SslConnectionRequestMessage)message;
 			securityListener.sslConnectionRequestEvent(requestMessage.uci, requestMessage.getFromNode());
 		}else if(message instanceof RegistrationRequestMessage){
-			//1, check if the permanent store has the public key
-			//2, if not, create Public/Private key pair
-			//3, use the private key sign the registration request message and send the public
-			//4, 
+			 
 		}
 	}
 
