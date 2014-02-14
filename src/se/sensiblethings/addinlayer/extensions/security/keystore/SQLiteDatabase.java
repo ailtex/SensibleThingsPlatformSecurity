@@ -1,11 +1,17 @@
 package se.sensiblethings.addinlayer.extensions.security.keystore;
 
+import java.security.NoSuchAlgorithmException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+
+import se.sensiblethings.addinlayer.extensions.security.rsa.RSAEncryption;
 
 
 public class SQLiteDatabase implements DatabaseOperations{
@@ -55,7 +61,7 @@ public class SQLiteDatabase implements DatabaseOperations{
 				String createTableSql = "create table permanentKey"+ 
 										"( uci           varchar(30) primary key not null," +
 										"  publicKey     blob "    +
-										"  privateKey    blok"     +
+										"  privateKey    blob"     +
 										"  certification text"     +
 										"  validation    timestamp)";
 				
@@ -67,6 +73,42 @@ public class SQLiteDatabase implements DatabaseOperations{
 		} catch (SQLException e) {
 			e.printStackTrace();
 			return false;
+		}
+		return true;
+	}
+	
+	/**
+	 * Check if local database stores the public key and private key 
+	 * @param uci the uci who creates the public key and private key
+	 * @return
+	 */
+	public boolean hasKeyPair(String uci){
+		try {
+			Statement statement = connection.createStatement();
+			ResultSet rsExist = statement.executeQuery("select publicKey, privateKey from permanentKey where uci = '" + uci + "';");
+			//if(rsExist.next()){
+				if(rsExist.getBytes("publicKey") != null && rsExist.getBytes("privateKey")!=null ){
+					return true;
+				}
+			//}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return false;
+	}
+	
+	public boolean createKeyPair(String uci){
+		try {
+			Statement statement = connection.createStatement();
+			RSAEncryption rsa = new RSAEncryption();
+			rsa.generateKey();
+			
+			String sql = "";
+			
+		} catch (SQLException e) {
+			e.printStackTrace();
+		} catch (NoSuchAlgorithmException e){
+			e.printStackTrace();
 		}
 		return true;
 	}
@@ -103,7 +145,15 @@ public class SQLiteDatabase implements DatabaseOperations{
 	@Override
 	public boolean storePublicKey(String uci, byte[] publicKey) {
 		
+		Map<String, String> record = new HashMap<String, String>();
+		record.put("uci", uci);
+		record.put("publicKey", new String(publicKey));
+		return insertOperation(record);
+		
+		/*
 		try {
+			
+			
 			Statement statement = connection.createStatement();
 			String sql = "insert into permanentKey(uci, publicKey, privateKey, certification, validation)" +
 						 "values(" + uci + "," + publicKey + ","+ "'','','')";
@@ -116,6 +166,7 @@ public class SQLiteDatabase implements DatabaseOperations{
 		}
 		
 		return false;
+		*/
 	}
 
 	@Override
@@ -136,7 +187,26 @@ public class SQLiteDatabase implements DatabaseOperations{
 		return true;
 	}
 
-	
+	private boolean insertOperation(Map<String, String> record){
+
+		try {
+			Statement statement = connection.createStatement();
+			Iterator record
+			String sql = "insert into permanentKey(uci, publicKey, privateKey, certification, validation)" + 
+					     "values ('" + record.get("uci") + "'," + 
+					     			   record.get("publicKey").getBytes() + "," + 
+					                   record.get("privateKey").getBytes() + "," +
+					     		  "'"+ record.get("certification") + "'," +
+					     		       record.get("validation") + ");";
+			statement.executeUpdate(sql);
+			statement.close();
+			connection.commit();
+			return true;
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return false;
+	}
 	
 	
 }

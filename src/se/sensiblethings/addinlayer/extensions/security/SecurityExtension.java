@@ -42,8 +42,11 @@ public class SecurityExtension implements Extension, MessageListener{
 
 	@Override
 	public void startAddIn() {
+		
 		db = new SQLiteDatabase();
+		// firstly connect to permanent key store
 		db.getConnection(SQLiteDatabase.PKS_DB_URL);
+		//initial the database
 		db.configureAndInitialize();
 	}
 
@@ -81,6 +84,9 @@ public class SecurityExtension implements Extension, MessageListener{
 		SslConnectionRequestMessage message = new SslConnectionRequestMessage(uci, node, communication.getLocalSensibleThingsNode());
 		
 		try {
+			// this message may not be secure, as if some one can hijack it
+			// if the bootstrap node can set up several different communications simultaneously
+			// the request node can just change itself communication type
 			communication.sendMessage(message);
 			transformToSslConnection();
 		}
@@ -90,18 +96,27 @@ public class SecurityExtension implements Extension, MessageListener{
 		}
 	}
 	
-	
-	public void register(String uci, SensibleThingsNode node){
-		RegistrationRequestMessage message = new RegistrationRequestMessage(uci, node, communication.getLocalSensibleThingsNode());
+
+	/**
+	 *  register the self uci to bootstrap node
+	 * @param toUci the boostrap's uci
+	 * @param node the bootstrap node
+	 * @param fromUci itself uci that will be registered
+	 */
+	public void register(String toUci, SensibleThingsNode node, String fromUci){
+		// check local key store, whether itself has created the key pair
+		if(db.hasKeyPair(fromUci)){
+			db.createKeyPair(fromUci);
+		}
+		
+		RegistrationRequestMessage message = new RegistrationRequestMessage(toUci, fromUci, node, communication.getLocalSensibleThingsNode());
 		
 		try {
 			communication.sendMessage(message);
 		} catch (DestinationNotReachableException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
-	
 	
 	
 	public SecurityListener getSecurityListener() {

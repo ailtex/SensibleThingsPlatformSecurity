@@ -19,4 +19,9 @@ public interface DatabaseOperations {
 	public boolean storeCertification(String uci,  byte[] publicKey, String certification, Date validation);
 	
 	public boolean closeDatabase();
+
+	public boolean hasKeyPair(String uci);
+
+	public boolean createKeyPair(String uci);
+
 }

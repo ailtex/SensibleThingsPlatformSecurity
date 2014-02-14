@@ -9,7 +9,8 @@ public class RegistrationRequestMessage extends Message{
 
 	private static final long serialVersionUID = -7196963283243573690L;
 
-	public String uci;
+	public String fromUci;
+	public String toUci;
 	
 	public String registrationRequest;
 	
@@ -21,19 +22,23 @@ public class RegistrationRequestMessage extends Message{
 		this.registrationRequest = registrationRequest;
 	}
 	
-	public RegistrationRequestMessage(String uci, SensibleThingsNode toNode,
+	public RegistrationRequestMessage(String toUci, String fromUci, SensibleThingsNode toNode,
 			SensibleThingsNode fromNode){
 		super(fromNode, toNode);
 
-		this.uci = uci;
+		this.fromUci = fromUci;
+		this.toUci = toUci;
+		
 		this.registrationRequest = new Date().toString();
 	}
 	
-	public RegistrationRequestMessage(String uci, SensibleThingsNode toNode,
+	public RegistrationRequestMessage(String toUci, String fromUci, SensibleThingsNode toNode,
 			SensibleThingsNode fromNode, String registrationRequest){
 		super(fromNode, toNode);
 		
-		this.uci = uci;
+		this.fromUci = fromUci;
+		this.toUci = toUci;
+		
 		this.registrationRequest = registrationRequest;
 	}
 }
