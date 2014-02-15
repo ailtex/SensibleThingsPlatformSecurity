@@ -1,8 +1,13 @@
 package se.sensiblethings.addinlayer.extensions.security;
 
+import java.security.NoSuchAlgorithmException;
+import java.security.interfaces.RSAPrivateKey;
+import java.security.spec.InvalidKeySpecException;
+
 import se.sensiblethings.addinlayer.extensions.Extension;
 import se.sensiblethings.addinlayer.extensions.security.keystore.DatabaseOperations;
 import se.sensiblethings.addinlayer.extensions.security.keystore.SQLiteDatabase;
+import se.sensiblethings.addinlayer.extensions.security.rsa.RSAEncryption;
 import se.sensiblethings.disseminationlayer.communication.Communication;
 import se.sensiblethings.disseminationlayer.communication.DestinationNotReachableException;
 import se.sensiblethings.disseminationlayer.communication.Message;
@@ -70,10 +75,37 @@ public class SecurityExtension implements Extension, MessageListener{
 			SslConnectionRequestMessage requestMessage = (SslConnectionRequestMessage)message;
 			securityListener.sslConnectionRequestEvent(requestMessage.uci, requestMessage.getFromNode());
 		}else if(message instanceof RegistrationRequestMessage){
+			RegistrationRequestMessage registrationRequestMessage = (RegistrationRequestMessage) message;
+			if(!db.hasKeyPair(registrationRequestMessage.toUci)){
+				db.createKeyPair(registrationRequestMessage.toUci);
+			}
+			
+			String myUci = registrationRequestMessage.toUci;
+			RegistrationResponseMessage registrationResponseMessage = new RegistrationResponseMessage(registrationRequestMessage.toUci, 
+																								      registrationRequestMessage.getToNode(),
+																								      registrationRequestMessage.getFromNode());
+			registrationResponseMessage.setPublicKey(db.getPublicKey(registrationRequestMessage.toUci));
+			
+			RSAEncryption rsa = new RSAEncryption();
+			
+			String sign_message =  registrationResponseMessage.toString();
+			
+			String signature = null;
+			try {
+				signature = new String(rsa.sign((RSAPrivateKey)rsa.loadKey(db.getPrivateKey(myUci), rsa.privateKey), 
+						sign_message.getBytes()));
+			} catch (NoSuchAlgorithmException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (InvalidKeySpecException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			registrationResponseMessage.setSignatue(signature);
 			
 		}
 	}
-
+	
 	/**
 	 * Create a SSL connection with bootstrap node
 	 * @param uci the uci who own the bootstrap node
@@ -105,7 +137,7 @@ public class SecurityExtension implements Extension, MessageListener{
 	 */
 	public void register(String toUci, SensibleThingsNode node, String fromUci){
 		// check local key store, whether itself has created the key pair
-		if(db.hasKeyPair(fromUci)){
+		if(!db.hasKeyPair(fromUci)){
 			db.createKeyPair(fromUci);
 		}
 		

@@ -10,6 +10,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Vector;
 
 import se.sensiblethings.addinlayer.extensions.security.rsa.RSAEncryption;
 
@@ -98,50 +99,44 @@ public class SQLiteDatabase implements DatabaseOperations{
 	}
 	
 	public boolean createKeyPair(String uci){
+		// generate the RSA key pair
+		RSAEncryption rsa = new RSAEncryption();
 		try {
-			Statement statement = connection.createStatement();
-			RSAEncryption rsa = new RSAEncryption();
 			rsa.generateKey();
-			
-			String sql = "";
-			
-		} catch (SQLException e) {
-			e.printStackTrace();
-		} catch (NoSuchAlgorithmException e){
-			e.printStackTrace();
-		}
-		return true;
-	}
-	
-	@Override
-	public boolean createPermanetKeyStore() {
-		// TODO Auto-generated method stub
-		return false;
-	}
-
-	@Override
-	public boolean createTemporaryKeyStore() {
-		// TODO Auto-generated method stub
-		return false;
-	}
-
-	@Override
-	public byte[] getPublicKey(String uci) {
-		try {
-			Statement statement = connection.createStatement();
-			String sql = "select publicKey from permanentKey where uci=" + uci + ";";
-			
-			ResultSet result = statement.executeQuery(sql);
-			return result.getBytes("publicKey");
-			
-		} catch (SQLException e) {
-			// TODO Auto-generated catch block
+		} catch (NoSuchAlgorithmException e) {
 			e.printStackTrace();
 		}
 		
-		return null;
+		// store the key pair
+		Map<String, String> record = new HashMap<String, String>();
+		record.put("uci", uci);
+		record.put("publicKey", new String(rsa.getPublicKey()));
+		record.put("privateKey", new String(rsa.getPrivateKey()));
+		return insertOperation(record);
+		
 	}
+	
 
+	@Override
+	public byte[] getPublicKey(String uci) {
+		Vector<String> property = new Vector<String>();
+		property.add("publicKey");
+		
+		Map<String,String> result = (HashMap<String, String>)selectOperation(uci, property);
+		
+		return result.get("publicKey").getBytes();
+	}
+	
+	@Override
+	public byte[] getPrivateKey(String uci) {
+		Vector<String> property = new Vector<String>();
+		property.add("privateKey");
+		
+		Map<String,String> result = (HashMap<String, String>)selectOperation(uci, property);
+		
+		return result.get("privateKey").getBytes();
+	}
+	
 	@Override
 	public boolean storePublicKey(String uci, byte[] publicKey) {
 		
@@ -149,24 +144,6 @@ public class SQLiteDatabase implements DatabaseOperations{
 		record.put("uci", uci);
 		record.put("publicKey", new String(publicKey));
 		return insertOperation(record);
-		
-		/*
-		try {
-			
-			
-			Statement statement = connection.createStatement();
-			String sql = "insert into permanentKey(uci, publicKey, privateKey, certification, validation)" +
-						 "values(" + uci + "," + publicKey + ","+ "'','','')";
-			statement.executeUpdate(sql);
-			statement.close();
-			connection.commit();
-		} catch (SQLException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-		return false;
-		*/
 	}
 
 	@Override
@@ -188,16 +165,40 @@ public class SQLiteDatabase implements DatabaseOperations{
 	}
 
 	private boolean insertOperation(Map<String, String> record){
-
+		
+		// create the sql
+		String sql_partOne = "insert into permanentKey(";
+		String sql_partTwo = "values (";
+		
+		boolean first = true;
 		try {
 			Statement statement = connection.createStatement();
-			Iterator record
-			String sql = "insert into permanentKey(uci, publicKey, privateKey, certification, validation)" + 
-					     "values ('" + record.get("uci") + "'," + 
-					     			   record.get("publicKey").getBytes() + "," + 
-					                   record.get("privateKey").getBytes() + "," +
-					     		  "'"+ record.get("certification") + "'," +
-					     		       record.get("validation") + ");";
+			Iterator iterator = record.entrySet().iterator();
+			while(iterator.hasNext()){
+				Map.Entry entry = (Map.Entry) iterator.next(); 
+				String property = (String)entry.getKey();
+				String value = (String)entry.getValue();
+				
+				// to avoid the first ","
+				if(first){
+					sql_partOne += property;
+					sql_partTwo += "'" + value + "'";
+					first = false;
+				}else{
+					sql_partOne += "," + property;
+					
+					if(property.equals("publicKey") || property.equals("privateKey")){
+						sql_partTwo += ",'" + value.getBytes() + "'";
+					}else{
+						sql_partTwo += ",'" + value+ "'";
+					}
+				}
+			}
+			sql_partOne += ")";
+			sql_partTwo += ");";
+			
+			String sql = sql_partOne + sql_partTwo;
+			
 			statement.executeUpdate(sql);
 			statement.close();
 			connection.commit();
@@ -208,5 +209,76 @@ public class SQLiteDatabase implements DatabaseOperations{
 		return false;
 	}
 	
+	private boolean updateOperation(String uci, Map<String, String> record){
+		String sql = "update permanentKey set ";
+		
+		try {
+			Statement statement = connection.createStatement();
+			Iterator iterator = record.entrySet().iterator();
+			
+			boolean first = true;
+			while(iterator.hasNext()){
+				Map.Entry entry = (Map.Entry) iterator.next(); 
+				String property = (String)entry.getKey();
+				String value = (String)entry.getValue();
+				
+				if(first){
+					if(property.equals("publicKey") || property.equals("privateKey"))
+						sql += property + " = " + value.getBytes();
+					else
+						sql += property + " = " + value;
+					
+					first = false;
+				}else{
+					if(property.equals("publicKey") || property.equals("privateKey"))
+						sql += "," + property + " = " + value.getBytes();
+					else
+						sql += "," + property + " = " + value;
+				}
+			}
+			
+			statement.executeUpdate(sql);
+			statement.close();
+			connection.commit();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		
+		return false;
+	}
 	
+	private Map<String,String> selectOperation(String uci, Vector<String> property){
+		Map<String, String> result = new HashMap<String, String>();
+		
+		try {
+			Statement statement = connection.createStatement();
+			String sql = "select ";//publicKey from permanentKey where uci=" + uci + ";";
+			
+			int index = 0;
+			for(; index < property.size() - 1 ; index++){
+				sql += property.get(index) + ",";
+			}
+			sql += property.get(index) + " from permanentKey where uci=" + uci + ";";
+			
+			
+			ResultSet resultSet = statement.executeQuery(sql);
+			
+			for(index = 0; index < property.size() - 1 ; index++){
+				String key = property.get(index);
+				String value = null;
+				
+				if(key.equals("privateKey") || key.equals("publicKey")){
+					value = new String(resultSet.getString(key));
+				}else{
+					value = resultSet.getString(key);
+				}
+				result.put(key, value);
+			}
+				
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		
+		return result;
+	}
 }

@@ -5,6 +5,10 @@ import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Vector;
 
 import se.sensiblethings.addinlayer.AddInManager;
 import se.sensiblethings.addinlayer.extensions.security.SecurityExtension;
@@ -54,7 +58,12 @@ public class SecurityTestMainBootstrap implements SensibleThingsListener, Securi
     	
     	
     	//platform_ssl = new SensibleThingsPlatform(LookupService.KELIPS, Communication.SSL, this);
-    	
+    	Vector<String> property= new Vector<String>();
+    	property.add("aaaa");
+    	property.add("bbbb");
+    	property.add("ccccc");
+		
+		System.out.println(property.toString());
 	}
 	
 	public void run(){

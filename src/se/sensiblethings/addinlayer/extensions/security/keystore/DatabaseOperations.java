@@ -8,11 +8,9 @@ public interface DatabaseOperations {
 	
 	public boolean configureAndInitialize();
 	
-	public boolean createPermanetKeyStore();
-	
-	public boolean createTemporaryKeyStore();
-	
 	public byte[] getPublicKey(String uci);
+	
+	public byte[] getPrivateKey(String uci);
 	
 	public boolean storePublicKey(String uci, byte[] publicKey);
 	

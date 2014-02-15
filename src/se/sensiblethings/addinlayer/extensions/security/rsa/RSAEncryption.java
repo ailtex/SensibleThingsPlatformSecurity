@@ -47,6 +47,9 @@ public class RSAEncryption {
         }   
 	}
 	*/
+	public static final String publicKey = "PUBLIC";
+	public static final String privateKey = "PRIVATE";
+	
 	KeyPair keyPair = null;
 	
 	public KeyPair generateKey() throws NoSuchAlgorithmException {   
@@ -73,7 +76,7 @@ public class RSAEncryption {
         // save public key   
         PropertiesConfiguration publicConfig = new PropertiesConfiguration(   
                 publicKeyFile);   
-        publicConfig.setProperty("PULIICKEY", toHexString(pubkey.getEncoded()));   
+        publicConfig.setProperty("PULIICKEY", toHexString(pubkey.getEncoded())); 
         publicConfig.save();   
   
         // save private key   
@@ -117,7 +120,26 @@ public class RSAEncryption {
             return publicKey;   
         }   
     }   
+    
+    public Key loadKey(byte[] key, String type)   
+            throws NoSuchAlgorithmException,   
+            InvalidKeySpecException {   
+ 
+        KeyFactory keyFactory = KeyFactory.getInstance("RSA");   
   
+        if (type.equals(privateKey)) {    
+            PKCS8EncodedKeySpec priPKCS8 = new PKCS8EncodedKeySpec(key);   
+            PrivateKey privateKey = keyFactory.generatePrivate(priPKCS8);   
+            return privateKey;   
+  
+        } else if(type.equals(publicKey)){    
+            X509EncodedKeySpec bobPubKeySpec = new X509EncodedKeySpec(key);   
+            PublicKey publicKey = keyFactory.generatePublic(bobPubKeySpec);   
+            return publicKey;   
+        }
+        return null;
+    }  
+    
     /**  
      * Encrypt String.  
      *   
@@ -140,7 +162,7 @@ public class RSAEncryption {
         }   
         return null;   
     }   
-  
+    
     /**  
      * Basic decrypt method  
      *   
@@ -161,6 +183,26 @@ public class RSAEncryption {
         return null;   
     }   
   
+    /**  
+     * sign a message.  
+     *   
+     * @return byte[]  
+     */  
+    public byte[] sign(RSAPrivateKey privateKey, byte[] data) {   
+        if (privateKey != null) {   
+            try {   
+                Cipher cipher = Cipher.getInstance("RSA");
+                
+                cipher.init(Cipher.ENCRYPT_MODE, privateKey);
+                
+                return cipher.doFinal(data);   
+            } catch (Exception e) {   
+                e.printStackTrace();   
+            }   
+        }   
+        return null;   
+    } 
+    
     public static String toHexString(byte[] b) {   
         StringBuilder sb = new StringBuilder(b.length * 2);   
         for (int i = 0; i < b.length; i++) {   
