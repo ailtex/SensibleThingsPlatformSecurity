@@ -1,6 +1,7 @@
 package se.sensiblethings.addinlayer.extensions.security;
 
 import java.security.interfaces.RSAPrivateKey;
+import java.util.Random;
 
 import se.sensiblethings.addinlayer.extensions.Extension;
 import se.sensiblethings.addinlayer.extensions.security.encryption.RSAEncryption;
@@ -42,6 +43,8 @@ public class SecurityExtension implements Extension, MessageListener{
 		communication.registerMessageListener(SslConnectionRequestMessage.class.getName(), this);
 		communication.registerMessageListener(RegistrationRequestMessage.class.getName(), this);
 		communication.registerMessageListener(RegistrationResponseMessage.class.getName(), this);
+		communication.registerMessageListener(CertificateRequestMessage.class.getName(), this);
+		
 		
 	}
 
@@ -77,11 +80,10 @@ public class SecurityExtension implements Extension, MessageListener{
 			securityOperations.initializePermanentKeyStore(myUci);
 			
 			
-			RegistrationResponseMessage registrationResponseMessage = new RegistrationResponseMessage(myUci, 
-																								      registrationRequestMessage.getToNode(),
-																								      registrationRequestMessage.getFromNode());
+			RegistrationResponseMessage registrationResponseMessage = 
+					new RegistrationResponseMessage(myUci, registrationRequestMessage.getToNode(),communication.getLocalSensibleThingsNode());
 			
-			// set public key and send it to the requester
+			// set public key and send it to the applicant
 			registrationResponseMessage.setPublicKey(securityOperations.getPublicKey());
 			
 			// signed the request message
@@ -98,6 +100,24 @@ public class SecurityExtension implements Extension, MessageListener{
 			if(securityOperations.verifyRequest(registrationResponseMessage.getSignatue(), 
 												registrationResponseMessage.getPublicKey())){
 				System.out.println("[Error] Fake signature");
+			}else{
+				// send the ID, public key, nonce, part of certification, hashed password to bootstrap
+				CertificateRequestMessage certifaceteRequestMessage = 
+						new CertificateRequestMessage(securityOperations.getBootStrapUci(),
+													  securityOperations.getOperator(),
+													  registrationResponseMessage.getToNode(),
+												      communication.getLocalSensibleThingsNode());
+				String part_certificate = null;
+				String hashed_password = null;
+				
+				String plainText = securityOperations.getOperator() + "," + 
+								   securityOperations.getPublicKey() + "," + 
+						           String.valueOf(new Random().nextLong()) + "," + 
+						           part_certificate + "," + 
+						           hashed_password;
+				
+				certifaceteRequestMessage.setContent(securityOperations.encryptMessage(plainText, registrationResponseMessage.getPublicKey()));
+				sendMessage(certifaceteRequestMessage);
 			}
 		}
 	}

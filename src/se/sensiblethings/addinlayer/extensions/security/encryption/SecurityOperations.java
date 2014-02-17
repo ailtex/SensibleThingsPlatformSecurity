@@ -7,6 +7,9 @@ import se.sensiblethings.addinlayer.extensions.security.keystore.DatabaseTemplat
 import se.sensiblethings.addinlayer.extensions.security.keystore.SQLiteDatabase;
 
 public class SecurityOperations {
+	public static final String PublickKeyEncryption = "Public";
+	public static final String SymmetricEncryption = "Symmetric";
+	
 	private String privateKey = null;
 	private String publicKey = null;
 
@@ -56,7 +59,24 @@ public class SecurityOperations {
 			return false;
 		}
 	}
-
+	
+	// public key encryption
+	public String encryptMessage(String message, String publicKey){
+		RSAEncryption rsa = new RSAEncryption();
+		
+		RSAPublicKey key = (RSAPublicKey)rsa.loadKey(publicKey.getBytes(), rsa.publicKey);
+		return new String(rsa.encrypt(key, message.getBytes()));
+		/*
+		if(type.equals(PublickKeyEncryption)){
+			
+			
+		}else if(type.equals(SymmetricEncryption)){
+			
+		}
+		return null;
+		*/
+	}
+	
 	public String getPublicKey() {
 		if(publicKey != null)
 			publicKey = new String(db.getPublicKey(operator));
