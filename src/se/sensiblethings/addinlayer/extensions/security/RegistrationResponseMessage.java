@@ -7,7 +7,7 @@ public class RegistrationResponseMessage extends Message{
 
 
 	private static final long serialVersionUID = -455090768499986394L;
-	private byte[] publicKey;
+	private String publicKey;
 	private String signatue;
 	
 	public String uci;
@@ -19,11 +19,11 @@ public class RegistrationResponseMessage extends Message{
 		this.uci = uci;
 	}
 
-	public byte[] getPublicKey() {
+	public String getPublicKey() {
 		return publicKey;
 	}
 
-	public void setPublicKey(byte[] publicKey) {
+	public void setPublicKey(String publicKey) {
 		this.publicKey = publicKey;
 	}
 

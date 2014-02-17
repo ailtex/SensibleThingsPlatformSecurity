@@ -1,13 +1,12 @@
 package se.sensiblethings.addinlayer.extensions.security;
 
-import java.security.NoSuchAlgorithmException;
 import java.security.interfaces.RSAPrivateKey;
-import java.security.spec.InvalidKeySpecException;
 
 import se.sensiblethings.addinlayer.extensions.Extension;
-import se.sensiblethings.addinlayer.extensions.security.keystore.DatabaseOperations;
+import se.sensiblethings.addinlayer.extensions.security.encryption.RSAEncryption;
+import se.sensiblethings.addinlayer.extensions.security.encryption.SecurityOperations;
+import se.sensiblethings.addinlayer.extensions.security.keystore.DatabaseTemplate;
 import se.sensiblethings.addinlayer.extensions.security.keystore.SQLiteDatabase;
-import se.sensiblethings.addinlayer.extensions.security.rsa.RSAEncryption;
 import se.sensiblethings.disseminationlayer.communication.Communication;
 import se.sensiblethings.disseminationlayer.communication.DestinationNotReachableException;
 import se.sensiblethings.disseminationlayer.communication.Message;
@@ -24,7 +23,7 @@ public class SecurityExtension implements Extension, MessageListener{
 	Communication communication = null;
 	
 	SecurityListener securityListener = null;
-	DatabaseOperations db = null;
+	SecurityOperations securityOperations = null;
 	
 	public SecurityExtension(){}
 	
@@ -42,17 +41,13 @@ public class SecurityExtension implements Extension, MessageListener{
 		//Register our own message types in the post office
 		communication.registerMessageListener(SslConnectionRequestMessage.class.getName(), this);
 		communication.registerMessageListener(RegistrationRequestMessage.class.getName(), this);
+		communication.registerMessageListener(RegistrationResponseMessage.class.getName(), this);
 		
 	}
 
 	@Override
 	public void startAddIn() {
-		
-		db = new SQLiteDatabase();
-		// firstly connect to permanent key store
-		db.getConnection(SQLiteDatabase.PKS_DB_URL);
-		//initial the database
-		db.configureAndInitialize();
+		securityOperations = new SecurityOperations();
 	}
 
 	@Override
@@ -76,33 +71,34 @@ public class SecurityExtension implements Extension, MessageListener{
 			securityListener.sslConnectionRequestEvent(requestMessage.uci, requestMessage.getFromNode());
 		}else if(message instanceof RegistrationRequestMessage){
 			RegistrationRequestMessage registrationRequestMessage = (RegistrationRequestMessage) message;
-			if(!db.hasKeyPair(registrationRequestMessage.toUci)){
-				db.createKeyPair(registrationRequestMessage.toUci);
-			}
 			
 			String myUci = registrationRequestMessage.toUci;
-			RegistrationResponseMessage registrationResponseMessage = new RegistrationResponseMessage(registrationRequestMessage.toUci, 
+			
+			securityOperations.initializePermanentKeyStore(myUci);
+			
+			
+			RegistrationResponseMessage registrationResponseMessage = new RegistrationResponseMessage(myUci, 
 																								      registrationRequestMessage.getToNode(),
 																								      registrationRequestMessage.getFromNode());
-			registrationResponseMessage.setPublicKey(db.getPublicKey(registrationRequestMessage.toUci));
 			
-			RSAEncryption rsa = new RSAEncryption();
+			// set public key and send it to the requester
+			registrationResponseMessage.setPublicKey(securityOperations.getPublicKey());
 			
-			String sign_message =  registrationResponseMessage.toString();
-			
-			String signature = null;
-			try {
-				signature = new String(rsa.sign((RSAPrivateKey)rsa.loadKey(db.getPrivateKey(myUci), rsa.privateKey), 
-						sign_message.getBytes()));
-			} catch (NoSuchAlgorithmException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (InvalidKeySpecException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+			// signed the request message
+			String toBeSigned_message =  registrationRequestMessage.fromUci + "," + 
+										 registrationRequestMessage.registrationRequestTime;
+			String signature = securityOperations.signMessage(toBeSigned_message);
 			registrationResponseMessage.setSignatue(signature);
 			
+			sendMessage(registrationResponseMessage);
+		}else if(message instanceof RegistrationResponseMessage){
+			
+			RegistrationResponseMessage registrationResponseMessage = (RegistrationResponseMessage) message;
+			// verify the public key and the signature
+			if(securityOperations.verifyRequest(registrationResponseMessage.getSignatue(), 
+												registrationResponseMessage.getPublicKey())){
+				System.out.println("[Error] Fake signature");
+			}
 		}
 	}
 	
@@ -115,17 +111,12 @@ public class SecurityExtension implements Extension, MessageListener{
 		//Send out the SslConnectionRequestMessage Message
 		SslConnectionRequestMessage message = new SslConnectionRequestMessage(uci, node, communication.getLocalSensibleThingsNode());
 		
-		try {
-			// this message may not be secure, as if some one can hijack it
-			// if the bootstrap node can set up several different communications simultaneously
-			// the request node can just change itself communication type
-			communication.sendMessage(message);
-			transformToSslConnection();
-		}
-		catch(DestinationNotReachableException e) {
-			//Do nothing
-			e.printStackTrace();
-		}
+		// this message may not be secure, as if some one can hijack it
+	    // if the bootstrap node can set up several different communications simultaneously
+	    // the request node can just change itself communication type
+		
+		sendMessage(message);
+		transformToSslConnection();
 	}
 	
 
@@ -137,17 +128,14 @@ public class SecurityExtension implements Extension, MessageListener{
 	 */
 	public void register(String toUci, SensibleThingsNode node, String fromUci){
 		// check local key store, whether itself has created the key pair
-		if(!db.hasKeyPair(fromUci)){
-			db.createKeyPair(fromUci);
-		}
+		
+		securityOperations.initializePermanentKeyStore(fromUci);
 		
 		RegistrationRequestMessage message = new RegistrationRequestMessage(toUci, fromUci, node, communication.getLocalSensibleThingsNode());
 		
-		try {
-			communication.sendMessage(message);
-		} catch (DestinationNotReachableException e) {
-			e.printStackTrace();
-		}
+		securityOperations.setRegistrationRequestTime(message.getRegistrationRequestTime());
+		securityOperations.setBootStrapUci(toUci);
+		sendMessage(message);
 	}
 	
 	
@@ -169,5 +157,14 @@ public class SecurityExtension implements Extension, MessageListener{
 		
 		this.core = platform.getDisseminationCore();
 		this.communication = core.getCommunication();
+	}
+	
+	private void sendMessage(Message message){
+		try {
+			communication.sendMessage(message);
+		} catch (DestinationNotReachableException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 }

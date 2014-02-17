@@ -12,14 +12,14 @@ public class RegistrationRequestMessage extends Message{
 	public String fromUci;
 	public String toUci;
 	
-	public String registrationRequest;
+	public String registrationRequestTime;
 	
-	public String getRegistrationRequest() {
-		return registrationRequest;
+	public String getRegistrationRequestTime() {
+		return registrationRequestTime;
 	}
 
-	public void setRegistrationRequest(String registrationRequest) {
-		this.registrationRequest = registrationRequest;
+	public void setRegistrationRequestTime(String registrationRequestTime) {
+		this.registrationRequestTime = registrationRequestTime;
 	}
 	
 	public RegistrationRequestMessage(String toUci, String fromUci, SensibleThingsNode toNode,
@@ -29,16 +29,16 @@ public class RegistrationRequestMessage extends Message{
 		this.fromUci = fromUci;
 		this.toUci = toUci;
 		
-		this.registrationRequest = new Date().toString();
+		this.registrationRequestTime = new Date().toString();
 	}
 	
 	public RegistrationRequestMessage(String toUci, String fromUci, SensibleThingsNode toNode,
-			SensibleThingsNode fromNode, String registrationRequest){
+			SensibleThingsNode fromNode, String registrationRequestTime){
 		super(fromNode, toNode);
 		
 		this.fromUci = fromUci;
 		this.toUci = toUci;
 		
-		this.registrationRequest = registrationRequest;
+		this.registrationRequestTime = registrationRequestTime;
 	}
 }

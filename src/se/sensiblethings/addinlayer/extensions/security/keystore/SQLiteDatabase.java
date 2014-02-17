@@ -12,10 +12,10 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Vector;
 
-import se.sensiblethings.addinlayer.extensions.security.rsa.RSAEncryption;
+import se.sensiblethings.addinlayer.extensions.security.encryption.RSAEncryption;
 
 
-public class SQLiteDatabase implements DatabaseOperations{
+public class SQLiteDatabase implements DatabaseTemplate{
 	
 	static final String JDBC_DRIVER = "org.sqlite.JDBC";
 	static final String DB_URL = "jdbc:sqlite:/Users/ailtex/Documents/workspace/SensibleThingsPlatformSecurity/tools/SensibleThingsPlatfrom.db";
@@ -83,6 +83,7 @@ public class SQLiteDatabase implements DatabaseOperations{
 	 * @param uci the uci who creates the public key and private key
 	 * @return
 	 */
+	@Override
 	public boolean hasKeyPair(String uci){
 		try {
 			Statement statement = connection.createStatement();
@@ -163,7 +164,12 @@ public class SQLiteDatabase implements DatabaseOperations{
 		}
 		return true;
 	}
-
+	
+	/**
+	 * insert operation on permanentKey database
+	 * @param record the record that will be inserted into
+	 * @return
+	 */
 	private boolean insertOperation(Map<String, String> record){
 		
 		// create the sql
@@ -209,6 +215,12 @@ public class SQLiteDatabase implements DatabaseOperations{
 		return false;
 	}
 	
+	/**
+	 * Update operations on permanentKey database
+	 * @param uci the primary key
+	 * @param record the values that would be updated
+	 * @return true: run successfully
+	 */
 	private boolean updateOperation(String uci, Map<String, String> record){
 		String sql = "update permanentKey set ";
 		
@@ -247,6 +259,12 @@ public class SQLiteDatabase implements DatabaseOperations{
 		return false;
 	}
 	
+	/**
+	 * Select operations on permanentKey databases
+	 * @param uci the primary key
+	 * @param property the properties that needed
+	 * @return
+	 */
 	private Map<String,String> selectOperation(String uci, Vector<String> property){
 		Map<String, String> result = new HashMap<String, String>();
 		

@@ -1,4 +1,4 @@
-package se.sensiblethings.addinlayer.extensions.security.rsa;
+package se.sensiblethings.addinlayer.extensions.security.encryption;
 
 import java.security.Key;   
 import java.security.KeyFactory;   
@@ -121,22 +121,30 @@ public class RSAEncryption {
         }   
     }   
     
-    public Key loadKey(byte[] key, String type)   
-            throws NoSuchAlgorithmException,   
-            InvalidKeySpecException {   
+    public Key loadKey(byte[] key, String type){   
  
-        KeyFactory keyFactory = KeyFactory.getInstance("RSA");   
-  
-        if (type.equals(privateKey)) {    
-            PKCS8EncodedKeySpec priPKCS8 = new PKCS8EncodedKeySpec(key);   
-            PrivateKey privateKey = keyFactory.generatePrivate(priPKCS8);   
-            return privateKey;   
-  
-        } else if(type.equals(publicKey)){    
-            X509EncodedKeySpec bobPubKeySpec = new X509EncodedKeySpec(key);   
-            PublicKey publicKey = keyFactory.generatePublic(bobPubKeySpec);   
-            return publicKey;   
-        }
+        KeyFactory keyFactory;
+		try {
+			keyFactory = KeyFactory.getInstance("RSA");
+		 
+	        if (type.equals(privateKey)) {    
+	            PKCS8EncodedKeySpec priPKCS8 = new PKCS8EncodedKeySpec(key);   
+	            PrivateKey privateKey = keyFactory.generatePrivate(priPKCS8);;
+
+	            return privateKey;   
+	  
+	        } else if(type.equals(publicKey)){    
+	            X509EncodedKeySpec bobPubKeySpec = new X509EncodedKeySpec(key);   
+	            PublicKey publicKey = keyFactory.generatePublic(bobPubKeySpec);
+	            
+	            return publicKey;   
+	        }
+	        
+		} catch (NoSuchAlgorithmException e) {
+			e.printStackTrace();
+		} catch (InvalidKeySpecException e) {
+			e.printStackTrace();
+		}   
         return null;
     }  
     
