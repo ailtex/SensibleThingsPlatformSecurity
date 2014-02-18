@@ -147,13 +147,14 @@ public class RSAEncryption {
 		}   
         return null;
     }  
-    
-    /**  
-     * Encrypt String.  
-     *   
-     * @return byte[]  
-     */  
-    protected byte[] encrypt(RSAPublicKey publicKey, byte[] data) {   
+
+    /**
+     * 
+     * @param publicKey
+     * @param data
+     * @return
+     */
+    public byte[] encrypt(RSAPublicKey publicKey, byte[] data) {   
         if (publicKey != null) {   
             try {   
                 //Cipher cipher = Cipher.getInstance("RSA",   
@@ -171,12 +172,8 @@ public class RSAEncryption {
         return null;   
     }   
     
-    /**  
-     * Basic decrypt method  
-     *   
-     * @return byte[]  
-     */  
-    protected byte[] decrypt(RSAPrivateKey privateKey, byte[] raw) {   
+
+    public byte[] decrypt(RSAPrivateKey privateKey, byte[] raw) {   
         if (privateKey != null) {   
             try {   
                 //Cipher cipher = Cipher.getInstance("RSA", new BouncyCastleProvider());

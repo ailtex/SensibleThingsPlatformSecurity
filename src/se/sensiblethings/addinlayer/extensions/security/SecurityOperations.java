@@ -1,16 +1,17 @@
-package se.sensiblethings.addinlayer.extensions.security.encryption;
+package se.sensiblethings.addinlayer.extensions.security;
 
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 
+import se.sensiblethings.addinlayer.extensions.security.encryption.RSAEncryption;
 import se.sensiblethings.addinlayer.extensions.security.keystore.DatabaseTemplate;
 import se.sensiblethings.addinlayer.extensions.security.keystore.SQLiteDatabase;
+import se.sensiblethings.addinlayer.extensions.security.messagedigest.MessageDigestOperations;
 
 public class SecurityOperations {
 	public static final String PublickKeyEncryption = "Public";
 	public static final String SymmetricEncryption = "Symmetric";
 	
-	private String privateKey = null;
 	private String publicKey = null;
 
 	// the operator is the uci who owns
@@ -75,6 +76,18 @@ public class SecurityOperations {
 		}
 		return null;
 		*/
+	}
+	
+	public String decryptMessage(String message){
+		RSAEncryption rsa = new RSAEncryption();
+		
+		RSAPrivateKey key = (RSAPrivateKey)rsa.loadKey(db.getPrivateKey(operator), rsa.privateKey);
+		
+		return new String(rsa.decrypt(key, message.getBytes()));
+	}
+	
+	public String digestMessage(String message){
+		return new String(MessageDigestOperations.encode(message.getBytes(), MessageDigestOperations.SHA1));
 	}
 	
 	public String getPublicKey() {

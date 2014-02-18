@@ -1,11 +1,12 @@
 package se.sensiblethings.addinlayer.extensions.security;
 
 import java.security.interfaces.RSAPrivateKey;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.Random;
 
 import se.sensiblethings.addinlayer.extensions.Extension;
 import se.sensiblethings.addinlayer.extensions.security.encryption.RSAEncryption;
-import se.sensiblethings.addinlayer.extensions.security.encryption.SecurityOperations;
 import se.sensiblethings.addinlayer.extensions.security.keystore.DatabaseTemplate;
 import se.sensiblethings.addinlayer.extensions.security.keystore.SQLiteDatabase;
 import se.sensiblethings.disseminationlayer.communication.Communication;
@@ -75,7 +76,7 @@ public class SecurityExtension implements Extension, MessageListener{
 		}else if(message instanceof RegistrationRequestMessage){
 			RegistrationRequestMessage registrationRequestMessage = (RegistrationRequestMessage) message;
 			
-			String myUci = registrationRequestMessage.toUci;
+			String myUci = securityOperations.getOperator();
 			
 			securityOperations.initializePermanentKeyStore(myUci);
 			
@@ -95,19 +96,22 @@ public class SecurityExtension implements Extension, MessageListener{
 			sendMessage(registrationResponseMessage);
 		}else if(message instanceof RegistrationResponseMessage){
 			
-			RegistrationResponseMessage registrationResponseMessage = (RegistrationResponseMessage) message;
+			RegistrationResponseMessage rrm = (RegistrationResponseMessage) message;
 			// verify the public key and the signature
-			if(securityOperations.verifyRequest(registrationResponseMessage.getSignatue(), 
-												registrationResponseMessage.getPublicKey())){
+			if(securityOperations.verifyRequest(rrm.getSignatue(), 
+												rrm.getPublicKey())){
 				System.out.println("[Error] Fake signature");
 			}else{
 				// send the ID, public key, nonce, part of certification, hashed password to bootstrap
-				CertificateRequestMessage certifaceteRequestMessage = 
+				CertificateRequestMessage crm = 
 						new CertificateRequestMessage(securityOperations.getBootStrapUci(),
 													  securityOperations.getOperator(),
-													  registrationResponseMessage.getToNode(),
+													  rrm.getToNode(),
 												      communication.getLocalSensibleThingsNode());
-				String part_certificate = null;
+				
+				String part_certificate = securityOperations.signMessage(securityOperations.getOperator()+","+
+																		 securityOperations.getPublicKey());
+				// here set the hashed password
 				String hashed_password = null;
 				
 				String plainText = securityOperations.getOperator() + "," + 
@@ -116,9 +120,22 @@ public class SecurityExtension implements Extension, MessageListener{
 						           part_certificate + "," + 
 						           hashed_password;
 				
-				certifaceteRequestMessage.setContent(securityOperations.encryptMessage(plainText, registrationResponseMessage.getPublicKey()));
-				sendMessage(certifaceteRequestMessage);
+				crm.setContent(securityOperations.encryptMessage(plainText, rrm.getPublicKey()));
+				sendMessage(crm);
 			}
+		}else if(message instanceof CertificateRequestMessage){
+			CertificateRequestMessage crm = (CertificateRequestMessage)message;
+			
+			String plainTextMsg = securityOperations.decryptMessage(crm.getContent());
+			// create the digest of the plain text message
+			String certificate = createCertificate(plainTextMsg);
+			
+			// create the digest of the certificate
+			String certificateDigest = securityOperations.digestMessage(certificate);
+			// sign the certificate digest
+			String certificateDigestSignature = securityOperations.signMessage(certificateDigest);
+			
+			
 		}
 	}
 	
@@ -186,5 +203,25 @@ public class SecurityExtension implements Extension, MessageListener{
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}
+	
+	private String createCertificate(String info){
+		// list of info :
+		// uci, public key, nonce, part of certificate, hashed password
+		String[] content = info.split(",");
+		
+		String certificate = content[0] + "," +  // uci
+							 content[1] + ",";  // public key
+		
+		// add the validation
+		Calendar calendar = Calendar.getInstance();
+		calendar.setTime(new Date());
+		calendar.add(Calendar.YEAR, 5);
+		certificate += calendar.getTime().toString() + ",";
+		
+		// add part of the certificate
+		certificate += content[3];
+		
+		return certificate;
 	}
 }
