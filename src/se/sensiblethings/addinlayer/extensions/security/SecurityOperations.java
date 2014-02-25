@@ -1,12 +1,14 @@
 package se.sensiblethings.addinlayer.extensions.security;
 
+import java.security.Key;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 
 import se.sensiblethings.addinlayer.extensions.security.encryption.RSAEncryption;
-import se.sensiblethings.addinlayer.extensions.security.keystore.DatabaseTemplate;
+import se.sensiblethings.addinlayer.extensions.security.keystore.KeyStoreTemplate;
 import se.sensiblethings.addinlayer.extensions.security.keystore.SQLiteDatabase;
 import se.sensiblethings.addinlayer.extensions.security.messagedigest.MessageDigestOperations;
+import se.sensiblethings.addinlayer.extensions.security.encryption.SymmetricEncryption;
 
 public class SecurityOperations {
 	public static final String PublickKeyEncryption = "Public";
@@ -21,7 +23,7 @@ public class SecurityOperations {
 	
 	private String bootStrapUci = null;
 	
-	DatabaseTemplate db = null;
+	KeyStoreTemplate db = null;
 	
 	public SecurityOperations(){
 		db = new SQLiteDatabase();
@@ -84,6 +86,12 @@ public class SecurityOperations {
 		RSAPrivateKey key = (RSAPrivateKey)rsa.loadKey(db.getPrivateKey(operator), rsa.privateKey);
 		
 		return new String(rsa.decrypt(key, message.getBytes()));
+	}
+	
+	public String generateSymmetricSecurityKey(String uci){
+		SymmetricEncryption symmetricEncryption = new SymmetricEncryption();
+		Key securityKey = symmetricEncryption.generateKey(symmetricEncryption.AES);
+		
 	}
 	
 	public String digestMessage(String message){

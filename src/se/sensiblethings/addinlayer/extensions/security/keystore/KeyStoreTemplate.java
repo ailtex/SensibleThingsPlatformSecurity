@@ -1,16 +1,17 @@
 package se.sensiblethings.addinlayer.extensions.security.keystore;
 
+import java.security.Key;
 import java.util.Date;
 
 
-public interface DatabaseTemplate {
+public interface KeyStoreTemplate {
 	public boolean getConnection(String databaseURL);
 	
 	public boolean configureAndInitialize();
 	
-	public byte[] getPublicKey(String uci);
+	public Key getPublicKey(String uci);
 	
-	public byte[] getPrivateKey(String uci);
+	public Key getPrivateKey(String uci);
 	
 	public boolean storePublicKey(String uci, byte[] publicKey);
 	
@@ -19,7 +20,5 @@ public interface DatabaseTemplate {
 	public boolean closeDatabase();
 
 	public boolean hasKeyPair(String uci);
-
-	public boolean createKeyPair(String uci);
 
 }

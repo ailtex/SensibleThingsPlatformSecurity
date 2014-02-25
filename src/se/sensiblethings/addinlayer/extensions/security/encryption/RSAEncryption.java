@@ -129,8 +129,8 @@ public class RSAEncryption {
 		 
 	        if (type.equals(privateKey)) {    
 	            PKCS8EncodedKeySpec priPKCS8 = new PKCS8EncodedKeySpec(key);   
-	            PrivateKey privateKey = keyFactory.generatePrivate(priPKCS8);;
-
+	            PrivateKey privateKey = keyFactory.generatePrivate(priPKCS8);
+	            
 	            return privateKey;   
 	  
 	        } else if(type.equals(publicKey)){    

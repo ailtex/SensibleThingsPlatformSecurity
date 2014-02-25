@@ -7,7 +7,7 @@ import java.util.Random;
 
 import se.sensiblethings.addinlayer.extensions.Extension;
 import se.sensiblethings.addinlayer.extensions.security.encryption.RSAEncryption;
-import se.sensiblethings.addinlayer.extensions.security.keystore.DatabaseTemplate;
+import se.sensiblethings.addinlayer.extensions.security.keystore.KeyStoreTemplate;
 import se.sensiblethings.addinlayer.extensions.security.keystore.SQLiteDatabase;
 import se.sensiblethings.disseminationlayer.communication.Communication;
 import se.sensiblethings.disseminationlayer.communication.DestinationNotReachableException;

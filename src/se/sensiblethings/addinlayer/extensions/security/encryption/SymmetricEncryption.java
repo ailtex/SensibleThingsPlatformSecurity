@@ -19,6 +19,10 @@ import javax.crypto.spec.DESKeySpec;
 
 public class SymmetricEncryption {
 	
+	public static final String AES = "AES";
+	public static final String DES = "DES";
+	public static final String DESede = "DESede";
+	
 	public static final String DES_ECB_PKCS5 = "DES/ECB/PKCS5Padding";
 	public static final String DES_CBC_PKCS5 = "DES/CBC/PKCS5Padding";
 	public static final String DESede_CBC_PKCS5 = "DESede/CBC/PKCS5Padding";

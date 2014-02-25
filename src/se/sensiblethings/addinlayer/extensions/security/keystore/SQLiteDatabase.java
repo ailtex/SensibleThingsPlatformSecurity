@@ -15,7 +15,7 @@ import java.util.Vector;
 import se.sensiblethings.addinlayer.extensions.security.encryption.RSAEncryption;
 
 
-public class SQLiteDatabase implements DatabaseTemplate{
+public class SQLiteDatabase implements KeyStoreTemplate{
 	
 	static final String JDBC_DRIVER = "org.sqlite.JDBC";
 	static final String DB_URL = "jdbc:sqlite:/Users/ailtex/Documents/workspace/SensibleThingsPlatformSecurity/tools/SensibleThingsPlatfrom.db";
