@@ -33,22 +33,37 @@ public class KeyStoreJCA implements KeyStoreTemplate{
 		
 		// "KeyStore" the file name, which stores the keys
 		// "password" the password of the keystore
-		createKeyStore("KeyStore", "password".toCharArray());
+		// createKeyStore("KeyStore", "password".toCharArray());
 	}
 	
-	public void loadKeyStore(String keyStoreFile, char[] password) throws 
-	NoSuchAlgorithmException, CertificateException, IOException {
+	public void loadKeyStore(String keyStoreFile, char[] password) throws  IOException {
+		
+		FileInputStream fis = null;
 		
 		try {
 			ks = KeyStore.getInstance(KeyStore.getDefaultType());
+			fis = new FileInputStream(keyStoreFile);
+			
 		} catch (KeyStoreException e) {
+			e.printStackTrace();
+		} catch(FileNotFoundException e){
+			e.printStackTrace();
+			
+			// if this file not found, it should create a new one
+			// then load the new one
+			createKeyStore(keyStoreFile, password);
+			fis = new FileInputStream(keyStoreFile);
+		} 
+		
+		
+		try {
+			ks.load(fis, password);
+		} catch (NoSuchAlgorithmException | CertificateException e) {
+			
 			e.printStackTrace();
 		}
 		
-		FileInputStream fis = new FileInputStream(keyStoreFile);
 		this.keyStoreFile = keyStoreFile;
-		
-		ks.load(fis, password);
 		
 		if(fis != null) fis.close();
 	}
@@ -64,6 +79,8 @@ public class KeyStoreJCA implements KeyStoreTemplate{
 		}
 		
 		ks.store(fos, password);
+		
+		if(fos != null) fos.close();
 	}
 	
 	
@@ -81,7 +98,8 @@ public class KeyStoreJCA implements KeyStoreTemplate{
 		// Encryption with Triple-DES.
 		//
 		// Keystore type designations are not case-sensitive.
-
+		KeyStore ks = null;
+		
 		try {
 			ks = KeyStore.getInstance(KeyStore.getDefaultType());
 			
@@ -98,7 +116,7 @@ public class KeyStoreJCA implements KeyStoreTemplate{
 			
 			e.printStackTrace();
 		}
-
+		
 	}
 	
 	@Override
@@ -164,26 +182,31 @@ public class KeyStoreJCA implements KeyStoreTemplate{
 		return false;
 	}
 	
-	
-	public boolean storePrivateKey(String alias, byte[] privateKey, char[] password, Certificate[] certChain) throws KeyStoreException{
-		// firstly transform the PrivateKey
-		RSAEncryption rsa = new RSAEncryption();
-		PrivateKey pk = (PrivateKey)rsa.loadKey(privateKey, rsa.privateKey);
-		
-		// certificate chain : null
-		PrivateKeyEntry pkEntry = new PrivateKeyEntry(pk, null);
-		
-		// certificate chain is null, it may get exception
+	/**
+	 * 
+	 * @param alias
+	 * @param privateKey
+	 * @param password
+	 * @param cert the self signed X509 v1 certificate
+	 * @return
+	 * @throws KeyStoreException
+	 */
+	public boolean storePrivateKey(String alias, 
+			PrivateKey privateKey, 
+			char[] password, 
+			Certificate cert) throws KeyStoreException{
+
+		// the certificate chain is required to store the private key
 		// Generate the certificate chain
-		// X509Certificate certificate = call CertificateOperations.generateSelfSignedCertificate(); 
+		// password same as the keystore
+		ks.setKeyEntry(alias, privateKey, password, new Certificate[]{cert});
 		
-		ks.setKeyEntry(alias, pk, password, certChain);
-		
-		// password needed
+		// keystore password needed
 		try {
-			updataKeyStore("password".toCharArray());
+			updataKeyStore(password);
 		} catch (NoSuchAlgorithmException | CertificateException | IOException e) {
 			e.printStackTrace();
+			return false;
 		}
 		
 		return true;
@@ -191,6 +214,7 @@ public class KeyStoreJCA implements KeyStoreTemplate{
 	
 	public boolean storeSecretKey(String alias, byte[] secretKey, char[] password) throws 
 	KeyStoreException, InvalidKeyException, NoSuchAlgorithmException, InvalidKeySpecException{
+		
 		// firstly transform the secretKey
 		SymmetricEncryption aes = new SymmetricEncryption();
 		SecretKey sk = (SecretKey)aes.loadKey(secretKey, aes.AES);
@@ -210,14 +234,14 @@ public class KeyStoreJCA implements KeyStoreTemplate{
 	
 	
 	
-	public boolean storeCertification(String alias, Certificate certificate) throws KeyStoreException{
+	public boolean storeCertification(String alias, Certificate certificate, char[] password) throws KeyStoreException{
 		
 		TrustedCertificateEntry cerEntry = new TrustedCertificateEntry(certificate);
 		ks.setCertificateEntry(alias, certificate);
 		
 		// password needed
 		try {
-			updataKeyStore("password".toCharArray());
+			updataKeyStore(password);
 		} catch (NoSuchAlgorithmException | CertificateException | IOException e) {
 			e.printStackTrace();
 		}
@@ -240,7 +264,13 @@ public class KeyStoreJCA implements KeyStoreTemplate{
 
 	@Override
 	public boolean hasKeyPair(String alias) {
-		// TODO Auto-generated method stub
+		
+		try {
+			return ks.isKeyEntry(alias);
+		} catch (KeyStoreException e) {
+			e.printStackTrace();
+		}
+		
 		return false;
 	}
 

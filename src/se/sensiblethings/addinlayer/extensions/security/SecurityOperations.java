@@ -1,10 +1,19 @@
 package se.sensiblethings.addinlayer.extensions.security;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.security.Key;
+import java.security.KeyPair;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 
+import se.sensiblethings.addinlayer.extensions.security.certificate.CertificateOperations;
 import se.sensiblethings.addinlayer.extensions.security.encryption.RSAEncryption;
+import se.sensiblethings.addinlayer.extensions.security.keystore.KeyStoreJCA;
 import se.sensiblethings.addinlayer.extensions.security.keystore.KeyStoreTemplate;
 import se.sensiblethings.addinlayer.extensions.security.keystore.SQLiteDatabase;
 import se.sensiblethings.addinlayer.extensions.security.messagedigest.MessageDigestOperations;
@@ -23,29 +32,71 @@ public class SecurityOperations {
 	
 	private String bootStrapUci = null;
 	
-	KeyStoreTemplate db = null;
+	KeyStoreJCA keystore = null;
 	
 	public SecurityOperations(){
-		db = new SQLiteDatabase();
+		/*
+		keystore = new SQLiteDatabase();
 		// firstly connect to permanent key store
-		db.getConnection(SQLiteDatabase.PKS_DB_URL);
+		keystore.getConnection(SQLiteDatabase.PKS_keystore_URL);
 		//initial the database
-		db.configureAndInitialize();
+		keystore.configureAndInitialize();
+		*/
+		keystore = new KeyStoreJCA();
+		
+		try {
+			keystore.loadKeyStore("KeyStore", "password".toCharArray());
+		} catch ( IOException e) {
+			// it may fail to load the key store
+			e.printStackTrace();
+		}
+		
 	}
 	
 	public void initializePermanentKeyStore(String uci){
 		setOperator(uci);
 		
-		if(!db.hasKeyPair(uci)){
-			db.createKeyPair(uci);
+		// check weather the store has the KeyPair
+		if(!keystore.hasKeyPair(uci)){
+			// if not, create the key pair
+			CreateKeyPairAndCertificate(uci);
+		}
+		
+	}
+	
+	protected void CreateKeyPairAndCertificate(String uci){
+		// sun.security.X509 package provides many APIs to use
+		// e.g. CertAndKeyGen gen = new CertAndKeyGen(keyAlgName, sigAlgName, providerName);
+		// it can generate the RSA keypair and self signed certificate
+		// While it is not recommended to use sun.* packages
+		// Reason to see : http://www.oracle.com/technetwork/java/faq-sun-packages-142232.html
+		KeyPair keyPair = null;
+		try {
+			 keyPair = new RSAEncryption().generateKey();
+		} catch (NoSuchAlgorithmException e) {
+			
+			e.printStackTrace();
+		}
+		
+		// generate the self signed X509 v1 certificate
+		CertificateOperations certOpert = new CertificateOperations();
+		
+		Certificate cert = certOpert.generateSelfSignedcertificate(keyPair);
+		
+		// store the key pair and the certificate
+		try {
+			keystore.storePrivateKey(uci, keyPair.getPrivate(), "password".toCharArray(), cert);
+		} catch (KeyStoreException e) {
+			e.printStackTrace();
 		}
 	}
+	
 	
 	public String signMessage(String message){
 		RSAEncryption rsa = new RSAEncryption();
 		
 		// load the private key
-		RSAPrivateKey privateKey = (RSAPrivateKey)rsa.loadKey(db.getPrivateKey(operator), rsa.privateKey);
+		RSAPrivateKey privateKey = (RSAPrivateKey)rsa.loadKey(keystore.getPrivateKey(operator), rsa.privateKey);
 		
 		return new String(rsa.sign(privateKey, message.getBytes()));
 
@@ -83,7 +134,7 @@ public class SecurityOperations {
 	public String decryptMessage(String message){
 		RSAEncryption rsa = new RSAEncryption();
 		
-		RSAPrivateKey key = (RSAPrivateKey)rsa.loadKey(db.getPrivateKey(operator), rsa.privateKey);
+		RSAPrivateKey key = (RSAPrivateKey)rsa.loadKey(keystore.getPrivateKey(operator), rsa.privateKey);
 		
 		return new String(rsa.decrypt(key, message.getBytes()));
 	}
@@ -100,7 +151,7 @@ public class SecurityOperations {
 	
 	public String getPublicKey() {
 		if(publicKey != null)
-			publicKey = new String(db.getPublicKey(operator));
+			publicKey = new String(keystore.getPublicKey(operator));
 		return publicKey;
 	}
 

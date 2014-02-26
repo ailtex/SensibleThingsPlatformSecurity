@@ -99,6 +99,7 @@ public class SQLiteDatabase implements KeyStoreTemplate{
 		return false;
 	}
 	
+	// it is not the database's duty
 	public boolean createKeyPair(String uci){
 		// generate the RSA key pair
 		RSAEncryption rsa = new RSAEncryption();

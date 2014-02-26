@@ -21,32 +21,7 @@ import org.apache.commons.configuration.PropertiesConfiguration;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;   
 
 public class RSAEncryption {
-	/*
-	public static void main(String[] agrs){
-		try {   
-            RSATest encrypt = new RSATest();   
-            String encryptText = "Hello";   
-  
-            // Generate keys   
-            KeyPair keyPair = encrypt.generateKey();   
-            RSAPrivateKey privateKey = (RSAPrivateKey) keyPair.getPrivate();   
-            RSAPublicKey publicKey = (RSAPublicKey) keyPair.getPublic();   
-            
-            //System.out.println(privateKey.toString());
-            //System.out.println(publicKey.toString());
-            
-            encrypt.saveKey(keyPair, "publicKey","privateKey");
-            
-            byte[] e = encrypt.encrypt(publicKey, encryptText.getBytes()); 
-            System.out.println(toHexString(encryptText.getBytes()));
-            byte[] de = encrypt.decrypt(privateKey, e);   
-            System.out.println(toHexString(e));   
-            System.out.println(toHexString(de));   
-        } catch (Exception e) {   
-            e.printStackTrace();   
-        }   
-	}
-	*/
+	
 	public static final String publicKey = "PUBLIC";
 	public static final String privateKey = "PRIVATE";
 	
@@ -229,4 +204,30 @@ public class RSAEncryption {
   
     private static char[] HEXCHAR = { '0', '1', '2', '3', '4', '5', '6', '7',   
             '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };  
+    
+    
+    public static void main(String[] agrs){
+		try {   
+            RSAEncryption encrypt = new RSAEncryption();   
+            String encryptText = "Hello";   
+  
+            // Generate keys   
+            KeyPair keyPair = encrypt.generateKey();   
+            RSAPrivateKey privateKey = (RSAPrivateKey) keyPair.getPrivate();   
+            RSAPublicKey publicKey = (RSAPublicKey) keyPair.getPublic();   
+            
+            //System.out.println(privateKey.toString());
+            //System.out.println(publicKey.toString());
+            
+            encrypt.saveKey(keyPair, "publicKey","privateKey");
+            
+            byte[] e = encrypt.encrypt(publicKey, encryptText.getBytes()); 
+            System.out.println(toHexString(encryptText.getBytes()));
+            byte[] de = encrypt.decrypt(privateKey, e);   
+            System.out.println(toHexString(e));   
+            System.out.println(toHexString(de));   
+        } catch (Exception e) {   
+            e.printStackTrace();   
+        }   
+	}
 }

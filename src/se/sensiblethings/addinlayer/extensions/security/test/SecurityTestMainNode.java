@@ -1,4 +1,4 @@
-package se.sensiblethings.test;
+package se.sensiblethings.addinlayer.extensions.security.test;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
