@@ -73,6 +73,7 @@ public class SecurityExtension implements Extension, MessageListener{
 			transformToSslConnection();
 			SslConnectionRequestMessage requestMessage = (SslConnectionRequestMessage)message;
 			securityListener.sslConnectionRequestEvent(requestMessage.uci, requestMessage.getFromNode());
+			
 		}else if(message instanceof RegistrationRequestMessage){
 			RegistrationRequestMessage registrationRequestMessage = (RegistrationRequestMessage) message;
 			

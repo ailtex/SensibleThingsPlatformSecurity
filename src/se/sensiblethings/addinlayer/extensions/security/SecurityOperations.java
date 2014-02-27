@@ -83,9 +83,12 @@ public class SecurityOperations {
 		
 		Certificate cert = certOpert.generateSelfSignedcertificate(keyPair);
 		
-		// store the key pair and the certificate
 		try {
+			// store the private key with the self signed certificate
 			keystore.storePrivateKey(uci, keyPair.getPrivate(), "password".toCharArray(), cert);
+			
+			// store the self signed certificate
+			keystore.storeCertification(uci, cert, "password".toCharArray());
 		} catch (KeyStoreException e) {
 			e.printStackTrace();
 		}
