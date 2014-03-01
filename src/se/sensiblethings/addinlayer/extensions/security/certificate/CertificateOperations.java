@@ -19,6 +19,7 @@ import java.security.PrivateKey;
 import java.security.Security;
 import java.security.SignatureException;
 import java.security.cert.Certificate;
+import java.security.cert.CertificateParsingException;
 import java.security.cert.X509Certificate;
 import java.util.Date;
 import java.util.Enumeration;
@@ -170,7 +171,8 @@ public class CertificateOperations {
 	}
 	
 	@SuppressWarnings("deprecation")
-	public X509Certificate[] buildChain(PKCS10CertificationRequest request, X509Certificate rootCert, KeyPair rootPair){
+	public X509Certificate[] buildChain(PKCS10CertificationRequest request, X509Certificate rootCert, KeyPair rootPair) throws
+	InvalidKeyException, NoSuchAlgorithmException, NoSuchProviderException, SignatureException, CertificateParsingException{
 		// validate the certification request
 		if (!request.verify("BC")) {
 			System.out.println("request failed to verify!");
@@ -183,10 +185,7 @@ public class CertificateOperations {
 		certGen.setIssuerDN(rootCert.getSubjectX500Principal());
 		certGen.setNotBefore(new Date(System.currentTimeMillis()));
 		certGen.setNotAfter(new Date(System.currentTimeMillis() + 50000));
-		
-		CertificationRequestInfo info = request.getCertificationRequestInfo();
-		
-		certGen.setSubjectDN(info.getSubject());
+		certGen.setSubjectDN(new X500Principal(request.getCertificationRequestInfo().getSubject().toString()));
 		certGen.setPublicKey(request.getPublicKey("BC"));
 		certGen.setSignatureAlgorithm("SHA256WithRSAEncryption");
 
