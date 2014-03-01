@@ -21,23 +21,33 @@ import java.security.SignatureException;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.util.Date;
+import java.util.Enumeration;
 import java.util.Vector;
 
 import javax.security.auth.x500.X500Principal;
 
+import org.bouncycastle.asn1.ASN1Set;
+import org.bouncycastle.asn1.DERObjectIdentifier;
 import org.bouncycastle.asn1.DEROctetString;
 import org.bouncycastle.asn1.DERSet;
+import org.bouncycastle.asn1.pkcs.CertificationRequestInfo;
 import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers;
-import org.bouncycastle.asn1.x509.Attribute;
+import org.bouncycastle.asn1.pkcs.Attribute;
+import org.bouncycastle.asn1.x500.X500Name;
+import org.bouncycastle.asn1.x509.BasicConstraints;
+import org.bouncycastle.asn1.x509.ExtendedKeyUsage;
 import org.bouncycastle.asn1.x509.GeneralName;
 import org.bouncycastle.asn1.x509.GeneralNames;
+import org.bouncycastle.asn1.x509.KeyPurposeId;
+import org.bouncycastle.asn1.x509.KeyUsage;
 import org.bouncycastle.asn1.x509.X509Extension;
 import org.bouncycastle.asn1.x509.X509Extensions;
+import org.bouncycastle.asn1.x509.X509Name;
 import org.bouncycastle.jce.PKCS10CertificationRequest;
-import org.bouncycastle.util.io.pem.PemWriter;
 import org.bouncycastle.x509.X509V1CertificateGenerator;
 import org.bouncycastle.x509.X509V3CertificateGenerator;
-
+import org.bouncycastle.x509.extension.AuthorityKeyIdentifierStructure;
+import org.bouncycastle.x509.extension.SubjectKeyIdentifierStructure;
 import org.bouncycastle.openssl.PEMWriter;
 
 public class CertificateOperations {
@@ -159,13 +169,70 @@ public class CertificateOperations {
 		return null;
 	}
 	
-	public void signCertificateSigningRequest(){
+	@SuppressWarnings("deprecation")
+	public X509Certificate[] buildChain(PKCS10CertificationRequest request, X509Certificate rootCert, KeyPair rootPair){
+		// validate the certification request
+		if (!request.verify("BC")) {
+			System.out.println("request failed to verify!");
+			System.exit(1);
+		}
 		
+		// create the certificate using the information in the request
+		X509V3CertificateGenerator certGen = new X509V3CertificateGenerator();
+		certGen.setSerialNumber(BigInteger.valueOf(System.currentTimeMillis()));
+		certGen.setIssuerDN(rootCert.getSubjectX500Principal());
+		certGen.setNotBefore(new Date(System.currentTimeMillis()));
+		certGen.setNotAfter(new Date(System.currentTimeMillis() + 50000));
+		
+		CertificationRequestInfo info = request.getCertificationRequestInfo();
+		
+		certGen.setSubjectDN(info.getSubject());
+		certGen.setPublicKey(request.getPublicKey("BC"));
+		certGen.setSignatureAlgorithm("SHA256WithRSAEncryption");
+
+		certGen.addExtension(X509Extensions.AuthorityKeyIdentifier, false,
+				new AuthorityKeyIdentifierStructure(rootCert));
+
+		certGen.addExtension(X509Extensions.SubjectKeyIdentifier,
+				false, new SubjectKeyIdentifierStructure(request.getPublicKey("BC")));
+
+		certGen.addExtension(X509Extensions.BasicConstraints, true,
+				new BasicConstraints(false));
+
+		certGen.addExtension(X509Extensions.KeyUsage, true, new KeyUsage(
+				KeyUsage.digitalSignature | KeyUsage.keyEncipherment));
+
+		certGen.addExtension(X509Extensions.ExtendedKeyUsage, true,
+				new ExtendedKeyUsage(KeyPurposeId.id_kp_serverAuth));
+
+		// extract the extension request attribute
+		ASN1Set attributes = request.getCertificationRequestInfo()
+				.getAttributes();
+
+		for (int i = 0; i != attributes.size(); i++) {
+			Attribute attr = Attribute.getInstance(attributes.getObjectAt(i));
+
+			// process extension request
+			if (attr.getAttrType().equals(
+					PKCSObjectIdentifiers.pkcs_9_at_extensionRequest)) {
+				X509Extensions extensions = X509Extensions.getInstance(attr
+						.getAttrValues().getObjectAt(0));
+
+				Enumeration e = extensions.oids();
+				while (e.hasMoreElements()) {
+					DERObjectIdentifier oid = (DERObjectIdentifier) e.nextElement();
+					X509Extension ext = extensions.getExtension(oid);
+
+					certGen.addExtension(oid, ext.isCritical(), ext.getValue()
+							.getOctets());
+				}
+			}
+		}
+		X509Certificate issuedCert = certGen.generateX509Certificate(rootPair.getPrivate());
+
+		return new X509Certificate[] { issuedCert, rootCert };
 	}
 	
-	public void signCertificate(Certificate certificate){
-		
-	}
 	
 	public void standOutInPemEncoded(X509Certificate cert){
 		PEMWriter pemWrt = new PEMWriter(new OutputStreamWriter(System.out));
