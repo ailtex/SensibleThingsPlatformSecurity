@@ -25,7 +25,7 @@ public class SecurityExtension implements Extension, MessageListener{
 	Communication communication = null;
 	
 	SecurityListener securityListener = null;
-	SecurityOperations securityOperations = null;
+	SecurityManager securityOperations = null;
 	
 	public SecurityExtension(){}
 	
@@ -51,7 +51,7 @@ public class SecurityExtension implements Extension, MessageListener{
 
 	@Override
 	public void startAddIn() {
-		securityOperations = new SecurityOperations();
+		securityOperations = new SecurityManager();
 	}
 
 	@Override

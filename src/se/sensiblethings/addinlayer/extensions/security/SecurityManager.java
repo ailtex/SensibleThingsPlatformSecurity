@@ -19,22 +19,21 @@ import se.sensiblethings.addinlayer.extensions.security.keystore.SQLiteDatabase;
 import se.sensiblethings.addinlayer.extensions.security.messagedigest.MessageDigestOperations;
 import se.sensiblethings.addinlayer.extensions.security.encryption.SymmetricEncryption;
 
-public class SecurityOperations {
+public class SecurityManager {
 	public static final String PublickKeyEncryption = "Public";
 	public static final String SymmetricEncryption = "Symmetric";
 	
-	private String publicKey = null;
-
+	
 	// the operator is the uci who owns
 	private String operator = null;
-	
+	private Key publicKey = null;
 	private String registrationRequestTime = null;
-	
 	private String bootStrapUci = null;
 	
 	KeyStoreJCA keystore = null;
+	RSAEncryption rsaEncyrption = null;
 	
-	public SecurityOperations(){
+	public SecurityManager(){
 		/*
 		keystore = new SQLiteDatabase();
 		// firstly connect to permanent key store
@@ -43,7 +42,8 @@ public class SecurityOperations {
 		keystore.configureAndInitialize();
 		*/
 		keystore = new KeyStoreJCA();
-		
+		rsaEncyrption = new RSAEncryption();
+				
 		try {
 			keystore.loadKeyStore("KeyStore", "password".toCharArray());
 		} catch ( IOException e) {
@@ -81,7 +81,9 @@ public class SecurityOperations {
 		// generate the self signed X509 v1 certificate
 		CertificateOperations certOpert = new CertificateOperations();
 		
-		Certificate cert = certOpert.generateSelfSignedcertificate(keyPair);
+		// setting the subject name of the certificate
+		String subjectName = "CN=" + uci + ",OU=ComputerColleage,O=MIUN,C=Sweden";
+		Certificate cert = certOpert.generateSelfSignedcertificate(subjectName, keyPair);
 		
 		try {
 			// store the private key with the self signed certificate
@@ -121,6 +123,9 @@ public class SecurityOperations {
 	public String encryptMessage(String message, String publicKey){
 		RSAEncryption rsa = new RSAEncryption();
 		
+		if(publicKey == null)
+			publicKey = this.getPublicKey();
+		
 		RSAPublicKey key = (RSAPublicKey)rsa.loadKey(publicKey.getBytes(), rsa.publicKey);
 		return new String(rsa.encrypt(key, message.getBytes()));
 		/*
@@ -137,7 +142,7 @@ public class SecurityOperations {
 	public String decryptMessage(String message){
 		RSAEncryption rsa = new RSAEncryption();
 		
-		RSAPrivateKey key = (RSAPrivateKey)rsa.loadKey(keystore.getPrivateKey(operator), rsa.privateKey);
+		RSAPrivateKey key = (RSAPrivateKey)keystore.getPrivateKey(operator);
 		
 		return new String(rsa.decrypt(key, message.getBytes()));
 	}
@@ -152,14 +157,8 @@ public class SecurityOperations {
 		return new String(MessageDigestOperations.encode(message.getBytes(), MessageDigestOperations.SHA1));
 	}
 	
-	public String getPublicKey() {
-		if(publicKey != null)
-			publicKey = new String(keystore.getPublicKey(operator));
-		return publicKey;
-	}
-
-	public void setPublicKey(String publicKey) {
-		this.publicKey = publicKey;
+	public Key getPublicKey() {
+			return keystore.getPublicKey(operator);
 	}
 	
 	public String getOperator() {

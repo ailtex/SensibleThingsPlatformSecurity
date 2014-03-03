@@ -97,7 +97,10 @@ public class CertificateOperations {
 		// STREET Street
 		// T Title
 		// 
-		subjectName = "CN=Bootstrap,OU=ComputerColleage,O=MIUN,C=Sweden";
+		
+		if(subjectName == null)
+			subjectName = "CN=Bootstrap,OU=ComputerColleage,O=MIUN,C=Sweden";
+		
 		certGen.setIssuerDN(new X500Principal(subjectName));
 		
 		// set the validation time

@@ -233,7 +233,6 @@ public class KeyStoreJCA implements KeyStoreTemplate{
 	}
 	
 	
-	
 	public boolean storeCertification(String alias, Certificate certificate, char[] password) throws KeyStoreException{
 		
 		TrustedCertificateEntry cerEntry = new TrustedCertificateEntry(certificate);

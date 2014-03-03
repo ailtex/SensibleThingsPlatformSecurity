@@ -25,23 +25,83 @@ public class RSAEncryption {
 	public static final String publicKey = "PUBLIC";
 	public static final String privateKey = "PRIVATE";
 	
-	KeyPair keyPair = null;
+	public static final String RSA = "RSA";
+	public static final String EC = "EC";
 	
-	public KeyPair generateKey() throws NoSuchAlgorithmException {   
+	
+	public static KeyPair generateKey() throws NoSuchAlgorithmException {   
         KeyPairGenerator keyPairGen = KeyPairGenerator.getInstance("RSA");   
         keyPairGen.initialize(1024, new SecureRandom());   
   
-        keyPair = keyPairGen.generateKeyPair();   
-        return keyPair;   
+        return keyPairGen.generateKeyPair();
     }   
 	
-	public byte[] getPublicKey(){
-		return keyPair.getPublic().getEncoded();
-	}
+	public Key loadKey(byte[] key, String type){   
+   	 
+        KeyFactory keyFactory;
+		try {
+			keyFactory = KeyFactory.getInstance("RSA");
+		 
+	        if (type.equals(privateKey)) {    
+	            PKCS8EncodedKeySpec priPKCS8 = new PKCS8EncodedKeySpec(key);   
+	            PrivateKey privateKey = keyFactory.generatePrivate(priPKCS8);
+	            
+	            return privateKey;   
+	  
+	        } else if(type.equals(publicKey)){    
+	            X509EncodedKeySpec bobPubKeySpec = new X509EncodedKeySpec(key);   
+	            PublicKey publicKey = keyFactory.generatePublic(bobPubKeySpec);
+	            
+	            return publicKey;   
+	        }
+	        
+		} catch (NoSuchAlgorithmException e) {
+			e.printStackTrace();
+		} catch (InvalidKeySpecException e) {
+			e.printStackTrace();
+		}   
+        return null;
+    }  
 	
-	public byte[] getPrivateKey(){
-		return keyPair.getPrivate().getEncoded();
-	}
+	/**
+     * 
+     * @param publicKey
+     * @param data
+     * @return
+     */
+    public static byte[] encrypt(RSAPublicKey publicKey, byte[] data) {   
+        if (publicKey != null) {   
+            try {   
+                //Cipher cipher = Cipher.getInstance("RSA",   
+                //        new BouncyCastleProvider());
+                
+                Cipher cipher = Cipher.getInstance("RSA");
+                
+                cipher.init(Cipher.ENCRYPT_MODE, publicKey);
+                
+                return cipher.doFinal(data);   
+            } catch (Exception e) {   
+                e.printStackTrace();   
+            }   
+        }   
+        return null;   
+    }   
+    
+
+    public static byte[] decrypt(RSAPrivateKey privateKey, byte[] raw) {   
+        if (privateKey != null) {   
+            try {   
+                //Cipher cipher = Cipher.getInstance("RSA", new BouncyCastleProvider());
+            	Cipher cipher = Cipher.getInstance("RSA");
+                cipher.init(Cipher.DECRYPT_MODE, privateKey);   
+                return cipher.doFinal(raw);   
+            } catch (Exception e) {   
+                e.printStackTrace();   
+            }   
+        }   
+  
+        return null;   
+    }
 	
     public void saveKey(KeyPair keyPair, String publicKeyFile,   
             String privateKeyFile) throws ConfigurationException {   
@@ -61,7 +121,9 @@ public class RSAEncryption {
                 toHexString(prikey.getEncoded()));   
         privateConfig.save();   
     }   
-  
+    
+    
+    
     /**  
      * @param filename  
      * @param type  
@@ -96,72 +158,6 @@ public class RSAEncryption {
         }   
     }   
     
-    public Key loadKey(byte[] key, String type){   
- 
-        KeyFactory keyFactory;
-		try {
-			keyFactory = KeyFactory.getInstance("RSA");
-		 
-	        if (type.equals(privateKey)) {    
-	            PKCS8EncodedKeySpec priPKCS8 = new PKCS8EncodedKeySpec(key);   
-	            PrivateKey privateKey = keyFactory.generatePrivate(priPKCS8);
-	            
-	            return privateKey;   
-	  
-	        } else if(type.equals(publicKey)){    
-	            X509EncodedKeySpec bobPubKeySpec = new X509EncodedKeySpec(key);   
-	            PublicKey publicKey = keyFactory.generatePublic(bobPubKeySpec);
-	            
-	            return publicKey;   
-	        }
-	        
-		} catch (NoSuchAlgorithmException e) {
-			e.printStackTrace();
-		} catch (InvalidKeySpecException e) {
-			e.printStackTrace();
-		}   
-        return null;
-    }  
-
-    /**
-     * 
-     * @param publicKey
-     * @param data
-     * @return
-     */
-    public byte[] encrypt(RSAPublicKey publicKey, byte[] data) {   
-        if (publicKey != null) {   
-            try {   
-                //Cipher cipher = Cipher.getInstance("RSA",   
-                //        new BouncyCastleProvider());
-                
-                Cipher cipher = Cipher.getInstance("RSA");
-                
-                cipher.init(Cipher.ENCRYPT_MODE, publicKey);
-                
-                return cipher.doFinal(data);   
-            } catch (Exception e) {   
-                e.printStackTrace();   
-            }   
-        }   
-        return null;   
-    }   
-    
-
-    public byte[] decrypt(RSAPrivateKey privateKey, byte[] raw) {   
-        if (privateKey != null) {   
-            try {   
-                //Cipher cipher = Cipher.getInstance("RSA", new BouncyCastleProvider());
-            	Cipher cipher = Cipher.getInstance("RSA");
-                cipher.init(Cipher.DECRYPT_MODE, privateKey);   
-                return cipher.doFinal(raw);   
-            } catch (Exception e) {   
-                e.printStackTrace();   
-            }   
-        }   
-  
-        return null;   
-    }   
   
     /**  
      * sign a message.  
