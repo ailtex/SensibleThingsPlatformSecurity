@@ -21,7 +21,7 @@ import java.util.Date;
 
 import javax.crypto.SecretKey;
 
-import se.sensiblethings.addinlayer.extensions.security.encryption.RSAEncryption;
+import se.sensiblethings.addinlayer.extensions.security.encryption.AsymmetricEncryption;
 import se.sensiblethings.addinlayer.extensions.security.encryption.SymmetricEncryption;
 
 public class KeyStoreJCA implements KeyStoreTemplate{

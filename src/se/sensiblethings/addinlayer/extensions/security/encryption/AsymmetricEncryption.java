@@ -20,27 +20,25 @@ import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;   
 import org.bouncycastle.jce.provider.BouncyCastleProvider;   
 
-public class RSAEncryption {
+public class AsymmetricEncryption {
 	
 	public static final String publicKey = "PUBLIC";
 	public static final String privateKey = "PRIVATE";
 	
-	public static final String RSA = "RSA";
-	public static final String EC = "EC";
+	public static final String RSA = "RSA"; // Recommended length 2028
 	
-	
-	public static KeyPair generateKey() throws NoSuchAlgorithmException {   
-        KeyPairGenerator keyPairGen = KeyPairGenerator.getInstance("RSA");   
-        keyPairGen.initialize(1024, new SecureRandom());   
+	public static KeyPair generateKey(String algorithm, int keyLength) throws NoSuchAlgorithmException {   
+        KeyPairGenerator keyPairGen = KeyPairGenerator.getInstance(algorithm);   
+        keyPairGen.initialize(keyLength, new SecureRandom());   
   
         return keyPairGen.generateKeyPair();
     }   
 	
-	public Key loadKey(byte[] key, String type){   
+	public Key loadKey(byte[] key, String type, String algorithm){   
    	 
         KeyFactory keyFactory;
 		try {
-			keyFactory = KeyFactory.getInstance("RSA");
+			keyFactory = KeyFactory.getInstance(algorithm);
 		 
 	        if (type.equals(privateKey)) {    
 	            PKCS8EncodedKeySpec priPKCS8 = new PKCS8EncodedKeySpec(key);   
@@ -69,13 +67,10 @@ public class RSAEncryption {
      * @param data
      * @return
      */
-    public static byte[] encrypt(RSAPublicKey publicKey, byte[] data) {   
+    public static byte[] encrypt(RSAPublicKey publicKey, byte[] data, String algorithm) {   
         if (publicKey != null) {   
             try {   
-                //Cipher cipher = Cipher.getInstance("RSA",   
-                //        new BouncyCastleProvider());
-                
-                Cipher cipher = Cipher.getInstance("RSA");
+                Cipher cipher = Cipher.getInstance(algorithm);
                 
                 cipher.init(Cipher.ENCRYPT_MODE, publicKey);
                 
@@ -88,11 +83,10 @@ public class RSAEncryption {
     }   
     
 
-    public static byte[] decrypt(RSAPrivateKey privateKey, byte[] raw) {   
+    public static byte[] decrypt(RSAPrivateKey privateKey, byte[] raw, String algorithm) {   
         if (privateKey != null) {   
             try {   
-                //Cipher cipher = Cipher.getInstance("RSA", new BouncyCastleProvider());
-            	Cipher cipher = Cipher.getInstance("RSA");
+            	Cipher cipher = Cipher.getInstance(algorithm);
                 cipher.init(Cipher.DECRYPT_MODE, privateKey);   
                 return cipher.doFinal(raw);   
             } catch (Exception e) {   
@@ -103,6 +97,27 @@ public class RSAEncryption {
         return null;   
     }
 	
+    
+    /**  
+     * sign a message.  
+     *   
+     * @return byte[]  
+     */  
+    public byte[] sign(RSAPrivateKey privateKey, byte[] data, String algorithm) {   
+        if (privateKey != null) {   
+            try {   
+                Cipher cipher = Cipher.getInstance(algorithm);
+                
+                cipher.init(Cipher.ENCRYPT_MODE, privateKey);
+                
+                return cipher.doFinal(data);   
+            } catch (Exception e) {   
+                e.printStackTrace();   
+            }   
+        }   
+        return null;   
+    } 
+    
     public void saveKey(KeyPair keyPair, String publicKeyFile,   
             String privateKeyFile) throws ConfigurationException {   
         PublicKey pubkey = keyPair.getPublic();   
@@ -159,25 +174,7 @@ public class RSAEncryption {
     }   
     
   
-    /**  
-     * sign a message.  
-     *   
-     * @return byte[]  
-     */  
-    public byte[] sign(RSAPrivateKey privateKey, byte[] data) {   
-        if (privateKey != null) {   
-            try {   
-                Cipher cipher = Cipher.getInstance("RSA");
-                
-                cipher.init(Cipher.ENCRYPT_MODE, privateKey);
-                
-                return cipher.doFinal(data);   
-            } catch (Exception e) {   
-                e.printStackTrace();   
-            }   
-        }   
-        return null;   
-    } 
+
     
     public static String toHexString(byte[] b) {   
         StringBuilder sb = new StringBuilder(b.length * 2);   
@@ -204,11 +201,11 @@ public class RSAEncryption {
     
     public static void main(String[] agrs){
 		try {   
-            RSAEncryption encrypt = new RSAEncryption();   
+            AsymmetricEncryption encrypt = new AsymmetricEncryption();   
             String encryptText = "Hello";   
   
             // Generate keys   
-            KeyPair keyPair = encrypt.generateKey();   
+            KeyPair keyPair = encrypt.generateKey(encrypt.RSA, 2048);   
             RSAPrivateKey privateKey = (RSAPrivateKey) keyPair.getPrivate();   
             RSAPublicKey publicKey = (RSAPublicKey) keyPair.getPublic();   
             
@@ -217,9 +214,9 @@ public class RSAEncryption {
             
             encrypt.saveKey(keyPair, "publicKey","privateKey");
             
-            byte[] e = encrypt.encrypt(publicKey, encryptText.getBytes()); 
+            byte[] e = encrypt.encrypt(publicKey, encryptText.getBytes(), encrypt.RSA); 
             System.out.println(toHexString(encryptText.getBytes()));
-            byte[] de = encrypt.decrypt(privateKey, e);   
+            byte[] de = encrypt.decrypt(privateKey, e, encrypt.RSA);   
             System.out.println(toHexString(e));   
             System.out.println(toHexString(de));   
         } catch (Exception e) {   

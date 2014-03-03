@@ -2,21 +2,25 @@ package se.sensiblethings.addinlayer.extensions.security;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.KeyPair;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 
 import se.sensiblethings.addinlayer.extensions.security.certificate.CertificateOperations;
-import se.sensiblethings.addinlayer.extensions.security.encryption.RSAEncryption;
+import se.sensiblethings.addinlayer.extensions.security.encryption.AsymmetricEncryption;
 import se.sensiblethings.addinlayer.extensions.security.keystore.KeyStoreJCA;
 import se.sensiblethings.addinlayer.extensions.security.keystore.KeyStoreTemplate;
 import se.sensiblethings.addinlayer.extensions.security.keystore.SQLiteDatabase;
 import se.sensiblethings.addinlayer.extensions.security.messagedigest.MessageDigestOperations;
+import se.sensiblethings.addinlayer.extensions.security.signature.SignatureOperations;
 import se.sensiblethings.addinlayer.extensions.security.encryption.SymmetricEncryption;
 
 public class SecurityManager {
@@ -31,7 +35,6 @@ public class SecurityManager {
 	private String bootStrapUci = null;
 	
 	KeyStoreJCA keystore = null;
-	RSAEncryption rsaEncyrption = null;
 	
 	public SecurityManager(){
 		/*
@@ -42,8 +45,7 @@ public class SecurityManager {
 		keystore.configureAndInitialize();
 		*/
 		keystore = new KeyStoreJCA();
-		rsaEncyrption = new RSAEncryption();
-				
+		
 		try {
 			keystore.loadKeyStore("KeyStore", "password".toCharArray());
 		} catch ( IOException e) {
@@ -72,7 +74,7 @@ public class SecurityManager {
 		// Reason to see : http://www.oracle.com/technetwork/java/faq-sun-packages-142232.html
 		KeyPair keyPair = null;
 		try {
-			 keyPair = new RSAEncryption().generateKey();
+			 keyPair = AsymmetricEncryption.generateKey(AsymmetricEncryption.RSA, 2048);
 		} catch (NoSuchAlgorithmException e) {
 			
 			e.printStackTrace();
@@ -97,18 +99,31 @@ public class SecurityManager {
 	}
 	
 	
-	public String signMessage(String message){
-		RSAEncryption rsa = new RSAEncryption();
-		
+	public String signMessage(String message, String algorithm){
 		// load the private key
-		RSAPrivateKey privateKey = (RSAPrivateKey)rsa.loadKey(keystore.getPrivateKey(operator), rsa.privateKey);
+		PrivateKey privateKey = (PrivateKey) keystore.getPrivateKey(operator);
 		
-		return new String(rsa.sign(privateKey, message.getBytes()));
-
+		String signature = null;
+		try {
+			signature = new String(SignatureOperations.sign(message.getBytes(), privateKey, algorithm));
+		} catch (InvalidKeyException | NoSuchAlgorithmException e) {
+			e.printStackTrace();
+		}
+		
+		return signature;
+	}
+	
+	public boolean verifySignature(String message, String signature, PublicKey publicKey, String algorithm){
+		try {
+			return SignatureOperations.verify(message.getBytes(), signature.getBytes(), publicKey, algorithm);
+		} catch (InvalidKeyException | NoSuchAlgorithmException e) {
+			e.printStackTrace();
+		}
+		return false;
 	}
 	
 	public boolean verifyRequest(String signature, String publicKey){
-		RSAEncryption rsa = new RSAEncryption();
+		AsymmetricEncryption rsa = new AsymmetricEncryption();
 		RSAPrivateKey key = (RSAPrivateKey)rsa.loadKey(publicKey.getBytes(), rsa.publicKey);
 		
 		String[] signaturePlainText = new String(rsa.decrypt(key, signature.getBytes())).split(",");
@@ -121,7 +136,7 @@ public class SecurityManager {
 	
 	// public key encryption
 	public String encryptMessage(String message, String publicKey){
-		RSAEncryption rsa = new RSAEncryption();
+		AsymmetricEncryption rsa = new AsymmetricEncryption();
 		
 		if(publicKey == null)
 			publicKey = this.getPublicKey();
@@ -140,7 +155,7 @@ public class SecurityManager {
 	}
 	
 	public String decryptMessage(String message){
-		RSAEncryption rsa = new RSAEncryption();
+		AsymmetricEncryption rsa = new AsymmetricEncryption();
 		
 		RSAPrivateKey key = (RSAPrivateKey)keystore.getPrivateKey(operator);
 		

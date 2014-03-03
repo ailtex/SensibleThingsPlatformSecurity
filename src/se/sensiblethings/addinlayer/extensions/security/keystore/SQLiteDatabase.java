@@ -12,7 +12,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Vector;
 
-import se.sensiblethings.addinlayer.extensions.security.encryption.RSAEncryption;
+import se.sensiblethings.addinlayer.extensions.security.encryption.AsymmetricEncryption;
 
 
 public class SQLiteDatabase implements KeyStoreTemplate{
@@ -102,7 +102,7 @@ public class SQLiteDatabase implements KeyStoreTemplate{
 	// it is not the database's duty
 	public boolean createKeyPair(String uci){
 		// generate the RSA key pair
-		RSAEncryption rsa = new RSAEncryption();
+		AsymmetricEncryption rsa = new AsymmetricEncryption();
 		try {
 			rsa.generateKey();
 		} catch (NoSuchAlgorithmException e) {
