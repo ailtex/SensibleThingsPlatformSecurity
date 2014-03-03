@@ -67,7 +67,7 @@ public class AsymmetricEncryption {
      * @param data
      * @return
      */
-    public static byte[] encrypt(RSAPublicKey publicKey, byte[] data, String algorithm) {   
+    public static byte[] encrypt(PublicKey publicKey, byte[] data, String algorithm) {   
         if (publicKey != null) {   
             try {   
                 Cipher cipher = Cipher.getInstance(algorithm);
@@ -83,7 +83,7 @@ public class AsymmetricEncryption {
     }   
     
 
-    public static byte[] decrypt(RSAPrivateKey privateKey, byte[] raw, String algorithm) {   
+    public static byte[] decrypt(PrivateKey privateKey, byte[] raw, String algorithm) {   
         if (privateKey != null) {   
             try {   
             	Cipher cipher = Cipher.getInstance(algorithm);
@@ -103,7 +103,7 @@ public class AsymmetricEncryption {
      *   
      * @return byte[]  
      */  
-    public byte[] sign(RSAPrivateKey privateKey, byte[] data, String algorithm) {   
+    public byte[] sign(PrivateKey privateKey, byte[] data, String algorithm) {   
         if (privateKey != null) {   
             try {   
                 Cipher cipher = Cipher.getInstance(algorithm);

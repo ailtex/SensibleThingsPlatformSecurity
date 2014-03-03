@@ -13,6 +13,9 @@ import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
+import java.security.spec.InvalidKeySpecException;
+
+import javax.crypto.SecretKey;
 
 import se.sensiblethings.addinlayer.extensions.security.certificate.CertificateOperations;
 import se.sensiblethings.addinlayer.extensions.security.encryption.AsymmetricEncryption;
@@ -24,30 +27,27 @@ import se.sensiblethings.addinlayer.extensions.security.signature.SignatureOpera
 import se.sensiblethings.addinlayer.extensions.security.encryption.SymmetricEncryption;
 
 public class SecurityManager {
-	public static final String PublickKeyEncryption = "Public";
-	public static final String SymmetricEncryption = "Symmetric";
-	
 	
 	// the operator is the uci who owns
 	private String operator = null;
-	private Key publicKey = null;
+	private PublicKey publicKey = null;
 	private String registrationRequestTime = null;
 	private String bootStrapUci = null;
 	
-	KeyStoreJCA keystore = null;
+	KeyStoreJCA keyStore = null;
 	
 	public SecurityManager(){
 		/*
-		keystore = new SQLiteDatabase();
+		keyStore = new SQLiteDatabase();
 		// firstly connect to permanent key store
-		keystore.getConnection(SQLiteDatabase.PKS_keystore_URL);
+		keyStore.getConnection(SQLiteDatabase.PKS_keystore_URL);
 		//initial the database
-		keystore.configureAndInitialize();
+		keyStore.configureAndInitialize();
 		*/
-		keystore = new KeyStoreJCA();
+		keyStore = new KeyStoreJCA();
 		
 		try {
-			keystore.loadKeyStore("KeyStore", "password".toCharArray());
+			keyStore.loadKeyStore("KeyStore", "password".toCharArray());
 		} catch ( IOException e) {
 			// it may fail to load the key store
 			e.printStackTrace();
@@ -59,7 +59,7 @@ public class SecurityManager {
 		setOperator(uci);
 		
 		// check weather the store has the KeyPair
-		if(!keystore.hasKeyPair(uci)){
+		if(!keyStore.hasKeyPair(uci)){
 			// if not, create the key pair
 			CreateKeyPairAndCertificate(uci);
 		}
@@ -89,10 +89,10 @@ public class SecurityManager {
 		
 		try {
 			// store the private key with the self signed certificate
-			keystore.storePrivateKey(uci, keyPair.getPrivate(), "password".toCharArray(), cert);
+			keyStore.storePrivateKey(uci, keyPair.getPrivate(), "password".toCharArray(), cert);
 			
 			// store the self signed certificate
-			keystore.storeCertification(uci, cert, "password".toCharArray());
+			keyStore.storeCertification(uci, cert, "password".toCharArray());
 		} catch (KeyStoreException e) {
 			e.printStackTrace();
 		}
@@ -101,7 +101,7 @@ public class SecurityManager {
 	
 	public String signMessage(String message, String algorithm){
 		// load the private key
-		PrivateKey privateKey = (PrivateKey) keystore.getPrivateKey(operator);
+		PrivateKey privateKey = (PrivateKey) keyStore.getPrivateKey(operator);
 		
 		String signature = null;
 		try {
@@ -123,6 +123,7 @@ public class SecurityManager {
 	}
 	
 	public boolean verifyRequest(String signature, String publicKey){
+		/*
 		AsymmetricEncryption rsa = new AsymmetricEncryption();
 		RSAPrivateKey key = (RSAPrivateKey)rsa.loadKey(publicKey.getBytes(), rsa.publicKey);
 		
@@ -132,48 +133,68 @@ public class SecurityManager {
 		}else{
 			return false;
 		}
-	}
-	
-	// public key encryption
-	public String encryptMessage(String message, String publicKey){
-		AsymmetricEncryption rsa = new AsymmetricEncryption();
-		
-		if(publicKey == null)
-			publicKey = this.getPublicKey();
-		
-		RSAPublicKey key = (RSAPublicKey)rsa.loadKey(publicKey.getBytes(), rsa.publicKey);
-		return new String(rsa.encrypt(key, message.getBytes()));
-		/*
-		if(type.equals(PublickKeyEncryption)){
-			
-			
-		}else if(type.equals(SymmetricEncryption)){
-			
-		}
-		return null;
 		*/
+		return false;
 	}
 	
-	public String decryptMessage(String message){
-		AsymmetricEncryption rsa = new AsymmetricEncryption();
+	/**
+	 * Encrypt message with RSA encryption
+	 * @param message
+	 * @param algorithm
+	 * @return
+	 */
+	public String encryptMessage(String sendToUci, String message, String algorithm){
 		
-		RSAPrivateKey key = (RSAPrivateKey)keystore.getPrivateKey(operator);
+		PublicKey publicKey = (PublicKey)keyStore.getPublicKey(sendToUci);
 		
-		return new String(rsa.decrypt(key, message.getBytes()));
+		String encryptedMessage = new String (AsymmetricEncryption.encrypt(publicKey, message.getBytes(), algorithm));
+		
+		return encryptedMessage;
 	}
 	
-	public String generateSymmetricSecurityKey(String uci){
-		SymmetricEncryption symmetricEncryption = new SymmetricEncryption();
-		Key securityKey = symmetricEncryption.generateKey(symmetricEncryption.AES);
+	/**
+	 * Decrypt message with RSA encryption
+	 * @param message
+	 * @return
+	 */
+	public String decryptMessage(String message, String algorithm){
+		// load the private key
+		PrivateKey privateKey = (PrivateKey)keyStore.getPrivateKey(operator);
 		
+		return new String( AsymmetricEncryption.decrypt(privateKey, message.getBytes(), algorithm) );
+	}
+	
+	
+	public boolean generateSymmetricSecurityKey(String uci){
+		
+		// generate the symmetric key
+		SecretKey secretKey;
+		
+		try {
+			secretKey = SymmetricEncryption.generateKey(SymmetricEncryption.AES);
+			
+			// store the security key
+			keyStore.storeSecretKey(uci, secretKey, "password".toCharArray());
+			
+			return true;
+		} catch (InvalidKeyException | KeyStoreException
+				| NoSuchAlgorithmException | InvalidKeySpecException e) {
+			e.printStackTrace();
+		}
+		
+		return false;
 	}
 	
 	public String digestMessage(String message){
 		return new String(MessageDigestOperations.encode(message.getBytes(), MessageDigestOperations.SHA1));
 	}
 	
-	public Key getPublicKey() {
-			return keystore.getPublicKey(operator);
+	public PublicKey getPublicKey() {
+		return (PublicKey) keyStore.getPublicKey(operator);
+	}
+	
+	public PublicKey getPublicKey(String uci){
+		return (PublicKey) keyStore.getPublicKey(uci);
 	}
 	
 	public String getOperator() {

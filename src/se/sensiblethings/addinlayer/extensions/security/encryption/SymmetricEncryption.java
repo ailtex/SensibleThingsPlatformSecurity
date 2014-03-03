@@ -30,18 +30,17 @@ public class SymmetricEncryption {
 	public static final String AES_CBC_PKCS5 = "AES/CBC/PKCS5Padding";
 	public static final String AES_ECB_PKCS5 = "AES/ECB/PKCS5Padding";
 	
-	Map<String, Integer> keySizeMap = null;
-	
-	public SymmetricEncryption(){
+	private static final Map<String, Integer> keySizeMap;
+	static {
 		keySizeMap = new HashMap<String,Integer>();
-		
 		
 		keySizeMap.put("DES", 56);
 		keySizeMap.put("DESede", 168);
 		keySizeMap.put("AES", 128);
 	}
 	
-	public SecretKey generateKey(String algorithm) throws NoSuchAlgorithmException{
+	
+	public static SecretKey generateKey(String algorithm) throws NoSuchAlgorithmException{
 		KeyGenerator keyGenerator = KeyGenerator.getInstance(algorithm);
 		
 		keyGenerator.init(keySizeMap.get(algorithm), new SecureRandom());
@@ -57,7 +56,7 @@ public class SymmetricEncryption {
 	    return secretKey;
 	}
 	
-	public byte[] encrypt(SecretKey key, byte[] data) throws 
+	public static byte[] encrypt(SecretKey key, byte[] data) throws 
 	NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
 		
 		Cipher cipher = Cipher.getInstance(AES_CBC_PKCS5);
@@ -65,7 +64,7 @@ public class SymmetricEncryption {
 		return cipher.doFinal(data);
 	}
 	
-	public byte[] decrypt(SecretKey key, byte[] data) throws 
+	public static byte[] decrypt(SecretKey key, byte[] data) throws 
 	NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
 		
 		Cipher cipher = Cipher.getInstance(AES_CBC_PKCS5);

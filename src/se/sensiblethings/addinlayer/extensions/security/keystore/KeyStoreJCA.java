@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.KeyStore;
+import java.security.KeyStore.PasswordProtection;
 import java.security.KeyStore.PrivateKeyEntry;
 import java.security.KeyStore.SecretKeyEntry;
 import java.security.KeyStore.TrustedCertificateEntry;
@@ -220,8 +221,8 @@ public class KeyStoreJCA implements KeyStoreTemplate{
 		SecretKey sk = (SecretKey)aes.loadKey(secretKey, aes.AES);
 		
 		SecretKeyEntry skEntry = new SecretKeyEntry(sk);
-		// ProtectionParameter : null
-		ks.setEntry(alias, skEntry, null);
+		
+		ks.setEntry(alias, skEntry, new PasswordProtection(password));
 	
 		// password needed
 		try {
@@ -232,6 +233,22 @@ public class KeyStoreJCA implements KeyStoreTemplate{
 		return true;
 	}
 	
+	public boolean storeSecretKey(String alias, SecretKey secretKey, char[] password) throws 
+	KeyStoreException, InvalidKeyException, NoSuchAlgorithmException, InvalidKeySpecException{
+		
+		SecretKeyEntry skEntry = new SecretKeyEntry(secretKey);
+		
+		// ProtectionParameter implemented by PasswordProtection
+		ks.setEntry(alias, skEntry, new PasswordProtection(password));
+		
+		// password needed
+		try {
+			updataKeyStore("password".toCharArray());
+		} catch (NoSuchAlgorithmException | CertificateException | IOException e) {
+			e.printStackTrace();
+		}
+		return true;
+	}
 	
 	public boolean storeCertification(String alias, Certificate certificate, char[] password) throws KeyStoreException{
 		
