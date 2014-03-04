@@ -1,5 +1,7 @@
 package se.sensiblethings.addinlayer.extensions.security;
 
+import java.security.cert.Certificate;
+
 import se.sensiblethings.disseminationlayer.communication.Message;
 import se.sensiblethings.interfacelayer.SensibleThingsNode;
 
@@ -7,8 +9,9 @@ public class RegistrationResponseMessage extends Message{
 
 
 	private static final long serialVersionUID = -455090768499986394L;
-	private String publicKey;
-	private String signatue;
+	private Certificate cert;
+	private String signature;
+	private String signatureAlgorithm;
 	
 	public String uci;
 	
@@ -19,20 +22,28 @@ public class RegistrationResponseMessage extends Message{
 		this.uci = uci;
 	}
 
-	public String getPublicKey() {
-		return publicKey;
+	public Certificate getCertificate() {
+		return cert;
 	}
 
-	public void setPublicKey(String publicKey) {
-		this.publicKey = publicKey;
+	public void setCertificate(Certificate cert) {
+		this.cert = cert;
 	}
 
-	public String getSignatue() {
-		return signatue;
+	public String getSignature() {
+		return signature;
 	}
 
-	public void setSignatue(String signatue) {
-		this.signatue = signatue;
+	public void setSignatue(String signature) {
+		this.signature = signature;
+	}
+
+	public String getSignatureAlgorithm() {
+		return signatureAlgorithm;
+	}
+
+	public void setSignatureAlgorithm(String signatureAlgorithm) {
+		this.signatureAlgorithm = signatureAlgorithm;
 	}
 	
 	

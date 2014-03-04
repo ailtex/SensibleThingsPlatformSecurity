@@ -31,7 +31,6 @@ public class SecurityManager {
 	// the operator is the uci who owns
 	private String operator = null;
 	private PublicKey publicKey = null;
-	private String registrationRequestTime = null;
 	private String bootStrapUci = null;
 	
 	KeyStoreJCA keyStore = null;
@@ -122,6 +121,15 @@ public class SecurityManager {
 		return false;
 	}
 	
+	public boolean verifySignature(String message, String signature, Certificate cert, String algorithm){
+		try {
+			return SignatureOperations.verify(message.getBytes(), signature.getBytes(), cert, algorithm);
+		} catch (InvalidKeyException | NoSuchAlgorithmException e) {
+			e.printStackTrace();
+		}
+		return false;
+	}
+	
 	public boolean verifyRequest(String signature, String publicKey){
 		/*
 		AsymmetricEncryption rsa = new AsymmetricEncryption();
@@ -195,6 +203,30 @@ public class SecurityManager {
 	
 	public PublicKey getPublicKey(String uci){
 		return (PublicKey) keyStore.getPublicKey(uci);
+	}
+	
+	/**
+	 * Get self signed certificate
+	 * @return
+	 */
+	public Certificate getCertificate(){
+		try {
+			return keyStore.getCertificate(operator);
+		} catch (KeyStoreException e) {
+			e.printStackTrace();
+		}
+		
+		return null;
+	}
+	
+	public Certificate getCertificate(String uci){
+		try {
+			return keyStore.getCertificate(uci);
+		} catch (KeyStoreException e) {
+			e.printStackTrace();
+		}
+		
+		return null;
 	}
 	
 	public String getOperator() {

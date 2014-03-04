@@ -9,6 +9,7 @@ import se.sensiblethings.addinlayer.extensions.Extension;
 import se.sensiblethings.addinlayer.extensions.security.encryption.AsymmetricEncryption;
 import se.sensiblethings.addinlayer.extensions.security.keystore.KeyStoreTemplate;
 import se.sensiblethings.addinlayer.extensions.security.keystore.SQLiteDatabase;
+import se.sensiblethings.addinlayer.extensions.security.signature.SignatureOperations;
 import se.sensiblethings.disseminationlayer.communication.Communication;
 import se.sensiblethings.disseminationlayer.communication.DestinationNotReachableException;
 import se.sensiblethings.disseminationlayer.communication.Message;
@@ -25,7 +26,9 @@ public class SecurityExtension implements Extension, MessageListener{
 	Communication communication = null;
 	
 	SecurityListener securityListener = null;
-	SecurityManager securityOperations = null;
+	SecurityManager securityManager = null;
+	
+	private String registrationRequestTime = null;
 	
 	public SecurityExtension(){}
 	
@@ -51,7 +54,7 @@ public class SecurityExtension implements Extension, MessageListener{
 
 	@Override
 	public void startAddIn() {
-		securityOperations = new SecurityManager();
+		securityManager = new SecurityManager();
 	}
 
 	@Override
@@ -75,71 +78,101 @@ public class SecurityExtension implements Extension, MessageListener{
 			securityListener.sslConnectionRequestEvent(requestMessage.uci, requestMessage.getFromNode());
 			
 		}else if(message instanceof RegistrationRequestMessage){
+			
 			RegistrationRequestMessage registrationRequestMessage = (RegistrationRequestMessage) message;
 			
-			String myUci = securityOperations.getOperator();
+			handleRegistrationRequestMessage(registrationRequestMessage);
 			
-			securityOperations.initializePermanentKeyStore(myUci);
-			
-			
-			RegistrationResponseMessage registrationResponseMessage = 
-					new RegistrationResponseMessage(myUci, registrationRequestMessage.getToNode(),communication.getLocalSensibleThingsNode());
-			
-			// set public key and send it to the applicant
-			registrationResponseMessage.setPublicKey(securityOperations.getPublicKey());
-			
-			// signed the request message
-			String toBeSigned_message =  registrationRequestMessage.fromUci + "," + 
-										 registrationRequestMessage.registrationRequestTime;
-			String signature = securityOperations.signMessage(toBeSigned_message);
-			registrationResponseMessage.setSignatue(signature);
-			
-			sendMessage(registrationResponseMessage);
 		}else if(message instanceof RegistrationResponseMessage){
 			
 			RegistrationResponseMessage rrm = (RegistrationResponseMessage) message;
-			// verify the public key and the signature
-			if(securityOperations.verifyRequest(rrm.getSignatue(), 
-												rrm.getPublicKey())){
-				System.out.println("[Error] Fake signature");
-			}else{
-				// send the ID, public key, nonce, part of certification, hashed password to bootstrap
-				CertificateRequestMessage crm = 
-						new CertificateRequestMessage(securityOperations.getBootStrapUci(),
-													  securityOperations.getOperator(),
-													  rrm.getToNode(),
-												      communication.getLocalSensibleThingsNode());
-				
-				String part_certificate = securityOperations.signMessage(securityOperations.getOperator()+","+
-																		 securityOperations.getPublicKey());
-				// here set the hashed password
-				String hashed_password = null;
-				
-				String plainText = securityOperations.getOperator() + "," + 
-								   securityOperations.getPublicKey() + "," + 
-						           String.valueOf(new Random().nextLong()) + "," + 
-						           part_certificate + "," + 
-						           hashed_password;
-				
-				crm.setContent(securityOperations.encryptMessage(plainText, rrm.getPublicKey()));
-				sendMessage(crm);
-			}
-		}else if(message instanceof CertificateRequestMessage){
+			
+			handleRegistrationResponseMessage(rrm);
+		}
+		else if(message instanceof CertificateRequestMessage){
 			CertificateRequestMessage crm = (CertificateRequestMessage)message;
 			
-			String plainTextMsg = securityOperations.decryptMessage(crm.getContent());
+			String plainTextMsg = securityManager.decryptMessage(crm.getContent());
 			// create the digest of the plain text message
 			String certificate = createCertificate(plainTextMsg);
 			
 			// create the digest of the certificate
-			String certificateDigest = securityOperations.digestMessage(certificate);
+			String certificateDigest = securityManager.digestMessage(certificate);
 			// sign the certificate digest
-			String certificateDigestSignature = securityOperations.signMessage(certificateDigest);
+			String certificateDigestSignature = securityManager.signMessage(certificateDigest);
 			
 			
 		}
+			
 	}
 	
+	private void handleRegistrationResponseMessage(
+			RegistrationResponseMessage rrm) {
+		
+		// Construct the original request, including itself uci and request time
+		String originalRequest = securityManager.getOperator() + "," +
+								registrationRequestTime;
+		
+		
+	  	// verify the public key and the signature
+		if(securityManager.verifySignature(originalRequest, 
+				rrm.getSignature(), rrm.getCertificate(), rrm.getSignatureAlgorithm())){
+			
+			// the request is valid
+			// send the ID, public key, nonce, part of certification bootstrap
+			
+			CertificateRequestMessage crm = 
+					new CertificateRequestMessage(securityManager.getBootStrapUci(),
+							securityManager.getOperator(), rrm.getToNode(), communication.getLocalSensibleThingsNode());
+			
+			String part_certificate = securityManager.signMessage(securityManager.getOperator()+","+
+					securityManager.getPublicKey());
+			
+			// here set the hashed password
+			String hashed_password = null;
+			
+			String plainText = securityManager.getOperator() + "," + 
+					securityManager.getPublicKey() + "," + 
+					           String.valueOf(new Random().nextLong()) + "," + 
+					           part_certificate + "," + 
+					           hashed_password;
+			
+			crm.setContent(securityManager.encryptMessage(plainText, rrm.getPublicKey()));
+			sendMessage(crm);
+		}else{
+			System.out.println("[Error] Fake signature");
+		}
+		
+	}
+
+	private void handleRegistrationRequestMessage(
+			RegistrationRequestMessage registrationRequestMessage) {
+		
+		String myUci = securityManager.getOperator();
+		
+		securityManager.initializePermanentKeyStore(myUci);
+		
+		RegistrationResponseMessage registrationResponseMessage = 
+				new RegistrationResponseMessage(myUci, registrationRequestMessage.getToNode(),communication.getLocalSensibleThingsNode());
+		
+		// set the Root certificate from Bootstrap and send it to the applicant
+		registrationResponseMessage.setCertificate(securityManager.getCertificate());
+		
+		// set the signature algorithm of the message
+		registrationResponseMessage.setSignatureAlgorithm(SignatureOperations.SHA256WITHRSA);
+		
+		// signed the request message
+		String toBeSignedMessage =  registrationRequestMessage.fromUci + "," + 
+									 registrationRequestMessage.registrationRequestTime;
+		
+		String signature = securityManager.signMessage(toBeSignedMessage, SignatureOperations.SHA256WITHRSA);
+		registrationResponseMessage.setSignatue(signature);
+		
+		// send out the message
+		sendMessage(registrationResponseMessage);
+		
+	}
+
 	/**
 	 * Create a SSL connection with bootstrap node
 	 * @param uci the uci who own the bootstrap node
@@ -167,12 +200,15 @@ public class SecurityExtension implements Extension, MessageListener{
 	public void register(String toUci, SensibleThingsNode node, String fromUci){
 		// check local key store, whether itself has created the key pair
 		
-		securityOperations.initializePermanentKeyStore(fromUci);
+		securityManager.initializePermanentKeyStore(fromUci);
 		
 		RegistrationRequestMessage message = new RegistrationRequestMessage(toUci, fromUci, node, communication.getLocalSensibleThingsNode());
 		
-		securityOperations.setRegistrationRequestTime(message.getRegistrationRequestTime());
-		securityOperations.setBootStrapUci(toUci);
+		// store the local registration Request Time
+		registrationRequestTime = message.getRegistrationRequestTime();
+		// store the bootstrap uci
+		securityManager.setBootStrapUci(toUci);
+		
 		sendMessage(message);
 	}
 	
@@ -201,7 +237,6 @@ public class SecurityExtension implements Extension, MessageListener{
 		try {
 			communication.sendMessage(message);
 		} catch (DestinationNotReachableException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
@@ -224,5 +259,13 @@ public class SecurityExtension implements Extension, MessageListener{
 		certificate += content[3];
 		
 		return certificate;
+	}
+	
+	public String getRegistrationRequestTime() {
+		return registrationRequestTime;
+	}
+
+	public void setRegistrationRequestTime(String registrationRequestTime) {
+		this.registrationRequestTime = registrationRequestTime;
 	}
 }
