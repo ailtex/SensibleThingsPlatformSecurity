@@ -113,31 +113,21 @@ public class SecurityExtension implements Extension, MessageListener{
 		String originalRequest = securityManager.getOperator() + "," +
 								registrationRequestTime;
 		
-		
 	  	// verify the public key and the signature
 		if(securityManager.verifySignature(originalRequest, 
 				rrm.getSignature(), rrm.getCertificate(), rrm.getSignatureAlgorithm())){
 			
 			// the request is valid
-			// send the ID, public key, nonce, part of certification bootstrap
+			// send the ID, CSR, nonce to bootstrap node
 			
 			CertificateRequestMessage crm = 
 					new CertificateRequestMessage(securityManager.getBootStrapUci(),
 							securityManager.getOperator(), rrm.getToNode(), communication.getLocalSensibleThingsNode());
 			
-			String part_certificate = securityManager.signMessage(securityManager.getOperator()+","+
-					securityManager.getPublicKey());
+			//generate an certificate signing request
+			crm.setCertRequest(securityManager.getCertificateSigingRequest(securityManager.getOperator()));
+			crm.setNoce(new Random().nextInt());
 			
-			// here set the hashed password
-			String hashed_password = null;
-			
-			String plainText = securityManager.getOperator() + "," + 
-					securityManager.getPublicKey() + "," + 
-					           String.valueOf(new Random().nextLong()) + "," + 
-					           part_certificate + "," + 
-					           hashed_password;
-			
-			crm.setContent(securityManager.encryptMessage(plainText, rrm.getPublicKey()));
 			sendMessage(crm);
 		}else{
 			System.out.println("[Error] Fake signature");

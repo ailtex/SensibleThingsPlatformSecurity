@@ -52,13 +52,6 @@ import org.bouncycastle.x509.extension.SubjectKeyIdentifierStructure;
 import org.bouncycastle.openssl.PEMWriter;
 
 public class CertificateOperations {
-	private Certificate cert = null;
-	
-	
-	public CertificateOperations(){
-		// add BouncyCastal to the security provider
-		Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
-	}
 	
 	/**
 	 * There is one solution to generate the X509 certificate without using the Bouncy Castle
@@ -72,7 +65,11 @@ public class CertificateOperations {
 	 * @return 
 	 */
 	@SuppressWarnings("deprecation")
-	public X509Certificate generateSelfSignedcertificate(String subjectName, KeyPair keyPair){
+	public static X509Certificate generateSelfSignedcertificate(String subjectName, KeyPair keyPair){
+		
+		// add BouncyCastal to the security provider
+		Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
+		
 		X509Certificate cert = null;
 		
 		X509V1CertificateGenerator certGen = new X509V1CertificateGenerator();
@@ -125,7 +122,9 @@ public class CertificateOperations {
 	
 	
 	@SuppressWarnings({ "deprecation", "unchecked" })
-	public PKCS10CertificationRequest generateCertificateSigningRequest(String subjectName, KeyPair keyPair){
+	public static PKCS10CertificationRequest generateCertificateSigningRequest(String subjectName, KeyPair keyPair){
+		// add BouncyCastal to the security provider
+		Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
 		
 		X500Principal sn = new X500Principal(subjectName);
 		
@@ -174,8 +173,12 @@ public class CertificateOperations {
 	}
 	
 	@SuppressWarnings("deprecation")
-	public X509Certificate[] buildChain(PKCS10CertificationRequest request, X509Certificate rootCert, KeyPair rootPair) throws
+	public static X509Certificate[] buildChain(PKCS10CertificationRequest request, X509Certificate rootCert, KeyPair rootPair) throws
 	InvalidKeyException, NoSuchAlgorithmException, NoSuchProviderException, SignatureException, CertificateParsingException{
+		
+		// add BouncyCastal to the security provider
+		Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
+		
 		// validate the certification request
 		if (!request.verify("BC")) {
 			System.out.println("request failed to verify!");

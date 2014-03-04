@@ -17,6 +17,8 @@ import java.security.spec.InvalidKeySpecException;
 
 import javax.crypto.SecretKey;
 
+import org.bouncycastle.jce.PKCS10CertificationRequest;
+
 import se.sensiblethings.addinlayer.extensions.security.certificate.CertificateOperations;
 import se.sensiblethings.addinlayer.extensions.security.encryption.AsymmetricEncryption;
 import se.sensiblethings.addinlayer.extensions.security.keystore.KeyStoreJCA;
@@ -80,11 +82,9 @@ public class SecurityManager {
 		}
 		
 		// generate the self signed X509 v1 certificate
-		CertificateOperations certOpert = new CertificateOperations();
-		
 		// setting the subject name of the certificate
 		String subjectName = "CN=" + uci + ",OU=ComputerColleage,O=MIUN,C=Sweden";
-		Certificate cert = certOpert.generateSelfSignedcertificate(subjectName, keyPair);
+		Certificate cert = CertificateOperations.generateSelfSignedcertificate(subjectName, keyPair);
 		
 		try {
 			// store the private key with the self signed certificate
@@ -130,20 +130,6 @@ public class SecurityManager {
 		return false;
 	}
 	
-	public boolean verifyRequest(String signature, String publicKey){
-		/*
-		AsymmetricEncryption rsa = new AsymmetricEncryption();
-		RSAPrivateKey key = (RSAPrivateKey)rsa.loadKey(publicKey.getBytes(), rsa.publicKey);
-		
-		String[] signaturePlainText = new String(rsa.decrypt(key, signature.getBytes())).split(",");
-		if(signaturePlainText[0].equals(bootStrapUci) && signaturePlainText[1].equals(registrationRequestTime)){
-			return true;
-		}else{
-			return false;
-		}
-		*/
-		return false;
-	}
 	
 	/**
 	 * Encrypt message with RSA encryption
@@ -193,8 +179,9 @@ public class SecurityManager {
 		return false;
 	}
 	
-	public String digestMessage(String message){
-		return new String(MessageDigestOperations.encode(message.getBytes(), MessageDigestOperations.SHA1));
+	public String digestMessage(String message, String algorithm){
+		
+		return new String(MessageDigestOperations.encode(message.getBytes(), algorithm));
 	}
 	
 	public PublicKey getPublicKey() {
@@ -229,20 +216,22 @@ public class SecurityManager {
 		return null;
 	}
 	
+	@SuppressWarnings("deprecation")
+	public PKCS10CertificationRequest getCertificateSigingRequest(String uci){
+		String subjectName = "CN=" + uci + ",OU=ComputerColleage,O=MIUN,C=Sweden";
+		
+		KeyPair keyPair = new KeyPair((PublicKey)keyStore.getPublicKey(uci), 
+									  (PrivateKey)keyStore.getPrivateKey(uci));
+		
+		return CertificateOperations.generateCertificateSigningRequest(subjectName, keyPair);
+	}
+	
 	public String getOperator() {
 		return operator;
 	}
 
 	public void setOperator(String operator) {
 		this.operator = operator;
-	}
-
-	public String getRegistrationRequestTime() {
-		return registrationRequestTime;
-	}
-
-	public void setRegistrationRequestTime(String registrationRequestTime) {
-		this.registrationRequestTime = registrationRequestTime;
 	}
 
 	public String getBootStrapUci() {

@@ -12,7 +12,7 @@ public class RegistrationRequestMessage extends Message{
 	public String fromUci;
 	public String toUci;
 	
-	public String registrationRequestTime;
+	private String registrationRequestTime = null;
 	
 	public String getRegistrationRequestTime() {
 		return registrationRequestTime;
