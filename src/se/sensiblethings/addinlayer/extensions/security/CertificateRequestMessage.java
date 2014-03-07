@@ -9,9 +9,8 @@ public class CertificateRequestMessage extends Message{
 
 	private static final long serialVersionUID = -3858164569571353606L;
 	
-	
-	private PKCS10CertificationRequest certRequest = null;
-	private int noce;
+	// encrypted payload
+	private byte[] payload = null;
 	
 	public String fromUci;
 	public String toUci;
@@ -22,19 +21,11 @@ public class CertificateRequestMessage extends Message{
 		
 	}
 
-	public PKCS10CertificationRequest getCertRequest() {
-		return certRequest;
+	public byte[] getPayload() {
+		return payload;
 	}
 
-	public void setCertRequest(PKCS10CertificationRequest certRequest) {
-		this.certRequest = certRequest;
-	}
-	
-	public int getNoce() {
-		return noce;
-	}
-
-	public void setNoce(int noce) {
-		this.noce = noce;
+	public void setPayload(byte[] payload) {
+		this.payload = payload;
 	}
 }

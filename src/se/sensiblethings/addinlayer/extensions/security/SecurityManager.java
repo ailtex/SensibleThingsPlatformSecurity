@@ -146,6 +146,15 @@ public class SecurityManager {
 		return encryptedMessage;
 	}
 	
+
+	public byte[] encryptMessage(String sendToUci, byte[] message, String algorithm){
+		
+		PublicKey publicKey = (PublicKey)keyStore.getPublicKey(sendToUci);
+		
+		return AsymmetricEncryption.encrypt(publicKey, message, algorithm);
+		
+	}
+	
 	/**
 	 * Decrypt message with RSA encryption
 	 * @param message
@@ -158,6 +167,12 @@ public class SecurityManager {
 		return new String( AsymmetricEncryption.decrypt(privateKey, message.getBytes(), algorithm) );
 	}
 	
+	public byte[] decryptMessage(byte[] message, String algorithm){
+		// load the private key
+		PrivateKey privateKey = (PrivateKey)keyStore.getPrivateKey(operator);
+		
+		return AsymmetricEncryption.decrypt(privateKey, message, algorithm);
+	}
 	
 	public boolean generateSymmetricSecurityKey(String uci){
 		

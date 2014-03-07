@@ -1,9 +1,13 @@
 package se.sensiblethings.addinlayer.extensions.security;
 
+import java.io.ObjectOutputStream;
 import java.security.interfaces.RSAPrivateKey;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Random;
+
+import org.apache.commons.lang.SerializationUtils;
+import org.bouncycastle.jce.PKCS10CertificationRequest;
 
 import se.sensiblethings.addinlayer.extensions.Extension;
 import se.sensiblethings.addinlayer.extensions.security.encryption.AsymmetricEncryption;
@@ -91,21 +95,23 @@ public class SecurityExtension implements Extension, MessageListener{
 		}
 		else if(message instanceof CertificateRequestMessage){
 			CertificateRequestMessage crm = (CertificateRequestMessage)message;
-			
-			String plainTextMsg = securityManager.decryptMessage(crm.getContent());
-			// create the digest of the plain text message
-			String certificate = createCertificate(plainTextMsg);
-			
-			// create the digest of the certificate
-			String certificateDigest = securityManager.digestMessage(certificate);
-			// sign the certificate digest
-			String certificateDigestSignature = securityManager.signMessage(certificateDigest);
-			
-			
+				
+			handleCertificateRequestMessage(crm);				
 		}
-			
+		
 	}
 	
+	private void handleCertificateRequestMessage(CertificateRequestMessage crm) {
+		byte[] cipherText = crm.getPayload();
+		byte[] plainText = securityManager.decryptMessage(cipherText, "RSA");
+		
+		CertificateRequestMessagePayload payload = (CertificateRequestMessagePayload)SerializationUtils.deserialize(plainText);
+		
+		PKCS10CertificationRequest certRequest = payload.getCertRequest();
+		
+		
+	}
+
 	private void handleRegistrationResponseMessage(
 			RegistrationResponseMessage rrm) {
 		
@@ -125,10 +131,23 @@ public class SecurityExtension implements Extension, MessageListener{
 							securityManager.getOperator(), rrm.getToNode(), communication.getLocalSensibleThingsNode());
 			
 			//generate an certificate signing request
-			crm.setCertRequest(securityManager.getCertificateSigingRequest(securityManager.getOperator()));
-			crm.setNoce(new Random().nextInt());
+			PKCS10CertificationRequest certRequest = 
+					securityManager.getCertificateSigingRequest(securityManager.getOperator());
+			// set the nonce
+			int nonce = new Random().nextInt();
+			
+			CertificateRequestMessagePayload payload = 
+					new CertificateRequestMessagePayload(certRequest, nonce);
+			
+			// use apache.commons.lang.SerializationUtils to serialize objects
+			byte[] plainText = SerializationUtils.serialize(payload);
+			// encrypt message
+			byte[] cipherText = securityManager.encryptMessage(rrm.uci, plainText, "RSA");
+			// set the encrypted payload
+			crm.setPayload(cipherText);
 			
 			sendMessage(crm);
+			
 		}else{
 			System.out.println("[Error] Fake signature");
 		}
@@ -153,7 +172,7 @@ public class SecurityExtension implements Extension, MessageListener{
 		
 		// signed the request message
 		String toBeSignedMessage =  registrationRequestMessage.fromUci + "," + 
-									 registrationRequestMessage.registrationRequestTime;
+									 registrationRequestMessage.getRegistrationRequestTime();
 		
 		String signature = securityManager.signMessage(toBeSignedMessage, SignatureOperations.SHA256WITHRSA);
 		registrationResponseMessage.setSignatue(signature);
