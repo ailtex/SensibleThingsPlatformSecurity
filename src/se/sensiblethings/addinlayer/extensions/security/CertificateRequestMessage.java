@@ -19,6 +19,8 @@ public class CertificateRequestMessage extends Message{
 			SensibleThingsNode fromNode) {
 		super(fromNode, toNode);
 		
+		this.fromUci =fromUci;
+		this.toUci = toUci;
 	}
 
 	public byte[] getPayload() {

@@ -1,6 +1,7 @@
 package se.sensiblethings.addinlayer.extensions.security;
 
 import java.io.ObjectOutputStream;
+import java.security.cert.Certificate;
 import java.security.interfaces.RSAPrivateKey;
 import java.util.Calendar;
 import java.util.Date;
@@ -11,6 +12,7 @@ import org.bouncycastle.jce.PKCS10CertificationRequest;
 
 import se.sensiblethings.addinlayer.extensions.Extension;
 import se.sensiblethings.addinlayer.extensions.security.encryption.AsymmetricEncryption;
+import se.sensiblethings.addinlayer.extensions.security.encryption.SymmetricEncryption;
 import se.sensiblethings.addinlayer.extensions.security.keystore.KeyStoreTemplate;
 import se.sensiblethings.addinlayer.extensions.security.keystore.SQLiteDatabase;
 import se.sensiblethings.addinlayer.extensions.security.signature.SignatureOperations;
@@ -103,12 +105,40 @@ public class SecurityExtension implements Extension, MessageListener{
 	
 	private void handleCertificateRequestMessage(CertificateRequestMessage crm) {
 		byte[] cipherText = crm.getPayload();
-		byte[] plainText = securityManager.decryptMessage(cipherText, "RSA");
 		
+		// decrypt the payload
+		byte[] plainText = securityManager.asymmetricDecryptMessage(cipherText, "RSA");
+		// deserialize the payload
 		CertificateRequestMessagePayload payload = (CertificateRequestMessagePayload)SerializationUtils.deserialize(plainText);
-		
+		// Get the certificate signing request
 		PKCS10CertificationRequest certRequest = payload.getCertRequest();
 		
+		// check the certificate signing request
+		if(securityManager.isCeritificateSigningRequestValid(certRequest, crm.fromUci)){
+			Certificate[] certs = (Certificate[]) securityManager.signCertificateSigningRequest(certRequest, crm.fromUci);
+			
+			// generate the session key
+			securityManager.generateSymmetricSecurityKey(crm.fromUci);
+			
+			CertificateResponseMessage certRespMesg = new CertificateResponseMessage(securityManager.getOperator(), crm.fromUci,
+															crm.getToNode(), communication.getLocalSensibleThingsNode());
+			
+			certRespMesg.setEncryptSecretKey(securityManager.asymmetricEncryptMessage(
+																	crm.fromUci, securityManager.
+																	getSecretKey(crm.fromUci).getEncoded(), 
+																	SymmetricEncryption.AES_CBC_PKCS5));
+			
+			CertificateResponseMessagePayload responsePayload = new CertificateResponseMessagePayload();
+			
+			responsePayload.setFromNonce(payload.getNonce());
+			responsePayload.setToNonce(new Random().nextInt());
+			responsePayload.setCertChain(certs);
+			
+			byte[] encryptPayload = securityManager.symmetricEncryptMessage(crm.fromUci, 
+					SerializationUtils.serialize(responsePayload), SymmetricEncryption.AES_CBC_PKCS5);
+			
+			certRespMesg.setPayload(encryptPayload);
+		}
 		
 	}
 
@@ -142,7 +172,7 @@ public class SecurityExtension implements Extension, MessageListener{
 			// use apache.commons.lang.SerializationUtils to serialize objects
 			byte[] plainText = SerializationUtils.serialize(payload);
 			// encrypt message
-			byte[] cipherText = securityManager.encryptMessage(rrm.uci, plainText, "RSA");
+			byte[] cipherText = securityManager.asymmetricEncryptMessage(rrm.uci, plainText, "RSA");
 			// set the encrypted payload
 			crm.setPayload(cipherText);
 			

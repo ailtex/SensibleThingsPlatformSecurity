@@ -7,14 +7,21 @@ import java.security.Key;
 import java.security.KeyPair;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.SignatureException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
+import java.security.cert.CertificateParsingException;
+import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.security.spec.InvalidKeySpecException;
 
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 
 import org.bouncycastle.jce.PKCS10CertificationRequest;
@@ -83,7 +90,9 @@ public class SecurityManager {
 		
 		// generate the self signed X509 v1 certificate
 		// setting the subject name of the certificate
-		String subjectName = "CN=" + uci + ",OU=ComputerColleage,O=MIUN,C=Sweden";
+		//String subjectName = "CN=" + uci + ",OU=ComputerColleage,O=MIUN,C=Sweden";
+		String subjectName = uci;
+		
 		Certificate cert = CertificateOperations.generateSelfSignedcertificate(subjectName, keyPair);
 		
 		try {
@@ -137,22 +146,37 @@ public class SecurityManager {
 	 * @param algorithm
 	 * @return
 	 */
-	public String encryptMessage(String sendToUci, String message, String algorithm){
+	public String asymmetricEncryptMessage(String toUci, String message, String algorithm){
 		
-		PublicKey publicKey = (PublicKey)keyStore.getPublicKey(sendToUci);
-		
-		String encryptedMessage = new String (AsymmetricEncryption.encrypt(publicKey, message.getBytes(), algorithm));
-		
-		return encryptedMessage;
+		return  new String (asymmetricEncryptMessage(toUci, message.getBytes(), algorithm));
 	}
 	
-
-	public byte[] encryptMessage(String sendToUci, byte[] message, String algorithm){
+	public byte[] asymmetricEncryptMessage(String toUci, byte[] message, String algorithm){
 		
-		PublicKey publicKey = (PublicKey)keyStore.getPublicKey(sendToUci);
+		PublicKey publicKey = (PublicKey)keyStore.getPublicKey(toUci);
 		
 		return AsymmetricEncryption.encrypt(publicKey, message, algorithm);
+	}
+	
+	public String symmetricEncryptMessage(String toUci, String message, String algorithm){
 		
+		return new String(symmetricEncryptMessage(toUci, message.getBytes(), algorithm));
+	}
+	
+	public byte[] symmetricEncryptMessage(String toUci, byte[] message, String algorithm){
+		// symmetric encryption
+		SecretKey secretKey = (SecretKey) keyStore.getSecretKey(toUci);
+		byte[] plainText = null;
+		try {
+			plainText = SymmetricEncryption.encrypt(secretKey, message);
+			
+		} catch (InvalidKeyException | NoSuchAlgorithmException
+				| NoSuchPaddingException | IllegalBlockSizeException
+				| BadPaddingException e) {
+			e.printStackTrace();
+		}
+
+		return plainText;
 	}
 	
 	/**
@@ -160,18 +184,38 @@ public class SecurityManager {
 	 * @param message
 	 * @return
 	 */
-	public String decryptMessage(String message, String algorithm){
-		// load the private key
-		PrivateKey privateKey = (PrivateKey)keyStore.getPrivateKey(operator);
+	public String asymmetricDecryptMessage(String message, String algorithm){
+		return new String(asymmetricDecryptMessage(message.getBytes(), algorithm));
 		
-		return new String( AsymmetricEncryption.decrypt(privateKey, message.getBytes(), algorithm) );
 	}
 	
-	public byte[] decryptMessage(byte[] message, String algorithm){
+	
+	public byte[] asymmetricDecryptMessage(byte[] message, String algorithm){
 		// load the private key
 		PrivateKey privateKey = (PrivateKey)keyStore.getPrivateKey(operator);
 		
 		return AsymmetricEncryption.decrypt(privateKey, message, algorithm);
+	}
+	
+	public String symmetricDecryptMessage(String fromUci, String message, String algorithm){
+		
+		return new String(symmetricDecryptMessage(fromUci, message.getBytes(), algorithm));
+	}
+	
+	public byte[] symmetricDecryptMessage(String fromUci, byte[] message, String algorithm){
+		SecretKey secretKey = (SecretKey) keyStore.getSecretKey(fromUci);
+		
+		byte[] plainText = null;
+		try {
+			plainText = SymmetricEncryption.decrypt(secretKey, message);
+			
+		} catch (InvalidKeyException | NoSuchAlgorithmException
+				| NoSuchPaddingException | IllegalBlockSizeException
+				| BadPaddingException e) {
+			e.printStackTrace();
+		}
+
+		return plainText;
 	}
 	
 	public boolean generateSymmetricSecurityKey(String uci){
@@ -194,6 +238,43 @@ public class SecurityManager {
 		return false;
 	}
 	
+	public boolean isCeritificateSigningRequestValid(PKCS10CertificationRequest certRequest, String fromUci){
+		
+		try {
+			if(certRequest.verify() && certRequest.getCertificationRequestInfo().getSubject().equals(fromUci)){
+				return true;
+			}else{
+				return false;
+			}
+		} catch (InvalidKeyException | NoSuchAlgorithmException
+				| NoSuchProviderException | SignatureException e) {
+			
+			e.printStackTrace();
+		}
+		return false;
+	}
+	
+	public Certificate[] signCertificateSigningRequest(PKCS10CertificationRequest certRequest, String uci){
+		KeyPair keyPair = new KeyPair((PublicKey)keyStore.getPublicKey(operator), 
+									  (PrivateKey)keyStore.getPrivateKey(operator));
+		Certificate[] certs = null;
+		
+		try {
+			certs =  CertificateOperations.buildChain(certRequest, (X509Certificate)keyStore.getCertificate(operator), keyPair);
+			
+			// store the issued certificate into keystore
+			keyStore.storeCertification(uci, certs[0], "password".toCharArray());
+			
+		} catch (InvalidKeyException | CertificateParsingException
+				| NoSuchAlgorithmException | NoSuchProviderException
+				| SignatureException | KeyStoreException e) {
+			
+			e.printStackTrace();
+		}
+		
+		return certs;
+	}
+	
 	public String digestMessage(String message, String algorithm){
 		
 		return new String(MessageDigestOperations.encode(message.getBytes(), algorithm));
@@ -205,6 +286,11 @@ public class SecurityManager {
 	
 	public PublicKey getPublicKey(String uci){
 		return (PublicKey) keyStore.getPublicKey(uci);
+	}
+	
+	public Key getSecretKey(String uci){
+		
+		return keyStore.getSecretKey(uci);
 	}
 	
 	/**
