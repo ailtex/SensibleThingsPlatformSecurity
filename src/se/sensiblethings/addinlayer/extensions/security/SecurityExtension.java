@@ -54,8 +54,7 @@ public class SecurityExtension implements Extension, MessageListener{
 		communication.registerMessageListener(RegistrationRequestMessage.class.getName(), this);
 		communication.registerMessageListener(RegistrationResponseMessage.class.getName(), this);
 		communication.registerMessageListener(CertificateRequestMessage.class.getName(), this);
-		
-		
+		communication.registerMessageListener(CertificateResponseMessage.class.getName(), this);
 	}
 
 	@Override
@@ -99,10 +98,49 @@ public class SecurityExtension implements Extension, MessageListener{
 			CertificateRequestMessage crm = (CertificateRequestMessage)message;
 				
 			handleCertificateRequestMessage(crm);				
+		}else if(message instanceof CertificateResponseMessage){
+			CertificateResponseMessage crm = (CertificateResponseMessage)message;
+			
+			handleCertificateResponseMessage(crm);
 		}
 		
 	}
 	
+	
+	private void handleCertificateResponseMessage(
+			CertificateResponseMessage crm) {
+		
+		byte[] encryptSecretKey = crm.getEncryptSecretKey();
+		// decrypt the secret key
+		byte[] secretKey = securityManager.asymmetricDecryptMessage(encryptSecretKey, AsymmetricEncryption.RSA);
+		
+		// decrypt the certificates and nonces
+		byte[] payload = securityManager.symmetricDecryptMessage(secretKey, crm.getPayload(), 
+				SymmetricEncryption.AES_CBC_PKCS5);
+		// deserialize
+		CertificateResponseMessagePayload responsePayload = (CertificateResponseMessagePayload)
+				SerializationUtils.deserialize(payload);
+		
+		// varify the nonce
+		if(responsePayload.getToNonce() == (Integer)securityManager.getFromDataPool("nonce")){
+			// store the secret key
+			securityManager.storeSecretKey(crm.fromUci, secretKey, SymmetricEncryption.AES_CBC_PKCS5, "password");
+			securityManager.storeCertificateChain(securityManager.getOperator(), responsePayload.getCertChain(), "password");
+			
+			//send back CertificateAcceptedResponseMessage
+			CertificateAcceptedResponseMessage carm = 
+					new CertificateAcceptedResponseMessage(crm.fromUci, securityManager.getOperator(), 
+							crm.getFromNode(), communication.getLocalSensibleThingsNode());
+			
+			int nonce =  responsePayload.getFromNonce();
+			carm.setPayload(securityManager.symmetricEncryptMessage(crm.fromUci, 
+					String.valueOf(nonce), SymmetricEncryption.AES_CBC_PKCS5).getBytes());
+			
+			sendMessage(carm);
+			
+		}
+	}
+
 	private void handleCertificateRequestMessage(CertificateRequestMessage crm) {
 		byte[] cipherText = crm.getPayload();
 		
@@ -130,14 +168,21 @@ public class SecurityExtension implements Extension, MessageListener{
 			
 			CertificateResponseMessagePayload responsePayload = new CertificateResponseMessagePayload();
 			
-			responsePayload.setFromNonce(payload.getNonce());
-			responsePayload.setToNonce(new Random().nextInt());
+			responsePayload.setToNonce(payload.getNonce());
+			
+			int toNonce = new Random().nextInt();
+			responsePayload.setFromNonce(toNonce);
+			// store into the data pool
+			securityManager.addToDataPool("nonce", toNonce);
+			
 			responsePayload.setCertChain(certs);
 			
 			byte[] encryptPayload = securityManager.symmetricEncryptMessage(crm.fromUci, 
 					SerializationUtils.serialize(responsePayload), SymmetricEncryption.AES_CBC_PKCS5);
 			
 			certRespMesg.setPayload(encryptPayload);
+			
+			sendMessage(certRespMesg);
 		}
 		
 	}
@@ -165,6 +210,9 @@ public class SecurityExtension implements Extension, MessageListener{
 					securityManager.getCertificateSigingRequest(securityManager.getOperator());
 			// set the nonce
 			int nonce = new Random().nextInt();
+			
+			// store the nonce into the data pool
+			securityManager.addToDataPool("nonce", nonce);
 			
 			CertificateRequestMessagePayload payload = 
 					new CertificateRequestMessagePayload(certRequest, nonce);

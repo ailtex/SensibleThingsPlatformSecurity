@@ -47,7 +47,7 @@ public class SymmetricEncryption {
 		return keyGenerator.generateKey();
 	}
 	
-	public Key loadKey(byte[] key, String algorithm) throws 
+	public static Key loadKey(byte[] key, String algorithm) throws 
 	InvalidKeyException, NoSuchAlgorithmException, InvalidKeySpecException {
 		
 		DESKeySpec des = new DESKeySpec(key);  

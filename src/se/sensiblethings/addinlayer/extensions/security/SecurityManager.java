@@ -18,6 +18,8 @@ import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.security.spec.InvalidKeySpecException;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
@@ -42,7 +44,8 @@ public class SecurityManager {
 	private PublicKey publicKey = null;
 	private String bootStrapUci = null;
 	
-	KeyStoreJCA keyStore = null;
+	private KeyStoreJCA keyStore = null;
+	private Map<String, Object> dataPool = new HashMap<String, Object>();
 	
 	public SecurityManager(){
 		/*
@@ -74,6 +77,48 @@ public class SecurityManager {
 		
 	}
 	
+	public String getOperator() {
+		return operator;
+	}
+
+	public void setOperator(String operator) {
+		this.operator = operator;
+	}
+
+	public String getBootStrapUci() {
+		return bootStrapUci;
+	}
+
+	public void setBootStrapUci(String bootStrapUci) {
+		this.bootStrapUci = bootStrapUci;
+	}
+	
+	public void addToDataPool(String name, Object value){
+		dataPool.put(name, value);
+	}
+	
+	public Object getFromDataPool(String name){
+		if(dataPool.containsKey(name)){
+			return dataPool.get(name);
+		}else{
+			return null;
+		}
+	}
+	
+	public boolean removeFromDataPool(String name){
+		if(dataPool.containsKey(name)){
+			dataPool.remove(name);
+			return true;
+		}else{
+			return false;
+		}
+	}
+	
+	/********************************************************************************
+	 * 
+	 *                           Certificate Part
+	 ********************************************************************************/
+	
 	protected void CreateKeyPairAndCertificate(String uci){
 		// sun.security.X509 package provides many APIs to use
 		// e.g. CertAndKeyGen gen = new CertAndKeyGen(keyAlgName, sigAlgName, providerName);
@@ -90,14 +135,14 @@ public class SecurityManager {
 		
 		// generate the self signed X509 v1 certificate
 		// setting the subject name of the certificate
-		//String subjectName = "CN=" + uci + ",OU=ComputerColleage,O=MIUN,C=Sweden";
+		// String subjectName = "CN=" + uci + ",OU=ComputerColleage,O=MIUN,C=Sweden";
 		String subjectName = uci;
 		
 		Certificate cert = CertificateOperations.generateSelfSignedcertificate(subjectName, keyPair);
 		
 		try {
 			// store the private key with the self signed certificate
-			keyStore.storePrivateKey(uci, keyPair.getPrivate(), "password".toCharArray(), cert);
+			keyStore.storePrivateKey(uci, keyPair.getPrivate(), "password".toCharArray(), new Certificate[]{cert});
 			
 			// store the self signed certificate
 			keyStore.storeCertification(uci, cert, "password".toCharArray());
@@ -106,149 +151,20 @@ public class SecurityManager {
 		}
 	}
 	
-	
-	public String signMessage(String message, String algorithm){
-		// load the private key
-		PrivateKey privateKey = (PrivateKey) keyStore.getPrivateKey(operator);
-		
-		String signature = null;
-		try {
-			signature = new String(SignatureOperations.sign(message.getBytes(), privateKey, algorithm));
-		} catch (InvalidKeyException | NoSuchAlgorithmException e) {
-			e.printStackTrace();
-		}
-		
-		return signature;
-	}
-	
-	public boolean verifySignature(String message, String signature, PublicKey publicKey, String algorithm){
-		try {
-			return SignatureOperations.verify(message.getBytes(), signature.getBytes(), publicKey, algorithm);
-		} catch (InvalidKeyException | NoSuchAlgorithmException e) {
-			e.printStackTrace();
-		}
-		return false;
-	}
-	
-	public boolean verifySignature(String message, String signature, Certificate cert, String algorithm){
-		try {
-			return SignatureOperations.verify(message.getBytes(), signature.getBytes(), cert, algorithm);
-		} catch (InvalidKeyException | NoSuchAlgorithmException e) {
-			e.printStackTrace();
-		}
-		return false;
-	}
-	
-	
-	/**
-	 * Encrypt message with RSA encryption
-	 * @param message
-	 * @param algorithm
-	 * @return
-	 */
-	public String asymmetricEncryptMessage(String toUci, String message, String algorithm){
-		
-		return  new String (asymmetricEncryptMessage(toUci, message.getBytes(), algorithm));
-	}
-	
-	public byte[] asymmetricEncryptMessage(String toUci, byte[] message, String algorithm){
-		
-		PublicKey publicKey = (PublicKey)keyStore.getPublicKey(toUci);
-		
-		return AsymmetricEncryption.encrypt(publicKey, message, algorithm);
-	}
-	
-	public String symmetricEncryptMessage(String toUci, String message, String algorithm){
-		
-		return new String(symmetricEncryptMessage(toUci, message.getBytes(), algorithm));
-	}
-	
-	public byte[] symmetricEncryptMessage(String toUci, byte[] message, String algorithm){
-		// symmetric encryption
-		SecretKey secretKey = (SecretKey) keyStore.getSecretKey(toUci);
-		byte[] plainText = null;
-		try {
-			plainText = SymmetricEncryption.encrypt(secretKey, message);
-			
-		} catch (InvalidKeyException | NoSuchAlgorithmException
-				| NoSuchPaddingException | IllegalBlockSizeException
-				| BadPaddingException e) {
-			e.printStackTrace();
-		}
+	public boolean isCeritificateSigningRequestValid(
+			PKCS10CertificationRequest certRequest, String fromUci) {
 
-		return plainText;
-	}
-	
-	/**
-	 * Decrypt message with RSA encryption
-	 * @param message
-	 * @return
-	 */
-	public String asymmetricDecryptMessage(String message, String algorithm){
-		return new String(asymmetricDecryptMessage(message.getBytes(), algorithm));
-		
-	}
-	
-	
-	public byte[] asymmetricDecryptMessage(byte[] message, String algorithm){
-		// load the private key
-		PrivateKey privateKey = (PrivateKey)keyStore.getPrivateKey(operator);
-		
-		return AsymmetricEncryption.decrypt(privateKey, message, algorithm);
-	}
-	
-	public String symmetricDecryptMessage(String fromUci, String message, String algorithm){
-		
-		return new String(symmetricDecryptMessage(fromUci, message.getBytes(), algorithm));
-	}
-	
-	public byte[] symmetricDecryptMessage(String fromUci, byte[] message, String algorithm){
-		SecretKey secretKey = (SecretKey) keyStore.getSecretKey(fromUci);
-		
-		byte[] plainText = null;
 		try {
-			plainText = SymmetricEncryption.decrypt(secretKey, message);
-			
-		} catch (InvalidKeyException | NoSuchAlgorithmException
-				| NoSuchPaddingException | IllegalBlockSizeException
-				| BadPaddingException e) {
-			e.printStackTrace();
-		}
-
-		return plainText;
-	}
-	
-	public boolean generateSymmetricSecurityKey(String uci){
-		
-		// generate the symmetric key
-		SecretKey secretKey;
-		
-		try {
-			secretKey = SymmetricEncryption.generateKey(SymmetricEncryption.AES);
-			
-			// store the security key
-			keyStore.storeSecretKey(uci, secretKey, "password".toCharArray());
-			
-			return true;
-		} catch (InvalidKeyException | KeyStoreException
-				| NoSuchAlgorithmException | InvalidKeySpecException e) {
-			e.printStackTrace();
-		}
-		
-		return false;
-	}
-	
-	public boolean isCeritificateSigningRequestValid(PKCS10CertificationRequest certRequest, String fromUci){
-		
-		try {
-			if(certRequest.verify() && certRequest.getCertificationRequestInfo().getSubject().equals(fromUci)){
+			if (certRequest.verify()
+					&& certRequest.getCertificationRequestInfo().getSubject()
+							.equals(fromUci)) {
 				return true;
-			}else{
+			} else {
 				return false;
 			}
 		} catch (InvalidKeyException | NoSuchAlgorithmException
 				| NoSuchProviderException | SignatureException e) {
-			
+
 			e.printStackTrace();
 		}
 		return false;
@@ -273,24 +189,6 @@ public class SecurityManager {
 		}
 		
 		return certs;
-	}
-	
-	public String digestMessage(String message, String algorithm){
-		
-		return new String(MessageDigestOperations.encode(message.getBytes(), algorithm));
-	}
-	
-	public PublicKey getPublicKey() {
-		return (PublicKey) keyStore.getPublicKey(operator);
-	}
-	
-	public PublicKey getPublicKey(String uci){
-		return (PublicKey) keyStore.getPublicKey(uci);
-	}
-	
-	public Key getSecretKey(String uci){
-		
-		return keyStore.getSecretKey(uci);
 	}
 	
 	/**
@@ -327,20 +225,227 @@ public class SecurityManager {
 		return CertificateOperations.generateCertificateSigningRequest(subjectName, keyPair);
 	}
 	
-	public String getOperator() {
-		return operator;
+	public void storeCertificateChain(String uci, Certificate[] certs, String password){
+		try {
+			keyStore.storePrivateKey(uci, (PrivateKey)keyStore.getPrivateKey(uci), password.toCharArray(), certs);
+		} catch (KeyStoreException e) {
+			
+			e.printStackTrace();
+		}
 	}
-
-	public void setOperator(String operator) {
-		this.operator = operator;
+	
+	/********************************************************************************
+	 * 
+	 *                           Signature Part
+	 ********************************************************************************/
+	
+	
+	public String signMessage(String message, String algorithm){
+		// load the private key
+		PrivateKey privateKey = (PrivateKey) keyStore.getPrivateKey(operator);
+		
+		String signature = null;
+		try {
+			signature = new String(SignatureOperations.sign(message.getBytes(), privateKey, algorithm));
+		} catch (InvalidKeyException | NoSuchAlgorithmException e) {
+			e.printStackTrace();
+		}
+		
+		return signature;
 	}
-
-	public String getBootStrapUci() {
-		return bootStrapUci;
+	
+	public boolean verifySignature(String message, String signature, PublicKey publicKey, String algorithm){
+		try {
+			return SignatureOperations.verify(message.getBytes(), signature.getBytes(), publicKey, algorithm);
+		} catch (InvalidKeyException | NoSuchAlgorithmException e) {
+			e.printStackTrace();
+		}
+		return false;
 	}
+	
+	public boolean verifySignature(String message, String signature, Certificate cert, String algorithm){
+		try {
+			return SignatureOperations.verify(message.getBytes(), signature.getBytes(), cert, algorithm);
+		} catch (InvalidKeyException | NoSuchAlgorithmException e) {
+			e.printStackTrace();
+		}
+		return false;
+	}
+	
+	
+	/********************************************************************************
+	 * 
+	 *                           Asymmetric Encrypt Part
+	 ********************************************************************************/
+	
+	/**
+	 * Encrypt message with RSA encryption
+	 * @param message
+	 * @param algorithm
+	 * @return
+	 */
+	public String asymmetricEncryptMessage(String toUci, String message, String algorithm){
+		
+		return  new String (asymmetricEncryptMessage(toUci, message.getBytes(), algorithm));
+	}
+	
+	public byte[] asymmetricEncryptMessage(String toUci, byte[] message, String algorithm){
+		
+		PublicKey publicKey = (PublicKey)keyStore.getPublicKey(toUci);
+		
+		return AsymmetricEncryption.encrypt(publicKey, message, algorithm);
+	}
+	
+	/**
+	 * Decrypt message with RSA encryption
+	 * @param message
+	 * @return
+	 */
+	public String asymmetricDecryptMessage(String message, String algorithm){
+		return new String(asymmetricDecryptMessage(message.getBytes(), algorithm));
+		
+	}
+	
+	
+	public byte[] asymmetricDecryptMessage(byte[] message, String algorithm){
+		// load the private key
+		PrivateKey privateKey = (PrivateKey)keyStore.getPrivateKey(operator);
+		
+		return AsymmetricEncryption.decrypt(privateKey, message, algorithm);
+	}
+	
+	public PublicKey getPublicKey() {
+		return (PublicKey) keyStore.getPublicKey(operator);
+	}
+	
+	public PublicKey getPublicKey(String uci){
+		return (PublicKey) keyStore.getPublicKey(uci);
+	}
+	
+	/********************************************************************************
+	 * 
+	 *                           Symmetric Encrypt Part
+	 ********************************************************************************/
+	
+	public String symmetricEncryptMessage(String toUci, String message, String algorithm){
+		
+		return new String(symmetricEncryptMessage(toUci, message.getBytes(), algorithm));
+	}
+	
+	public byte[] symmetricEncryptMessage(String toUci, byte[] message, String algorithm){
+		// symmetric encryption
+		SecretKey secretKey = (SecretKey) keyStore.getSecretKey(toUci);
+		byte[] plainText = null;
+		try {
+			plainText = SymmetricEncryption.encrypt(secretKey, message);
+			
+		} catch (InvalidKeyException | NoSuchAlgorithmException
+				| NoSuchPaddingException | IllegalBlockSizeException
+				| BadPaddingException e) {
+			e.printStackTrace();
+		}
 
-	public void setBootStrapUci(String bootStrapUci) {
-		this.bootStrapUci = bootStrapUci;
+		return plainText;
+	}
+	
+	public String symmetricDecryptMessage(String fromUci, String message, String algorithm){
+		
+		return new String(symmetricDecryptMessage(fromUci, message.getBytes(), algorithm));
+	}
+	
+	public byte[] symmetricDecryptMessage(String fromUci, byte[] message, String algorithm){
+		SecretKey secretKey = (SecretKey) keyStore.getSecretKey(fromUci);
+		
+		byte[] plainText = null;
+		try {
+			plainText = SymmetricEncryption.decrypt(secretKey, message);
+			
+		} catch (InvalidKeyException | NoSuchAlgorithmException
+				| NoSuchPaddingException | IllegalBlockSizeException
+				| BadPaddingException e) {
+			e.printStackTrace();
+		}
+
+		return plainText;
+	}
+	
+	public byte[] symmetricDecryptMessage(byte[] secretKey, byte[] message, String algorithm){
+		// load the secret key
+		SecretKey key = symmetricLoadKey(secretKey, algorithm);
+		
+		byte[] plainText = null;
+		try {
+			plainText = SymmetricEncryption.decrypt(key, message);
+			
+		} catch (InvalidKeyException | NoSuchAlgorithmException
+				| NoSuchPaddingException | IllegalBlockSizeException
+				| BadPaddingException e2) {
+			e2.printStackTrace();
+		}
+
+		return plainText;
+	}
+	
+	private SecretKey symmetricLoadKey(byte[] secretKey, String algorithm){
+		SecretKey key = null;
+		
+		try {
+			key = (SecretKey)SymmetricEncryption.loadKey(secretKey, algorithm);
+		} catch (InvalidKeyException | NoSuchAlgorithmException
+				| InvalidKeySpecException e1) {
+			e1.printStackTrace();
+		}
+		
+		return key;
+	}
+	
+	public boolean generateSymmetricSecurityKey(String uci){
+		
+		// generate the symmetric key
+		SecretKey secretKey = null;
+		
+		try {
+			secretKey = SymmetricEncryption.generateKey(SymmetricEncryption.AES);
+			
+			// store the security key
+			storeSecretKey(uci, secretKey, "password");
+			
+			return true;
+		} catch (NoSuchAlgorithmException e) {
+			e.printStackTrace();
+		}
+
+		return false;
+	}
+	
+	public void storeSecretKey(String uci, SecretKey secretKey, String password){
+		try {
+			keyStore.storeSecretKey(uci, secretKey, password.toCharArray());
+		} catch (InvalidKeyException | KeyStoreException
+				| NoSuchAlgorithmException | InvalidKeySpecException e) {
+			
+			e.printStackTrace();
+		}
+	}
+	
+	public void storeSecretKey(String uci, byte[] secretKey, String algorithm, String password){
+		SecretKey key = symmetricLoadKey(secretKey, algorithm);
+		storeSecretKey(uci, key, password);
+	}
+	
+	public Key getSecretKey(String uci) {
+
+		return keyStore.getSecretKey(uci);
+	}
+	
+	/********************************************************************************
+	 * 
+	 *                           Digest Part
+	 ********************************************************************************/
+	
+	public String digestMessage(String message, String algorithm){
+		
+		return new String(MessageDigestOperations.encode(message.getBytes(), algorithm));
 	}
 	
 }

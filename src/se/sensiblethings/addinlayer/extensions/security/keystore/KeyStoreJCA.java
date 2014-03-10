@@ -195,12 +195,12 @@ public class KeyStoreJCA implements KeyStoreTemplate{
 	public boolean storePrivateKey(String alias, 
 			PrivateKey privateKey, 
 			char[] password, 
-			Certificate cert) throws KeyStoreException{
+			Certificate[] certs) throws KeyStoreException{
 
 		// the certificate chain is required to store the private key
 		// Generate the certificate chain
 		// password same as the keystore
-		ks.setKeyEntry(alias, privateKey, password, new Certificate[]{cert});
+		ks.setKeyEntry(alias, privateKey, password, certs);
 		
 		// keystore password needed
 		try {
