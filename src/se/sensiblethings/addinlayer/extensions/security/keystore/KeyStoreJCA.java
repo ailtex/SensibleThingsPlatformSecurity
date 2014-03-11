@@ -69,19 +69,27 @@ public class KeyStoreJCA implements KeyStoreTemplate{
 		if(fis != null) fis.close();
 	}
 	
-	private void updataKeyStore(char[] password) throws 
-	KeyStoreException, NoSuchAlgorithmException, CertificateException, IOException{
+	private boolean updataKeyStore(char[] password){
 		
 		FileOutputStream fos = null;
 		try {
 			fos = new FileOutputStream(keyStoreFile);
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
+			return false;
 		}
 		
-		ks.store(fos, password);
+		try {
+			ks.store(fos, password);
+			
+			if(fos != null) fos.close();
+		} catch (KeyStoreException | NoSuchAlgorithmException
+				| CertificateException | IOException e) {
+			e.printStackTrace();
+			return false;
+		}
 		
-		if(fos != null) fos.close();
+		return true;
 	}
 	
 	
@@ -120,19 +128,6 @@ public class KeyStoreJCA implements KeyStoreTemplate{
 		
 	}
 	
-	@Override
-	public boolean getConnection(String databaseURL) {
-		// TODO Auto-generated method stub
-		return false;
-	}
-
-	@Override
-	public boolean configureAndInitialize() {
-		// TODO Auto-generated method stub
-		return false;
-	}
-	
-	@Override
 	public Key getPublicKey(String alias){
 		
 		Key key = null;
@@ -149,12 +144,12 @@ public class KeyStoreJCA implements KeyStoreTemplate{
 		return ks.getCertificate(alias);
 	}
 	
-	@Override
-	public Key getPrivateKey(String alias) {
+	
+	public Key getPrivateKey(String alias, char[] password) {
 		
 		Key key = null;
 		try {
-			PrivateKeyEntry pkEntry = (PrivateKeyEntry) ks.getEntry(alias, null);
+			PrivateKeyEntry pkEntry = (PrivateKeyEntry) ks.getEntry(alias,  new PasswordProtection(password));
 			key = pkEntry.getPrivateKey();
 		} catch (NoSuchAlgorithmException | UnrecoverableEntryException
 				| KeyStoreException e) {
@@ -164,10 +159,10 @@ public class KeyStoreJCA implements KeyStoreTemplate{
 	}
 	
 	
-	public Key getSecretKey(String alias){
+	public Key getSecretKey(String alias, char[] password){
 		Key key = null;
 		try {
-			SecretKeyEntry pkEntry = (SecretKeyEntry) ks.getEntry(alias, null);
+			SecretKeyEntry pkEntry = (SecretKeyEntry) ks.getEntry(alias,  new PasswordProtection(password));
 			key = pkEntry.getSecretKey();
 			
 		} catch (NoSuchAlgorithmException | UnrecoverableEntryException
@@ -177,12 +172,7 @@ public class KeyStoreJCA implements KeyStoreTemplate{
 		return key;
 	}
 	
-	@Override
-	public boolean storePublicKey(String alias, byte[] publicKey) {
-		// TODO Auto-generated method stub
-		return false;
-	}
-	
+
 	/**
 	 * 
 	 * @param alias
@@ -203,14 +193,8 @@ public class KeyStoreJCA implements KeyStoreTemplate{
 		ks.setKeyEntry(alias, privateKey, password, certs);
 		
 		// keystore password needed
-		try {
-			updataKeyStore(password);
-		} catch (NoSuchAlgorithmException | CertificateException | IOException e) {
-			e.printStackTrace();
-			return false;
-		}
+		return updataKeyStore(password);
 		
-		return true;
 	}
 	
 	public boolean storeSecretKey(String alias, byte[] secretKey, char[] password) throws 
@@ -225,12 +209,9 @@ public class KeyStoreJCA implements KeyStoreTemplate{
 		ks.setEntry(alias, skEntry, new PasswordProtection(password));
 	
 		// password needed
-		try {
-			updataKeyStore("password".toCharArray());
-		} catch (NoSuchAlgorithmException | CertificateException | IOException e) {
-			e.printStackTrace();
-		}
-		return true;
+		
+		return updataKeyStore("password".toCharArray());
+		
 	}
 	
 	public boolean storeSecretKey(String alias, SecretKey secretKey, char[] password) throws 
@@ -242,12 +223,8 @@ public class KeyStoreJCA implements KeyStoreTemplate{
 		ks.setEntry(alias, skEntry, new PasswordProtection(password));
 		
 		// password needed
-		try {
-			updataKeyStore("password".toCharArray());
-		} catch (NoSuchAlgorithmException | CertificateException | IOException e) {
-			e.printStackTrace();
-		}
-		return true;
+		return updataKeyStore("password".toCharArray());
+		
 	}
 	
 	public boolean storeCertification(String alias, Certificate certificate, char[] password) throws KeyStoreException{
@@ -256,34 +233,16 @@ public class KeyStoreJCA implements KeyStoreTemplate{
 		ks.setCertificateEntry(alias, certificate);
 		
 		// password needed
-		try {
-			updataKeyStore(password);
-		} catch (NoSuchAlgorithmException | CertificateException | IOException e) {
-			e.printStackTrace();
-		}
+		return updataKeyStore(password);
 		
-		return true;
 	}
 	
-	@Override
-	public boolean storeCertification(String alias, byte[] publicKey,
-			String certification, Date validation) {
-		
-		return false;
-	}
-
-	@Override
-	public boolean closeDatabase() {
-		// TODO Auto-generated method stub
-		return false;
-	}
-
-	@Override
-	public boolean hasKeyPair(String alias) {
-		
+	
+	public boolean hasKey(String alias){
 		try {
 			return ks.isKeyEntry(alias);
 		} catch (KeyStoreException e) {
+			
 			e.printStackTrace();
 		}
 		

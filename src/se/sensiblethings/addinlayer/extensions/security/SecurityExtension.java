@@ -1,6 +1,7 @@
 package se.sensiblethings.addinlayer.extensions.security;
 
 import java.io.ObjectOutputStream;
+import java.nio.ByteBuffer;
 import java.security.cert.Certificate;
 import java.security.interfaces.RSAPrivateKey;
 import java.util.Calendar;
@@ -34,7 +35,6 @@ public class SecurityExtension implements Extension, MessageListener{
 	SecurityListener securityListener = null;
 	SecurityManager securityManager = null;
 	
-	private String registrationRequestTime = null;
 	
 	public SecurityExtension(){}
 	
@@ -55,6 +55,8 @@ public class SecurityExtension implements Extension, MessageListener{
 		communication.registerMessageListener(RegistrationResponseMessage.class.getName(), this);
 		communication.registerMessageListener(CertificateRequestMessage.class.getName(), this);
 		communication.registerMessageListener(CertificateResponseMessage.class.getName(), this);
+		communication.registerMessageListener(CertificateAcceptedResponseMessage.class.getName(), this);
+		
 	}
 
 	@Override
@@ -73,7 +75,59 @@ public class SecurityExtension implements Extension, MessageListener{
 		// TODO Auto-generated method stub
 		
 	}
+	
+	public SecurityListener getSecurityListener() {
+		return securityListener;
+	}
 
+	public void setSecurityListener(SecurityListener listener) {
+		this.securityListener = listener;
+	}
+	
+	/**
+	 * Create a SSL connection with bootstrap node
+	 * @param uci the uci who own the bootstrap node
+	 * @param node the node that SSL connection is established with 
+	 */
+	public void createSslConnection(String uci, SensibleThingsNode node){
+		//Send out the SslConnectionRequestMessage Message
+		SslConnectionRequestMessage message = new SslConnectionRequestMessage(uci, node, communication.getLocalSensibleThingsNode());
+		
+		// this message may not be secure, as if some one can hijack it
+	    // if the bootstrap node can set up several different communications simultaneously
+	    // the request node can just change itself communication type
+		
+		sendMessage(message);
+		transformToSslConnection();
+	}
+	
+	public void sendSecureMassage(String message, String toUci, SensibleThingsNode toNode){
+		
+	}
+	
+	
+	/**
+	 *  register the self uci to bootstrap node
+	 * @param toUci the boostrap's uci
+	 * @param node the bootstrap node
+	 * @param fromUci itself uci that will be registered
+	 */
+	public void register(String toUci, SensibleThingsNode node, String fromUci){
+		// check local key store, whether itself has created the key pair
+		
+		securityManager.initializePermanentKeyStore(fromUci);
+		
+		RegistrationRequestMessage message = new RegistrationRequestMessage(toUci, fromUci, node, communication.getLocalSensibleThingsNode());
+		
+		// store the local registration Request Time
+		securityManager.addToDataPool("registrationRequestTime", message.getRegistrationRequestTime());
+		
+		// store the bootstrap uci
+		securityManager.setBootStrapUci(toUci);
+		
+		sendMessage(message);
+	}
+	
 	@Override
 	public void handleMessage(Message message) {
 		if(message instanceof SslConnectionRequestMessage) {
@@ -102,6 +156,17 @@ public class SecurityExtension implements Extension, MessageListener{
 			CertificateResponseMessage crm = (CertificateResponseMessage)message;
 			
 			handleCertificateResponseMessage(crm);
+		}else if(message instanceof CertificateAcceptedResponseMessage){
+			CertificateAcceptedResponseMessage carm = (CertificateAcceptedResponseMessage)message;
+			byte[] payload = securityManager.symmetricDecryptMessage(
+					carm.fromUci, carm.getPayload(), SymmetricEncryption.AES_CBC_PKCS5);
+			
+			// convert byte array to integer
+			int nonce = ByteBuffer.wrap(payload).getInt();
+			
+			if(nonce == (Integer)securityManager.getFromDataPool("nonce")){
+				System.out.println("[Bootstrap] Certificate has been safely accepted!");
+			}
 		}
 		
 	}
@@ -162,9 +227,9 @@ public class SecurityExtension implements Extension, MessageListener{
 															crm.getToNode(), communication.getLocalSensibleThingsNode());
 			
 			certRespMesg.setEncryptSecretKey(securityManager.asymmetricEncryptMessage(
-																	crm.fromUci, securityManager.
-																	getSecretKey(crm.fromUci).getEncoded(), 
-																	SymmetricEncryption.AES_CBC_PKCS5));
+								crm.fromUci, 
+								securityManager.getSecretKey(crm.fromUci, "password".toCharArray()).getEncoded(),
+								SymmetricEncryption.AES_CBC_PKCS5));
 			
 			CertificateResponseMessagePayload responsePayload = new CertificateResponseMessagePayload();
 			
@@ -192,7 +257,7 @@ public class SecurityExtension implements Extension, MessageListener{
 		
 		// Construct the original request, including itself uci and request time
 		String originalRequest = securityManager.getOperator() + "," +
-								registrationRequestTime;
+								securityManager.getFromDataPool("registrationRequestTime");
 		
 	  	// verify the public key and the signature
 		if(securityManager.verifySignature(originalRequest, 
@@ -260,53 +325,6 @@ public class SecurityExtension implements Extension, MessageListener{
 		
 	}
 
-	/**
-	 * Create a SSL connection with bootstrap node
-	 * @param uci the uci who own the bootstrap node
-	 * @param node the node that SSL connection is established with 
-	 */
-	public void createSslConnection(String uci, SensibleThingsNode node){
-		//Send out the SslConnectionRequestMessage Message
-		SslConnectionRequestMessage message = new SslConnectionRequestMessage(uci, node, communication.getLocalSensibleThingsNode());
-		
-		// this message may not be secure, as if some one can hijack it
-	    // if the bootstrap node can set up several different communications simultaneously
-	    // the request node can just change itself communication type
-		
-		sendMessage(message);
-		transformToSslConnection();
-	}
-	
-
-	/**
-	 *  register the self uci to bootstrap node
-	 * @param toUci the boostrap's uci
-	 * @param node the bootstrap node
-	 * @param fromUci itself uci that will be registered
-	 */
-	public void register(String toUci, SensibleThingsNode node, String fromUci){
-		// check local key store, whether itself has created the key pair
-		
-		securityManager.initializePermanentKeyStore(fromUci);
-		
-		RegistrationRequestMessage message = new RegistrationRequestMessage(toUci, fromUci, node, communication.getLocalSensibleThingsNode());
-		
-		// store the local registration Request Time
-		registrationRequestTime = message.getRegistrationRequestTime();
-		// store the bootstrap uci
-		securityManager.setBootStrapUci(toUci);
-		
-		sendMessage(message);
-	}
-	
-	
-	public SecurityListener getSecurityListener() {
-		return securityListener;
-	}
-
-	public void setSecurityListener(SecurityListener listener) {
-		this.securityListener = listener;
-	}
 	
 	private void transformToSslConnection(){
 		if(platform.isBehindNat()){
@@ -346,13 +364,5 @@ public class SecurityExtension implements Extension, MessageListener{
 		certificate += content[3];
 		
 		return certificate;
-	}
-	
-	public String getRegistrationRequestTime() {
-		return registrationRequestTime;
-	}
-
-	public void setRegistrationRequestTime(String registrationRequestTime) {
-		this.registrationRequestTime = registrationRequestTime;
 	}
 }

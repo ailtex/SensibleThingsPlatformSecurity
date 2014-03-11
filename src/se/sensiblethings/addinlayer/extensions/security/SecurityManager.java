@@ -70,7 +70,7 @@ public class SecurityManager {
 		setOperator(uci);
 		
 		// check weather the store has the KeyPair
-		if(!keyStore.hasKeyPair(uci)){
+		if(!keyStore.hasKey(uci)){
 			// if not, create the key pair
 			CreateKeyPairAndCertificate(uci);
 		}
@@ -172,7 +172,7 @@ public class SecurityManager {
 	
 	public Certificate[] signCertificateSigningRequest(PKCS10CertificationRequest certRequest, String uci){
 		KeyPair keyPair = new KeyPair((PublicKey)keyStore.getPublicKey(operator), 
-									  (PrivateKey)keyStore.getPrivateKey(operator));
+									  (PrivateKey)keyStore.getPrivateKey(operator, "password".toCharArray()));
 		Certificate[] certs = null;
 		
 		try {
@@ -220,14 +220,15 @@ public class SecurityManager {
 		String subjectName = "CN=" + uci + ",OU=ComputerColleage,O=MIUN,C=Sweden";
 		
 		KeyPair keyPair = new KeyPair((PublicKey)keyStore.getPublicKey(uci), 
-									  (PrivateKey)keyStore.getPrivateKey(uci));
+									  (PrivateKey)keyStore.getPrivateKey(uci,  "password".toCharArray()));
 		
 		return CertificateOperations.generateCertificateSigningRequest(subjectName, keyPair);
 	}
 	
 	public void storeCertificateChain(String uci, Certificate[] certs, String password){
 		try {
-			keyStore.storePrivateKey(uci, (PrivateKey)keyStore.getPrivateKey(uci), password.toCharArray(), certs);
+			keyStore.storePrivateKey(uci, (PrivateKey)keyStore.getPrivateKey(uci, "password".toCharArray()),
+					password.toCharArray(), certs);
 		} catch (KeyStoreException e) {
 			
 			e.printStackTrace();
@@ -242,7 +243,7 @@ public class SecurityManager {
 	
 	public String signMessage(String message, String algorithm){
 		// load the private key
-		PrivateKey privateKey = (PrivateKey) keyStore.getPrivateKey(operator);
+		PrivateKey privateKey = (PrivateKey) keyStore.getPrivateKey(operator, "password".toCharArray());
 		
 		String signature = null;
 		try {
@@ -309,7 +310,7 @@ public class SecurityManager {
 	
 	public byte[] asymmetricDecryptMessage(byte[] message, String algorithm){
 		// load the private key
-		PrivateKey privateKey = (PrivateKey)keyStore.getPrivateKey(operator);
+		PrivateKey privateKey = (PrivateKey)keyStore.getPrivateKey(operator, "password".toCharArray());
 		
 		return AsymmetricEncryption.decrypt(privateKey, message, algorithm);
 	}
@@ -334,7 +335,7 @@ public class SecurityManager {
 	
 	public byte[] symmetricEncryptMessage(String toUci, byte[] message, String algorithm){
 		// symmetric encryption
-		SecretKey secretKey = (SecretKey) keyStore.getSecretKey(toUci);
+		SecretKey secretKey = (SecretKey) keyStore.getSecretKey(toUci, "password".toCharArray());
 		byte[] plainText = null;
 		try {
 			plainText = SymmetricEncryption.encrypt(secretKey, message);
@@ -354,7 +355,7 @@ public class SecurityManager {
 	}
 	
 	public byte[] symmetricDecryptMessage(String fromUci, byte[] message, String algorithm){
-		SecretKey secretKey = (SecretKey) keyStore.getSecretKey(fromUci);
+		SecretKey secretKey = (SecretKey) keyStore.getSecretKey(fromUci, "password".toCharArray());
 		
 		byte[] plainText = null;
 		try {
@@ -433,9 +434,13 @@ public class SecurityManager {
 		storeSecretKey(uci, key, password);
 	}
 	
-	public Key getSecretKey(String uci) {
+	public Key getSecretKey(String uci, char[] password) {
 
-		return keyStore.getSecretKey(uci);
+		return keyStore.getSecretKey(uci, password);
+	}
+	
+	public boolean hasSecretKey(String uci){
+		return keyStore.hasKey(uci);
 	}
 	
 	/********************************************************************************
