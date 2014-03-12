@@ -3,7 +3,7 @@ package se.sensiblethings.addinlayer.extensions.security;
 import se.sensiblethings.disseminationlayer.communication.Message;
 import se.sensiblethings.interfacelayer.SensibleThingsNode;
 
-public class SslConnectionRequestMessage extends Message{
+public class SslConnectionMessage extends Message{
 
 	/**
 	 * 
@@ -12,11 +12,22 @@ public class SslConnectionRequestMessage extends Message{
 	
 	public String uci;
 	
-	public SslConnectionRequestMessage(String uci, SensibleThingsNode toNode,
+	private String signal;
+	
+	public SslConnectionMessage(String uci, SensibleThingsNode toNode,
 			SensibleThingsNode fromNode) {
 		super(fromNode, toNode);
 		
 		this.uci = uci;
 	}
 
+	public String getSignal() {
+		return signal;
+	}
+
+	public void setSignal(String signal) {
+		this.signal = signal;
+	}
+	
+	
 }

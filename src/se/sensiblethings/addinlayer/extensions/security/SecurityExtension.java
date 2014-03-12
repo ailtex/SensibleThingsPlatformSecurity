@@ -50,7 +50,7 @@ public class SecurityExtension implements Extension, MessageListener{
 		this.communication = core.getCommunication();
 		
 		//Register our own message types in the post office
-		communication.registerMessageListener(SslConnectionRequestMessage.class.getName(), this);
+		communication.registerMessageListener(SslConnectionMessage.class.getName(), this);
 		communication.registerMessageListener(RegistrationRequestMessage.class.getName(), this);
 		communication.registerMessageListener(RegistrationResponseMessage.class.getName(), this);
 		communication.registerMessageListener(CertificateRequestMessage.class.getName(), this);
@@ -91,14 +91,15 @@ public class SecurityExtension implements Extension, MessageListener{
 	 */
 	public void createSslConnection(String uci, SensibleThingsNode node){
 		//Send out the SslConnectionRequestMessage Message
-		SslConnectionRequestMessage message = new SslConnectionRequestMessage(uci, node, communication.getLocalSensibleThingsNode());
+		SslConnectionMessage message = new SslConnectionMessage(uci, node, communication.getLocalSensibleThingsNode());
 		
+		message.setSignal("Connect");
 		// this message may not be secure, as if some one can hijack it
 	    // if the bootstrap node can set up several different communications simultaneously
 	    // the request node can just change itself communication type
 		
 		sendMessage(message);
-		transformToSslConnection();
+		transformCommunication("SSL");
 	}
 	
 	public void sendSecureMassage(String message, String toUci, SensibleThingsNode toNode){
@@ -130,11 +131,17 @@ public class SecurityExtension implements Extension, MessageListener{
 	
 	@Override
 	public void handleMessage(Message message) {
-		if(message instanceof SslConnectionRequestMessage) {
-			// change connection type
-			transformToSslConnection();
-			SslConnectionRequestMessage requestMessage = (SslConnectionRequestMessage)message;
-			securityListener.sslConnectionRequestEvent(requestMessage.uci, requestMessage.getFromNode());
+		if(message instanceof SslConnectionMessage) {
+			if(((SslConnectionMessage) message).getSignal().equals("Connect")){
+				// change connection type
+				transformCommunication("SSL");
+				
+				SslConnectionMessage requestMessage = (SslConnectionMessage)message;
+				securityListener.sslConnectionRequestEvent(requestMessage.uci, requestMessage.getFromNode());
+			}else if(((SslConnectionMessage) message).getSignal().equals("Disconnect")){
+				
+			}
+			
 			
 		}else if(message instanceof RegistrationRequestMessage){
 			
@@ -166,7 +173,9 @@ public class SecurityExtension implements Extension, MessageListener{
 			
 			if(nonce == (Integer)securityManager.getFromDataPool("nonce")){
 				System.out.println("[Bootstrap] Certificate has been safely accepted!");
+				
 			}
+			
 		}
 		
 	}
@@ -325,18 +334,35 @@ public class SecurityExtension implements Extension, MessageListener{
 		
 	}
 
-	
-	private void transformToSslConnection(){
-		if(platform.isBehindNat()){
-			platform.changeCommunicationTo(communication.PROXY_SSL);
-		}else{
-			SslCommunication.initCommunicationPort = 9009;
-			platform.changeCommunicationTo(communication.SSL);
+	private void transformCommunication(String communicationType){
+		if(communicationType.equals("SSL")){
+			if(platform.isBehindNat()){
+				platform.changeCommunicationTo(communication.PROXY_SSL);
+			}else{
+				SslCommunication.initCommunicationPort = 9009;
+				platform.changeCommunicationTo(communication.SSL);
+			}
+			
+			
+		}else if(communicationType.equals("SSL")){
+			if(platform.isBehindNat()){
+				platform.changeCommunicationTo(communication.PROXY_RUDP);
+			}else{
+				SslCommunication.initCommunicationPort = 9009;
+				platform.changeCommunicationTo(communication.RUDP);
+			}
 		}
 		
 		this.core = platform.getDisseminationCore();
 		this.communication = core.getCommunication();
+		
 	}
+	
+	private void transformToSslConnection(){
+		
+	}
+	
+	
 	
 	private void sendMessage(Message message){
 		try {
