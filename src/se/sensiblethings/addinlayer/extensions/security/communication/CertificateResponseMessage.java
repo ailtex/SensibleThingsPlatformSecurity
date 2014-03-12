@@ -1,4 +1,4 @@
-package se.sensiblethings.addinlayer.extensions.security;
+package se.sensiblethings.addinlayer.extensions.security.communication;
 
 import se.sensiblethings.disseminationlayer.communication.Message;
 import se.sensiblethings.interfacelayer.SensibleThingsNode;

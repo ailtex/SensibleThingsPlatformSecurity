@@ -227,7 +227,7 @@ public class KeyStoreJCA implements KeyStoreTemplate{
 		
 	}
 	
-	public boolean storeCertification(String alias, Certificate certificate, char[] password) throws KeyStoreException{
+	public boolean storeCertificate(String alias, Certificate certificate, char[] password) throws KeyStoreException{
 		
 		TrustedCertificateEntry cerEntry = new TrustedCertificateEntry(certificate);
 		ks.setCertificateEntry(alias, certificate);
@@ -248,5 +248,24 @@ public class KeyStoreJCA implements KeyStoreTemplate{
 		
 		return false;
 	}
-
+	
+	public boolean hasCertificate(String alias){
+		try {
+			return ks.isCertificateEntry(alias);
+		} catch (KeyStoreException e) {
+			e.printStackTrace();
+		}
+		
+		return false;
+	}
+	
+	public Date getCreationData(String alias){
+		
+		try {
+			return ks.getCreationDate(alias);
+		} catch (KeyStoreException e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
 }

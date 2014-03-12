@@ -18,6 +18,7 @@ import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.security.spec.InvalidKeySpecException;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -114,6 +115,21 @@ public class SecurityManager {
 		}
 	}
 	
+	public boolean isKeyValid(String uci, long lifeTimeInHours){
+		return keyStore.hasKey(uci) && 
+				checkKeyLifetime(keyStore.getCreationData(uci), lifeTimeInHours);
+	}
+	
+	private boolean checkKeyLifetime(Date creationTime, long lifeTimeInHours){
+		long time = (new Date().getTime() - creationTime.getTime()) / (60 * 60 * 1000);
+		if(time < lifeTimeInHours){
+			return true;
+		}else{
+			return false;
+		}
+		
+	}
+	
 	/********************************************************************************
 	 * 
 	 *                           Certificate Part
@@ -145,14 +161,14 @@ public class SecurityManager {
 			keyStore.storePrivateKey(uci, keyPair.getPrivate(), "password".toCharArray(), new Certificate[]{cert});
 			
 			// store the self signed certificate
-			keyStore.storeCertification(uci, cert, "password".toCharArray());
+			keyStore.storeCertificate(uci, cert, "password".toCharArray());
 		} catch (KeyStoreException e) {
 			e.printStackTrace();
 		}
 	}
 	
 	public boolean isCeritificateSigningRequestValid(
-			PKCS10CertificationRequest certRequest, String fromUci) {
+		PKCS10CertificationRequest certRequest, String fromUci) {
 
 		try {
 			if (certRequest.verify()
@@ -179,7 +195,7 @@ public class SecurityManager {
 			certs =  CertificateOperations.buildChain(certRequest, (X509Certificate)keyStore.getCertificate(operator), keyPair);
 			
 			// store the issued certificate into keystore
-			keyStore.storeCertification(uci, certs[0], "password".toCharArray());
+			keyStore.storeCertificate(uci, certs[0], "password".toCharArray());
 			
 		} catch (InvalidKeyException | CertificateParsingException
 				| NoSuchAlgorithmException | NoSuchProviderException
@@ -215,6 +231,10 @@ public class SecurityManager {
 		return null;
 	}
 	
+	public boolean hasCertificate(String uci){
+		return keyStore.hasCertificate(uci);
+	}
+	
 	@SuppressWarnings("deprecation")
 	public PKCS10CertificationRequest getCertificateSigingRequest(String uci){
 		String subjectName = "CN=" + uci + ",OU=ComputerColleage,O=MIUN,C=Sweden";
@@ -242,12 +262,17 @@ public class SecurityManager {
 	
 	
 	public String signMessage(String message, String algorithm){
+		
+		return new String(signMessage(message.getBytes(), algorithm));
+	}
+	
+	public byte[] signMessage(byte[] message, String algorithm){
 		// load the private key
 		PrivateKey privateKey = (PrivateKey) keyStore.getPrivateKey(operator, "password".toCharArray());
 		
-		String signature = null;
+		byte[] signature = null;
 		try {
-			signature = new String(SignatureOperations.sign(message.getBytes(), privateKey, algorithm));
+			signature = SignatureOperations.sign(message, privateKey, algorithm);
 		} catch (InvalidKeyException | NoSuchAlgorithmException e) {
 			e.printStackTrace();
 		}

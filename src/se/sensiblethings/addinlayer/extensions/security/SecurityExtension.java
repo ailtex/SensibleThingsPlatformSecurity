@@ -8,10 +8,24 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.Random;
 
+import javax.crypto.SecretKey;
+
 import org.apache.commons.lang.SerializationUtils;
 import org.bouncycastle.jce.PKCS10CertificationRequest;
 
 import se.sensiblethings.addinlayer.extensions.Extension;
+import se.sensiblethings.addinlayer.extensions.security.communication.CertificateAcceptedResponseMessage;
+import se.sensiblethings.addinlayer.extensions.security.communication.CertificatePayload;
+import se.sensiblethings.addinlayer.extensions.security.communication.CertificateRequestMessage;
+import se.sensiblethings.addinlayer.extensions.security.communication.CertificateRequestPayload;
+import se.sensiblethings.addinlayer.extensions.security.communication.CertificateResponseMessage;
+import se.sensiblethings.addinlayer.extensions.security.communication.CertificateResponsePayload;
+import se.sensiblethings.addinlayer.extensions.security.communication.RegistrationRequestMessage;
+import se.sensiblethings.addinlayer.extensions.security.communication.RegistrationResponseMessage;
+import se.sensiblethings.addinlayer.extensions.security.communication.SecretKeyPayload;
+import se.sensiblethings.addinlayer.extensions.security.communication.SecureMessage;
+import se.sensiblethings.addinlayer.extensions.security.communication.SessionKeyExchangeMessage;
+import se.sensiblethings.addinlayer.extensions.security.communication.SslConnectionMessage;
 import se.sensiblethings.addinlayer.extensions.security.encryption.AsymmetricEncryption;
 import se.sensiblethings.addinlayer.extensions.security.encryption.SymmetricEncryption;
 import se.sensiblethings.addinlayer.extensions.security.keystore.KeyStoreTemplate;
@@ -56,7 +70,7 @@ public class SecurityExtension implements Extension, MessageListener{
 		communication.registerMessageListener(CertificateRequestMessage.class.getName(), this);
 		communication.registerMessageListener(CertificateResponseMessage.class.getName(), this);
 		communication.registerMessageListener(CertificateAcceptedResponseMessage.class.getName(), this);
-		
+		communication.registerMessageListener(SessionKeyExchangeMessage.class.getName(), this);
 	}
 
 	@Override
@@ -103,7 +117,39 @@ public class SecurityExtension implements Extension, MessageListener{
 	}
 	
 	public void sendSecureMassage(String message, String toUci, SensibleThingsNode toNode){
+		// Get the lifeTime of keys from configuration file
+		// Here for simple
+		long lifeTimeInHours = 60 * 60 * 1000 * 5; 
 		
+		if(securityManager.isKeyValid(toUci, lifeTimeInHours)){
+			SecureMessage sm = new SecureMessage(toUci, securityManager.getOperator(),
+					toNode, communication.getLocalSensibleThingsNode());
+			
+			sm.setPayload(securityManager.symmetricEncryptMessage(toUci, message, SymmetricEncryption.AES_CBC_PKCS5));
+			
+		}else if(securityManager.hasCertificate(toUci)){
+			SessionKeyExchangeMessage skxm = new SessionKeyExchangeMessage(toUci, securityManager.getOperator(),
+					toNode, communication.getLocalSensibleThingsNode());
+			
+			// set the secret key payload
+			securityManager.generateSymmetricSecurityKey(toUci);
+			SecretKeyPayload secretKeyPayload = new SecretKeyPayload(
+					(SecretKey)securityManager.getSecretKey(toUci, "password".toCharArray()),
+					SymmetricEncryption.AES_CBC_PKCS5,
+					lifeTimeInHours);
+			
+			byte[] payload = SerializationUtils.serialize(secretKeyPayload);
+			byte[] encryptPayload = securityManager.asymmetricEncryptMessage(toUci, payload, "RSA");
+			skxm.setSecretKeyPayload(encryptPayload);
+			
+			// set the secret key payload signature
+			skxm.setSecretKeyPayloadSignature(securityManager.signMessage(payload, SignatureOperations.SHA256WITHRSA));
+			
+			// set the certificatePayload
+			skxm.setCertificatePayload(
+					SerializationUtils.serialize(
+							new CertificatePayload(securityManager.getCertificate())));
+		}
 	}
 	
 	
@@ -174,6 +220,9 @@ public class SecurityExtension implements Extension, MessageListener{
 			if(nonce == (Integer)securityManager.getFromDataPool("nonce")){
 				System.out.println("[Bootstrap] Certificate has been safely accepted!");
 				
+				// remove the nonce from the data pool
+				securityManager.removeFromDataPool("nonce");
+				
 			}
 			
 		}
@@ -192,11 +241,14 @@ public class SecurityExtension implements Extension, MessageListener{
 		byte[] payload = securityManager.symmetricDecryptMessage(secretKey, crm.getPayload(), 
 				SymmetricEncryption.AES_CBC_PKCS5);
 		// deserialize
-		CertificateResponseMessagePayload responsePayload = (CertificateResponseMessagePayload)
+		CertificateResponsePayload responsePayload = (CertificateResponsePayload)
 				SerializationUtils.deserialize(payload);
 		
 		// varify the nonce
 		if(responsePayload.getToNonce() == (Integer)securityManager.getFromDataPool("nonce")){
+			// remove the nonce from the data pool
+			securityManager.removeFromDataPool("nonce");
+			
 			// store the secret key
 			securityManager.storeSecretKey(crm.fromUci, secretKey, SymmetricEncryption.AES_CBC_PKCS5, "password");
 			securityManager.storeCertificateChain(securityManager.getOperator(), responsePayload.getCertChain(), "password");
@@ -221,7 +273,7 @@ public class SecurityExtension implements Extension, MessageListener{
 		// decrypt the payload
 		byte[] plainText = securityManager.asymmetricDecryptMessage(cipherText, "RSA");
 		// deserialize the payload
-		CertificateRequestMessagePayload payload = (CertificateRequestMessagePayload)SerializationUtils.deserialize(plainText);
+		CertificateRequestPayload payload = (CertificateRequestPayload)SerializationUtils.deserialize(plainText);
 		// Get the certificate signing request
 		PKCS10CertificationRequest certRequest = payload.getCertRequest();
 		
@@ -240,7 +292,7 @@ public class SecurityExtension implements Extension, MessageListener{
 								securityManager.getSecretKey(crm.fromUci, "password".toCharArray()).getEncoded(),
 								SymmetricEncryption.AES_CBC_PKCS5));
 			
-			CertificateResponseMessagePayload responsePayload = new CertificateResponseMessagePayload();
+			CertificateResponsePayload responsePayload = new CertificateResponsePayload();
 			
 			responsePayload.setToNonce(payload.getNonce());
 			
@@ -288,8 +340,8 @@ public class SecurityExtension implements Extension, MessageListener{
 			// store the nonce into the data pool
 			securityManager.addToDataPool("nonce", nonce);
 			
-			CertificateRequestMessagePayload payload = 
-					new CertificateRequestMessagePayload(certRequest, nonce);
+			CertificateRequestPayload payload = 
+					new CertificateRequestPayload(certRequest, nonce);
 			
 			// use apache.commons.lang.SerializationUtils to serialize objects
 			byte[] plainText = SerializationUtils.serialize(payload);

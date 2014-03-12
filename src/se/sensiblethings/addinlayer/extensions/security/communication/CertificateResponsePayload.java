@@ -1,10 +1,8 @@
-package se.sensiblethings.addinlayer.extensions.security;
+package se.sensiblethings.addinlayer.extensions.security.communication;
 
 import java.security.cert.Certificate;
 
-import se.sensiblethings.addinlayer.extensions.security.communication.MessagePayload;
-
-public class CertificateResponseMessagePayload extends MessagePayload{
+public class CertificateResponsePayload extends MessagePayload{
 
 	private static final long serialVersionUID = -2410288697653708987L;
 	

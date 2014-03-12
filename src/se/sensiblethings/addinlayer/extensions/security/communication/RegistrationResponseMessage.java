@@ -1,4 +1,4 @@
-package se.sensiblethings.addinlayer.extensions.security;
+package se.sensiblethings.addinlayer.extensions.security.communication;
 
 import java.security.cert.Certificate;
 

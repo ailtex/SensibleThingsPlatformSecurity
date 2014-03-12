@@ -1,19 +1,21 @@
-package se.sensiblethings.addinlayer.extensions.security;
+package se.sensiblethings.addinlayer.extensions.security.communication;
+
+import org.bouncycastle.jce.PKCS10CertificationRequest;
 
 import se.sensiblethings.disseminationlayer.communication.Message;
 import se.sensiblethings.interfacelayer.SensibleThingsNode;
 
-public class CertificateAcceptedResponseMessage extends Message{
+public class CertificateRequestMessage extends Message{
 
-
-	private static final long serialVersionUID = 259454408800180536L;
+	private static final long serialVersionUID = -3858164569571353606L;
+	
+	// encrypted payload
+	private byte[] payload = null;
 	
 	public String fromUci;
 	public String toUci;
 	
-	private byte[] payload;
-	
-	public CertificateAcceptedResponseMessage(String toUci, String fromUci, SensibleThingsNode toNode,
+	public CertificateRequestMessage(String toUci, String fromUci, SensibleThingsNode toNode,
 			SensibleThingsNode fromNode) {
 		super(fromNode, toNode);
 		
@@ -28,5 +30,4 @@ public class CertificateAcceptedResponseMessage extends Message{
 	public void setPayload(byte[] payload) {
 		this.payload = payload;
 	}
-	
 }
