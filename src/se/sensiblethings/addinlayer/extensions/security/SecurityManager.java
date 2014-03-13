@@ -46,7 +46,7 @@ public class SecurityManager {
 	private String bootStrapUci = null;
 	
 	private KeyStoreJCA keyStore = null;
-	private Map<String, Object> dataPool = new HashMap<String, Object>();
+	private Map<String, Object> noncePool = new HashMap<String, Object>();
 	
 	public SecurityManager(){
 		/*
@@ -94,21 +94,21 @@ public class SecurityManager {
 		this.bootStrapUci = bootStrapUci;
 	}
 	
-	public void addToDataPool(String name, Object value){
-		dataPool.put(name, value);
+	public void addToNoncePool(String name, Object value){
+		noncePool.put(name, value);
 	}
 	
-	public Object getFromDataPool(String name){
-		if(dataPool.containsKey(name)){
-			return dataPool.get(name);
+	public Object getFromNoncePool(String name){
+		if(noncePool.containsKey(name)){
+			return noncePool.get(name);
 		}else{
 			return null;
 		}
 	}
 	
-	public boolean removeFromDataPool(String name){
-		if(dataPool.containsKey(name)){
-			dataPool.remove(name);
+	public boolean removeFromNoncePool(String name){
+		if(noncePool.containsKey(name)){
+			noncePool.remove(name);
 			return true;
 		}else{
 			return false;

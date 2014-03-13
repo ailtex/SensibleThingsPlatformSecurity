@@ -6,7 +6,12 @@ import java.security.cert.Certificate;
 import java.security.interfaces.RSAPrivateKey;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.Random;
+import java.util.Vector;
 
 import javax.crypto.SecretKey;
 
@@ -18,6 +23,8 @@ import se.sensiblethings.addinlayer.extensions.security.communication.MessagePay
 import se.sensiblethings.addinlayer.extensions.security.communication.ResponsePayload;
 import se.sensiblethings.addinlayer.extensions.security.communication.SecureMessage;
 import se.sensiblethings.addinlayer.extensions.security.communication.message.CertificateAcceptedResponseMessage;
+import se.sensiblethings.addinlayer.extensions.security.communication.message.CertificateExchangeMessage;
+import se.sensiblethings.addinlayer.extensions.security.communication.message.CertificateExchangeResponseMessage;
 import se.sensiblethings.addinlayer.extensions.security.communication.message.CertificateRequestMessage;
 import se.sensiblethings.addinlayer.extensions.security.communication.message.CertificateResponseMessage;
 import se.sensiblethings.addinlayer.extensions.security.communication.message.RegistrationRequestMessage;
@@ -25,6 +32,7 @@ import se.sensiblethings.addinlayer.extensions.security.communication.message.Re
 import se.sensiblethings.addinlayer.extensions.security.communication.message.SessionKeyExchangeMessage;
 import se.sensiblethings.addinlayer.extensions.security.communication.message.SessionKeyResponseMessage;
 import se.sensiblethings.addinlayer.extensions.security.communication.message.SslConnectionMessage;
+import se.sensiblethings.addinlayer.extensions.security.communication.payload.CertificateExchangePayload;
 import se.sensiblethings.addinlayer.extensions.security.communication.payload.CertificatePayload;
 import se.sensiblethings.addinlayer.extensions.security.communication.payload.CertificateRequestPayload;
 import se.sensiblethings.addinlayer.extensions.security.communication.payload.CertificateResponsePayload;
@@ -52,6 +60,7 @@ public class SecurityExtension implements Extension, MessageListener{
 	SecurityListener securityListener = null;
 	SecurityManager securityManager = null;
 	
+	Map<String, Vector<SecureMessage>> postOffice = null;
 	
 	public SecurityExtension(){}
 	
@@ -74,11 +83,15 @@ public class SecurityExtension implements Extension, MessageListener{
 		communication.registerMessageListener(CertificateResponseMessage.class.getName(), this);
 		communication.registerMessageListener(CertificateAcceptedResponseMessage.class.getName(), this);
 		communication.registerMessageListener(SessionKeyExchangeMessage.class.getName(), this);
+		communication.registerMessageListener(SessionKeyResponseMessage.class.getName(), this);
+		communication.registerMessageListener(CertificateExchangeMessage.class.getName(), this);
+		
 	}
 
 	@Override
 	public void startAddIn() {
 		securityManager = new SecurityManager();
+		postOffice = new HashMap<String, Vector<SecureMessage>>();
 	}
 
 	@Override
@@ -125,43 +138,100 @@ public class SecurityExtension implements Extension, MessageListener{
 		long lifeTimeInHours = 60 * 60 * 1000 * 5; 
 		
 		if(securityManager.isKeyValid(toUci, lifeTimeInHours)){
-			SecureMessage sm = new SecureMessage(toUci, securityManager.getOperator(),
-					toNode, communication.getLocalSensibleThingsNode());
-			
-			sm.setPayload(securityManager.symmetricEncryptMessage(toUci, message.getBytes(), SymmetricEncryption.AES_CBC_PKCS5));
+
+			sendToPostOffice(encapsulateSecueMessage(message, toUci, toNode));
+			sendOutSecureMessage(toUci);
 			
 		}else if(securityManager.hasCertificate(toUci)){
-			SessionKeyExchangeMessage skxm = new SessionKeyExchangeMessage(toUci, securityManager.getOperator(),
-					toNode, communication.getLocalSensibleThingsNode());
 			
-			// set the secret key payload
-			securityManager.generateSymmetricSecurityKey(toUci);
-			SecretKeyPayload secretKeyPayload = new SecretKeyPayload(
-					(SecretKey)securityManager.getSecretKey(toUci, "password".toCharArray()),
-					SymmetricEncryption.AES_CBC_PKCS5,
-					lifeTimeInHours);
-			
-			// set nonce and add it to the data pool
-			int nonce = new Random().nextInt();
-			secretKeyPayload.setNonce(nonce);
-			securityManager.addToDataPool("nonce", nonce);
-			
-			byte[] payload = SerializationUtils.serialize(secretKeyPayload);
-			byte[] encryptPayload = securityManager.asymmetricEncryptMessage(toUci, payload, "RSA");
-			skxm.setSecretKeyPayload(encryptPayload);
-			
-			// set the secret key payload signature
-			skxm.setSecretKeyPayloadSignature(securityManager.signMessage(payload, SignatureOperations.SHA256WITHRSA));
-			
-			// set the certificatePayload
-			byte[] certificatePayload = SerializationUtils.serialize(
-					new CertificatePayload(securityManager.getCertificate()));
-			skxm.setCertificatePayload(certificatePayload);			
-			
-			sendMessage(skxm);
+			exchangeSessionKey(toUci, toNode);			
+			sendToPostOffice(encapsulateSecueMessage(message, toUci, toNode));
+		}else{
+			exchangeCertificate(toUci, toNode);
+			sendToPostOffice(encapsulateSecueMessage(message, toUci, toNode));
 		}
 	}
 	
+	
+	private void exchangeCertificate(String toUci, SensibleThingsNode toNode) {
+		CertificateExchangeMessage cxm = new CertificateExchangeMessage(toUci, securityManager.getOperator(),
+				toNode, communication.getLocalSensibleThingsNode());
+		
+		CertificateExchangePayload cxp = new CertificateExchangePayload(securityManager.getCertificate());
+		cxp.setTimeStamp(new Date());
+		
+		byte[] payload = SerializationUtils.serialize(cxp);
+		cxm.setPayload(payload);
+		cxm.setSignature(securityManager.signMessage(payload, SignatureOperations.SHA256WITHRSA));
+		
+		sendMessage(cxm);
+	}
+
+	private SecureMessage encapsulateSecueMessage(String message, String toUci,
+			SensibleThingsNode toNode) {
+		SecureMessage sm = new SecureMessage(toUci, securityManager.getOperator(),
+				toNode, communication.getLocalSensibleThingsNode());
+		
+		sm.setPayload(securityManager.symmetricEncryptMessage(toUci, message.getBytes(), 
+				SymmetricEncryption.AES_CBC_PKCS5));
+		
+		return sm;
+	}
+
+	private void exchangeSessionKey(String toUci, SensibleThingsNode toNode) {
+		long lifeTimeInHours = 60 * 60 * 1000 * 5; 
+		
+		SessionKeyExchangeMessage skxm = new SessionKeyExchangeMessage(toUci, securityManager.getOperator(),
+				toNode, communication.getLocalSensibleThingsNode());
+		
+		// set the secret key payload
+		securityManager.generateSymmetricSecurityKey(toUci);
+		SecretKeyPayload secretKeyPayload = new SecretKeyPayload(
+				(SecretKey)securityManager.getSecretKey(toUci, "password".toCharArray()),
+				SymmetricEncryption.AES_CBC_PKCS5,
+				lifeTimeInHours);
+		
+		// set nonce and add it to the data pool
+		int nonce = new Random().nextInt();
+		secretKeyPayload.setNonce(nonce);
+		securityManager.addToNoncePool(toUci, nonce);
+		
+		byte[] payload = SerializationUtils.serialize(secretKeyPayload);
+		byte[] encryptPayload = securityManager.asymmetricEncryptMessage(toUci, payload, "RSA");
+		skxm.setPayload(encryptPayload);
+		
+		// set the secret key payload signature and the algorithm
+		skxm.setSignature(securityManager.signMessage(payload, SignatureOperations.SHA256WITHRSA));
+		skxm.setSignatureAlgorithm(SignatureOperations.SHA256WITHRSA);
+		
+		// set the certificatePayload
+		byte[] certificatePayload = SerializationUtils.serialize(
+				new CertificatePayload(securityManager.getCertificate()));
+		skxm.setCertificatePayload(certificatePayload);			
+		
+		sendMessage(skxm);
+		
+	}
+
+	private void sendToPostOffice(SecureMessage sm){
+		String toUci = sm.toUci;
+		if(postOffice.containsKey(toUci)){
+			postOffice.get(toUci).add(sm);
+		}else{
+			postOffice.put(toUci, new Vector<SecureMessage>());
+			postOffice.get(toUci).add(sm);
+		}
+	}
+	
+	private void sendOutSecureMessage(String toUci){
+		if(postOffice.containsKey(toUci)){
+			Iterator<SecureMessage> it = postOffice.get(toUci).iterator();
+			while(it.hasNext()){
+				sendMessage(it.next());
+			}
+			postOffice.get(toUci).removeAllElements();
+		}
+	}
 	
 	/**
 	 *  register the self uci to bootstrap node
@@ -177,7 +247,7 @@ public class SecurityExtension implements Extension, MessageListener{
 		RegistrationRequestMessage message = new RegistrationRequestMessage(toUci, fromUci, node, communication.getLocalSensibleThingsNode());
 		
 		// store the local registration Request Time
-		securityManager.addToDataPool("registrationRequestTime", message.getRegistrationRequestTime());
+		securityManager.addToNoncePool("registrationRequestTime", message.getRegistrationRequestTime());
 		
 		// store the bootstrap uci
 		securityManager.setBootStrapUci(toUci);
@@ -195,33 +265,27 @@ public class SecurityExtension implements Extension, MessageListener{
 				SslConnectionMessage requestMessage = (SslConnectionMessage)message;
 				securityListener.sslConnectionRequestEvent(requestMessage.uci, requestMessage.getFromNode());
 			}else if(((SslConnectionMessage) message).getSignal().equals("Disconnect")){
-				
+				transformCommunication("RUDP");
 			}
 			
-			
 		}else if(message instanceof RegistrationRequestMessage){
-			
 			RegistrationRequestMessage registrationRequestMessage = (RegistrationRequestMessage) message;
-			
 			handleRegistrationRequestMessage(registrationRequestMessage);
 			
 		}else if(message instanceof RegistrationResponseMessage){
-			
 			RegistrationResponseMessage rrm = (RegistrationResponseMessage) message;
-			
 			handleRegistrationResponseMessage(rrm);
-		}
-		else if(message instanceof CertificateRequestMessage){
+			
+		}else if(message instanceof CertificateRequestMessage){
 			CertificateRequestMessage crm = (CertificateRequestMessage)message;
-				
-			handleCertificateRequestMessage(crm);				
+			handleCertificateRequestMessage(crm);
+
 		}else if(message instanceof CertificateResponseMessage){
 			CertificateResponseMessage crm = (CertificateResponseMessage)message;
-			
 			handleCertificateResponseMessage(crm);
+			
 		}else if(message instanceof CertificateAcceptedResponseMessage){
 			CertificateAcceptedResponseMessage carm = (CertificateAcceptedResponseMessage)message;
-			
 			handleCertificateAcceptedResponseMessage(carm);
 			
 		}else if(message instanceof SessionKeyExchangeMessage){
@@ -230,8 +294,81 @@ public class SecurityExtension implements Extension, MessageListener{
 			
 		}else if(message instanceof SessionKeyResponseMessage){
 			SessionKeyResponseMessage skrm = (SessionKeyResponseMessage)message;
-			
 			handleSessionKeyResponseMessage(skrm);
+			
+		}else if(message instanceof CertificateExchangeMessage){
+			CertificateExchangeMessage cxm = (CertificateExchangeMessage)message;
+			handleCertificateExchangeMessage(cxm);
+			
+		}else if(message instanceof CertificateExchangeResponseMessage){
+			CertificateExchangeResponseMessage cxrm = (CertificateExchangeResponseMessage)message;
+			handleCertificateExchangeResponseMessage(cxrm);
+		}
+		
+	}
+	
+	
+	private void handleCertificateExchangeResponseMessage(
+			CertificateExchangeResponseMessage cxrm) {
+		//Decapsulte the Certificate
+		byte[] payload = cxrm.getPayload();
+		CertificateExchangePayload cxp = (CertificateExchangePayload)SerializationUtils.deserialize(payload);
+		Certificate cert = cxp.getCert();
+		
+		// check signature
+		if(!securityManager.verifySignature(cxrm.getPayload(), cxrm.getPayload(), cert, cxrm.getSignatureAlgorithm())){
+			System.out.println("[Signature] Error!");
+			return;
+		}
+		
+		// check the source ID and 
+		if(!cxp.getFromUci().equals(cxrm.fromUci) || !cxp.getToUci().equals(cxrm.toUci)){
+			System.out.println("[ID] Error!");
+			return;
+		}
+		
+		// verify the certificate
+		if (securityManager.isCertificateValid(cert, cxrm.fromUci)) {
+			// store the certificate
+			securityManager.storeCertificate(cxrm.fromUci, cert, "password");
+			
+			exchangeSessionKey(cxrm.toUci, cxrm.getToNode());
+		}
+	}
+
+	private void handleCertificateExchangeMessage(CertificateExchangeMessage cxm) {
+		//Decapsulte the Certificate
+		byte[] payload = cxm.getPayload();
+		CertificateExchangePayload cxp = (CertificateExchangePayload)SerializationUtils.deserialize(payload);
+		Certificate cert = cxp.getCert();
+		
+		// check signature
+		if(!securityManager.verifySignature(cxm.getPayload(), cxm.getPayload(), cert, cxm.getSignatureAlgorithm())){
+			System.out.println("[Signature] Error!");
+		}
+		
+		// verify the certificate
+		if (securityManager.isCertificateValid(cert, cxm.fromUci)) {
+			// store the certificate
+			securityManager.storeCertificate(cxm.fromUci, cert, "password");
+			
+			// send back response message
+			CertificateExchangeResponseMessage cxrm = new CertificateExchangeResponseMessage(cxm.fromUci,
+					securityManager.getOperator(), cxm.getFromNode(), communication.getLocalSensibleThingsNode());
+			
+			// add the uci
+			cxp.setFromUci(securityManager.getOperator());
+			cxp.setToUci(cxm.fromUci);
+			
+			byte[] cxrmPayload = SerializationUtils.serialize(cxp);
+			// set the payload
+			cxrm.setPayload(cxrmPayload);
+			// set the signature
+			cxrm.setSignature(securityManager.signMessage(cxrmPayload, cxm.getSignatureAlgorithm()));
+			// set the certificate
+			cxrm.setCert(securityManager.getCertificate());
+			// send
+			sendMessage(cxrm);
 		}
 		
 	}
@@ -241,8 +378,14 @@ public class SecurityExtension implements Extension, MessageListener{
 		byte[] payload = securityManager.symmetricDecryptMessage(skrm.fromUci, skrm.getPayload(), 
 				SymmetricEncryption.AES_CBC_PKCS5);
 		
+		// verify the signature
 		if(securityManager.verifySignature(payload, skrm.getSignature(), skrm.fromUci, skrm.getSignatureAlgorithm())){
 			
+			ResponsePayload responsePayload = (ResponsePayload)SerializationUtils.deserialize(payload);
+			if(responsePayload.getToNonce() == (Integer)securityManager.getFromNoncePool(skrm.fromUci)){
+				sendOutSecureMessage(skrm.fromUci);
+				securityManager.removeFromNoncePool("nonce");
+			}
 		}
 		
 	}
@@ -271,15 +414,20 @@ public class SecurityExtension implements Extension, MessageListener{
 		
 		if(isValid){
 			// Decapsulate the key
-			byte[] secretKeyPayload = skxm.getSecretKeyPayload();
-			byte[] decryptSecretKeyPayload = securityManager
-					.asymmetricDecryptMessage(secretKeyPayload, "RSA");
-			SecretKeyPayload payload = (SecretKeyPayload) SerializationUtils
-					.deserialize(decryptSecretKeyPayload);
-
+			byte[] secretKeyPayload = skxm.getPayload();
+			byte[] decryptSecretKeyPayload = securityManager.asymmetricDecryptMessage(secretKeyPayload, "RSA");
+			
+			// check the payload signature
+			if(!securityManager.verifySignature(decryptSecretKeyPayload, skxm.getSignature(),
+					securityManager.getPublicKey(skxm.fromUci), skxm.getSignatureAlgorithm())){
+				System.out.println("[Signature] Error");
+				return;
+			}
+			
+			SecretKeyPayload payload = (SecretKeyPayload) SerializationUtils.deserialize(decryptSecretKeyPayload);
+			
 			// store the session key
-			securityManager.storeSecretKey(skxm.fromUci, payload.getKey(),
-					"Password");
+			securityManager.storeSecretKey(skxm.fromUci, payload.getKey(),"Password");
 
 			// send back an response message
 			SessionKeyResponseMessage responseMessage = new SessionKeyResponseMessage(skxm.toUci,
@@ -294,7 +442,7 @@ public class SecurityExtension implements Extension, MessageListener{
 			int nonce = new Random().nextInt();
 			responsePayload.setToNonce(nonce);
 			// add it to the data pool
-			securityManager.addToDataPool("nonce", nonce);
+			securityManager.addToNoncePool(skxm.fromUci, nonce);
 
 			byte[] responsePayloadInByte = SerializationUtils.serialize(responsePayload);
 			
@@ -317,11 +465,11 @@ public class SecurityExtension implements Extension, MessageListener{
 		// convert byte array to integer
 		int nonce = ByteBuffer.wrap(payload).getInt();
 		
-		if(nonce == (Integer)securityManager.getFromDataPool("nonce")){
+		if(nonce == (Integer)securityManager.getFromNoncePool("nonce")){
 			System.out.println("[Bootstrap] Certificate has been safely accepted!");
 			
 			// remove the nonce from the data pool
-			securityManager.removeFromDataPool("nonce");
+			securityManager.removeFromNoncePool("nonce");
 		}
 		
 	}
@@ -341,9 +489,9 @@ public class SecurityExtension implements Extension, MessageListener{
 				SerializationUtils.deserialize(payload);
 		
 		// varify the nonce
-		if(responsePayload.getToNonce() == (Integer)securityManager.getFromDataPool("nonce")){
+		if(responsePayload.getToNonce() == (Integer)securityManager.getFromNoncePool(crm.fromUci)){
 			// remove the nonce from the data pool
-			securityManager.removeFromDataPool("nonce");
+			securityManager.removeFromNoncePool(crm.fromUci);
 			
 			// store the secret key
 			securityManager.storeSecretKey(crm.fromUci, secretKey, SymmetricEncryption.AES_CBC_PKCS5, "password");
@@ -395,7 +543,7 @@ public class SecurityExtension implements Extension, MessageListener{
 			int toNonce = new Random().nextInt();
 			responsePayload.setFromNonce(toNonce);
 			// store into the data pool
-			securityManager.addToDataPool("nonce", toNonce);
+			securityManager.addToNoncePool(crm.fromUci, toNonce);
 			
 			responsePayload.setCertChain(certs);
 			
@@ -414,7 +562,7 @@ public class SecurityExtension implements Extension, MessageListener{
 		
 		// Construct the original request, including itself uci and request time
 		String originalRequest = securityManager.getOperator() + "," +
-								securityManager.getFromDataPool("registrationRequestTime");
+								securityManager.getFromNoncePool("registrationRequestTime");
 		
 	  	// verify the public key and the signature
 		if(securityManager.verifySignature(originalRequest, 
@@ -434,7 +582,7 @@ public class SecurityExtension implements Extension, MessageListener{
 			int nonce = new Random().nextInt();
 			
 			// store the nonce into the data pool
-			securityManager.addToDataPool("nonce", nonce);
+			securityManager.addToNoncePool(rrm.uci, nonce);
 			
 			CertificateRequestPayload payload = 
 					new CertificateRequestPayload(certRequest, nonce);
@@ -492,7 +640,7 @@ public class SecurityExtension implements Extension, MessageListener{
 			}
 			
 			
-		}else if(communicationType.equals("SSL")){
+		}else if(communicationType.equals("RUDP")){
 			if(platform.isBehindNat()){
 				platform.changeCommunicationTo(communication.PROXY_RUDP);
 			}else{
@@ -506,11 +654,6 @@ public class SecurityExtension implements Extension, MessageListener{
 		
 	}
 	
-	private void transformToSslConnection(){
-		
-	}
-	
-	
 	
 	private void sendMessage(Message message){
 		try {
@@ -520,23 +663,4 @@ public class SecurityExtension implements Extension, MessageListener{
 		}
 	}
 	
-	private String createCertificate(String info){
-		// list of info :
-		// uci, public key, nonce, part of certificate, hashed password
-		String[] content = info.split(",");
-		
-		String certificate = content[0] + "," +  // uci
-							 content[1] + ",";  // public key
-		
-		// add the validation
-		Calendar calendar = Calendar.getInstance();
-		calendar.setTime(new Date());
-		calendar.add(Calendar.YEAR, 5);
-		certificate += calendar.getTime().toString() + ",";
-		
-		// add part of the certificate
-		certificate += content[3];
-		
-		return certificate;
-	}
 }
