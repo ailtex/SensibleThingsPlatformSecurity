@@ -8,7 +8,7 @@ public class SecureMessage extends Message{
 	public String fromUci;
 	public String toUci;
 	
-	private String payload;
+	private byte[] payload;
 	private byte[] signature;
 	private String signatureAlgorithm;
 	
@@ -21,12 +21,29 @@ public class SecureMessage extends Message{
 		this.toUci = toUci;
 	}
 
-	public String getPayload() {
+	public byte[] getPayload() {
 		return payload;
 	}
 
-	public void setPayload(String payload) {
+	public void setPayload(byte[] payload) {
 		this.payload = payload;
 	}
+
+	public byte[] getSignature() {
+		return signature;
+	}
+
+	public void setSignature(byte[] signature) {
+		this.signature = signature;
+	}
+
+	public String getSignatureAlgorithm() {
+		return signatureAlgorithm;
+	}
+
+	public void setSignatureAlgorithm(String signatureAlgorithm) {
+		this.signatureAlgorithm = signatureAlgorithm;
+	}
+	
 	
 }

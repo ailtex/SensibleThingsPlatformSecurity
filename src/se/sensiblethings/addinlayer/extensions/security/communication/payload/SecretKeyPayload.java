@@ -1,6 +1,8 @@
-package se.sensiblethings.addinlayer.extensions.security.communication;
+package se.sensiblethings.addinlayer.extensions.security.communication.payload;
 
 import javax.crypto.SecretKey;
+
+import se.sensiblethings.addinlayer.extensions.security.communication.MessagePayload;
 
 
 public class SecretKeyPayload extends MessagePayload{
@@ -14,6 +16,7 @@ public class SecretKeyPayload extends MessagePayload{
 	private String algorithm = null;
 	private long lifeTime = 0;
 	private String fromUci = null;
+	private int nonce;
 	
 	public SecretKeyPayload(SecretKey key, String algorithm, long lifeTime) {
 		super();
@@ -62,6 +65,14 @@ public class SecretKeyPayload extends MessagePayload{
 		this.fromUci = fromUci;
 	}
 
-	
+
+	public int getNonce() {
+		return nonce;
+	}
+
+
+	public void setNonce(int nonce) {
+		this.nonce = nonce;
+	}
 
 }

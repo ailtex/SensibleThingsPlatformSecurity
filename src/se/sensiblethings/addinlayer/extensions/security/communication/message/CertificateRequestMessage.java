@@ -1,4 +1,4 @@
-package se.sensiblethings.addinlayer.extensions.security.communication;
+package se.sensiblethings.addinlayer.extensions.security.communication.message;
 
 import org.bouncycastle.jce.PKCS10CertificationRequest;
 

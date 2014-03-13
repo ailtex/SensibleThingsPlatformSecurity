@@ -186,6 +186,34 @@ public class SecurityManager {
 		return false;
 	}
 	
+	public boolean isCertificateValid(Certificate cert, String fromUci){
+		X509Certificate X509Cert = (X509Certificate) cert; 
+		
+		try {
+			X509Cert.verify((PublicKey)keyStore.getPublicKey(bootStrapUci));
+			X509Cert.checkValidity();
+		} catch (InvalidKeyException | CertificateException
+				| NoSuchAlgorithmException | NoSuchProviderException
+				| SignatureException e) {
+			
+			e.printStackTrace();
+			return false;
+		}
+		
+		if(! X509Cert.getSubjectX500Principal().getName().equals(fromUci))
+			return false;
+		
+		if(! X509Cert.getIssuerX500Principal().getName().equals(bootStrapUci)){
+			return false;
+		}
+			
+		return true;
+	}
+	
+	public boolean isContactedBefore(String fromUci){
+		return keyStore.containAlias(fromUci);
+	}
+	
 	public Certificate[] signCertificateSigningRequest(PKCS10CertificationRequest certRequest, String uci){
 		KeyPair keyPair = new KeyPair((PublicKey)keyStore.getPublicKey(operator), 
 									  (PrivateKey)keyStore.getPrivateKey(operator, "password".toCharArray()));
@@ -255,6 +283,13 @@ public class SecurityManager {
 		}
 	}
 	
+	public void storeCertificate(String uci, Certificate cert, String password){
+		try {
+			keyStore.storeCertificate(uci, cert, password.toCharArray());
+		} catch (KeyStoreException e) {
+			e.printStackTrace();
+		}
+	}
 	/********************************************************************************
 	 * 
 	 *                           Signature Part
@@ -280,9 +315,27 @@ public class SecurityManager {
 		return signature;
 	}
 	
-	public boolean verifySignature(String message, String signature, PublicKey publicKey, String algorithm){
+	public boolean verifySignature(byte[] message, byte[] signature, String fromUci, String algorithm){
+		return verifySignature(message, signature, (PublicKey)keyStore.getPublicKey(fromUci), algorithm);
+	}
+	
+	public boolean verifySignature(byte[] message, byte[] signature, PublicKey publicKey, String algorithm){
 		try {
-			return SignatureOperations.verify(message.getBytes(), signature.getBytes(), publicKey, algorithm);
+			return SignatureOperations.verify(message, signature, publicKey, algorithm);
+		} catch (InvalidKeyException | NoSuchAlgorithmException e) {
+			e.printStackTrace();
+		}
+		return false;
+	}
+	
+	public boolean verifySignature(String message, String signature, PublicKey publicKey, String algorithm){
+		
+		return verifySignature(message.getBytes(),  signature.getBytes(), publicKey, algorithm);
+	}
+	
+	public boolean verifySignature(byte[] message, byte[] signature, Certificate cert, String algorithm){
+		try {
+			return SignatureOperations.verify(message, signature, cert, algorithm);
 		} catch (InvalidKeyException | NoSuchAlgorithmException e) {
 			e.printStackTrace();
 		}
@@ -290,12 +343,7 @@ public class SecurityManager {
 	}
 	
 	public boolean verifySignature(String message, String signature, Certificate cert, String algorithm){
-		try {
-			return SignatureOperations.verify(message.getBytes(), signature.getBytes(), cert, algorithm);
-		} catch (InvalidKeyException | NoSuchAlgorithmException e) {
-			e.printStackTrace();
-		}
-		return false;
+		return verifySignature(message.getBytes(), signature.getBytes(), cert, algorithm);
 	}
 	
 	

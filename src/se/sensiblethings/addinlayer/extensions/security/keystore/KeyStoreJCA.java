@@ -259,6 +259,16 @@ public class KeyStoreJCA implements KeyStoreTemplate{
 		return false;
 	}
 	
+	public boolean containAlias(String alias){
+		try {
+			return ks.containsAlias(alias);
+		} catch (KeyStoreException e) {
+			e.printStackTrace();
+		}
+		
+		return false;
+	}
+	
 	public Date getCreationData(String alias){
 		
 		try {

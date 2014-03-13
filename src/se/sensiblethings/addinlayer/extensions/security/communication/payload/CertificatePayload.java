@@ -1,6 +1,8 @@
-package se.sensiblethings.addinlayer.extensions.security.communication;
+package se.sensiblethings.addinlayer.extensions.security.communication.payload;
 
 import java.security.cert.Certificate;
+
+import se.sensiblethings.addinlayer.extensions.security.communication.MessagePayload;
 
 
 public class CertificatePayload extends MessagePayload{

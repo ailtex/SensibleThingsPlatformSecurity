@@ -14,18 +14,21 @@ import org.apache.commons.lang.SerializationUtils;
 import org.bouncycastle.jce.PKCS10CertificationRequest;
 
 import se.sensiblethings.addinlayer.extensions.Extension;
-import se.sensiblethings.addinlayer.extensions.security.communication.CertificateAcceptedResponseMessage;
-import se.sensiblethings.addinlayer.extensions.security.communication.CertificatePayload;
-import se.sensiblethings.addinlayer.extensions.security.communication.CertificateRequestMessage;
-import se.sensiblethings.addinlayer.extensions.security.communication.CertificateRequestPayload;
-import se.sensiblethings.addinlayer.extensions.security.communication.CertificateResponseMessage;
-import se.sensiblethings.addinlayer.extensions.security.communication.CertificateResponsePayload;
-import se.sensiblethings.addinlayer.extensions.security.communication.RegistrationRequestMessage;
-import se.sensiblethings.addinlayer.extensions.security.communication.RegistrationResponseMessage;
-import se.sensiblethings.addinlayer.extensions.security.communication.SecretKeyPayload;
+import se.sensiblethings.addinlayer.extensions.security.communication.MessagePayload;
+import se.sensiblethings.addinlayer.extensions.security.communication.ResponsePayload;
 import se.sensiblethings.addinlayer.extensions.security.communication.SecureMessage;
-import se.sensiblethings.addinlayer.extensions.security.communication.SessionKeyExchangeMessage;
-import se.sensiblethings.addinlayer.extensions.security.communication.SslConnectionMessage;
+import se.sensiblethings.addinlayer.extensions.security.communication.message.CertificateAcceptedResponseMessage;
+import se.sensiblethings.addinlayer.extensions.security.communication.message.CertificateRequestMessage;
+import se.sensiblethings.addinlayer.extensions.security.communication.message.CertificateResponseMessage;
+import se.sensiblethings.addinlayer.extensions.security.communication.message.RegistrationRequestMessage;
+import se.sensiblethings.addinlayer.extensions.security.communication.message.RegistrationResponseMessage;
+import se.sensiblethings.addinlayer.extensions.security.communication.message.SessionKeyExchangeMessage;
+import se.sensiblethings.addinlayer.extensions.security.communication.message.SessionKeyResponseMessage;
+import se.sensiblethings.addinlayer.extensions.security.communication.message.SslConnectionMessage;
+import se.sensiblethings.addinlayer.extensions.security.communication.payload.CertificatePayload;
+import se.sensiblethings.addinlayer.extensions.security.communication.payload.CertificateRequestPayload;
+import se.sensiblethings.addinlayer.extensions.security.communication.payload.CertificateResponsePayload;
+import se.sensiblethings.addinlayer.extensions.security.communication.payload.SecretKeyPayload;
 import se.sensiblethings.addinlayer.extensions.security.encryption.AsymmetricEncryption;
 import se.sensiblethings.addinlayer.extensions.security.encryption.SymmetricEncryption;
 import se.sensiblethings.addinlayer.extensions.security.keystore.KeyStoreTemplate;
@@ -125,7 +128,7 @@ public class SecurityExtension implements Extension, MessageListener{
 			SecureMessage sm = new SecureMessage(toUci, securityManager.getOperator(),
 					toNode, communication.getLocalSensibleThingsNode());
 			
-			sm.setPayload(securityManager.symmetricEncryptMessage(toUci, message, SymmetricEncryption.AES_CBC_PKCS5));
+			sm.setPayload(securityManager.symmetricEncryptMessage(toUci, message.getBytes(), SymmetricEncryption.AES_CBC_PKCS5));
 			
 		}else if(securityManager.hasCertificate(toUci)){
 			SessionKeyExchangeMessage skxm = new SessionKeyExchangeMessage(toUci, securityManager.getOperator(),
@@ -138,6 +141,11 @@ public class SecurityExtension implements Extension, MessageListener{
 					SymmetricEncryption.AES_CBC_PKCS5,
 					lifeTimeInHours);
 			
+			// set nonce and add it to the data pool
+			int nonce = new Random().nextInt();
+			secretKeyPayload.setNonce(nonce);
+			securityManager.addToDataPool("nonce", nonce);
+			
 			byte[] payload = SerializationUtils.serialize(secretKeyPayload);
 			byte[] encryptPayload = securityManager.asymmetricEncryptMessage(toUci, payload, "RSA");
 			skxm.setSecretKeyPayload(encryptPayload);
@@ -146,9 +154,11 @@ public class SecurityExtension implements Extension, MessageListener{
 			skxm.setSecretKeyPayloadSignature(securityManager.signMessage(payload, SignatureOperations.SHA256WITHRSA));
 			
 			// set the certificatePayload
-			skxm.setCertificatePayload(
-					SerializationUtils.serialize(
-							new CertificatePayload(securityManager.getCertificate())));
+			byte[] certificatePayload = SerializationUtils.serialize(
+					new CertificatePayload(securityManager.getCertificate()));
+			skxm.setCertificatePayload(certificatePayload);			
+			
+			sendMessage(skxm);
 		}
 	}
 	
@@ -211,25 +221,111 @@ public class SecurityExtension implements Extension, MessageListener{
 			handleCertificateResponseMessage(crm);
 		}else if(message instanceof CertificateAcceptedResponseMessage){
 			CertificateAcceptedResponseMessage carm = (CertificateAcceptedResponseMessage)message;
-			byte[] payload = securityManager.symmetricDecryptMessage(
-					carm.fromUci, carm.getPayload(), SymmetricEncryption.AES_CBC_PKCS5);
 			
-			// convert byte array to integer
-			int nonce = ByteBuffer.wrap(payload).getInt();
+			handleCertificateAcceptedResponseMessage(carm);
 			
-			if(nonce == (Integer)securityManager.getFromDataPool("nonce")){
-				System.out.println("[Bootstrap] Certificate has been safely accepted!");
-				
-				// remove the nonce from the data pool
-				securityManager.removeFromDataPool("nonce");
-				
-			}
+		}else if(message instanceof SessionKeyExchangeMessage){
+			SessionKeyExchangeMessage skxm = (SessionKeyExchangeMessage)message;	
+			handleSessionKeyExchangeMessage(skxm);
 			
+		}else if(message instanceof SessionKeyResponseMessage){
+			SessionKeyResponseMessage skrm = (SessionKeyResponseMessage)message;
+			
+			handleSessionKeyResponseMessage(skrm);
 		}
 		
 	}
 	
 	
+	private void handleSessionKeyResponseMessage(SessionKeyResponseMessage skrm) {
+		byte[] payload = securityManager.symmetricDecryptMessage(skrm.fromUci, skrm.getPayload(), 
+				SymmetricEncryption.AES_CBC_PKCS5);
+		
+		if(securityManager.verifySignature(payload, skrm.getSignature(), skrm.fromUci, skrm.getSignatureAlgorithm())){
+			
+		}
+		
+	}
+
+	private void handleSessionKeyExchangeMessage(SessionKeyExchangeMessage skxm) {
+		// 1, check the source id
+		// 2, check if the ID exist
+		// 3, check if the certificate valid
+		// 4, decrypt the session key and check its signature
+		
+		// Get the certificate
+		
+		boolean isValid = false;
+		
+		// if it contacted before, it jump checking the certificate 
+		if(securityManager.isContactedBefore(skxm.fromUci)){
+			isValid = true;
+		}else{
+			Certificate cert = (Certificate)SerializationUtils.deserialize(skxm.getCertificatePayload());
+			
+			if(securityManager.isCertificateValid(cert, skxm.fromUci)){
+				isValid = true;
+				securityManager.storeCertificate(skxm.fromUci, cert, "password");
+			}
+		}
+		
+		if(isValid){
+			// Decapsulate the key
+			byte[] secretKeyPayload = skxm.getSecretKeyPayload();
+			byte[] decryptSecretKeyPayload = securityManager
+					.asymmetricDecryptMessage(secretKeyPayload, "RSA");
+			SecretKeyPayload payload = (SecretKeyPayload) SerializationUtils
+					.deserialize(decryptSecretKeyPayload);
+
+			// store the session key
+			securityManager.storeSecretKey(skxm.fromUci, payload.getKey(),
+					"Password");
+
+			// send back an response message
+			SessionKeyResponseMessage responseMessage = new SessionKeyResponseMessage(skxm.toUci,
+					securityManager.getOperator(), skxm.getFromNode(),
+					communication.getLocalSensibleThingsNode());
+
+			ResponsePayload responsePayload = new ResponsePayload(skxm.fromUci, securityManager.getOperator());
+
+			responsePayload.setFromNonce(payload.getNonce());
+
+			// set the nonce
+			int nonce = new Random().nextInt();
+			responsePayload.setToNonce(nonce);
+			// add it to the data pool
+			securityManager.addToDataPool("nonce", nonce);
+
+			byte[] responsePayloadInByte = SerializationUtils.serialize(responsePayload);
+			
+			responseMessage.setSignature(securityManager.signMessage(responsePayloadInByte, SignatureOperations.SHA256WITHRSA));
+
+			responseMessage.setPayload(securityManager.symmetricEncryptMessage(
+							skxm.fromUci, responsePayloadInByte,
+							payload.getAlgorithm()));
+
+			sendMessage(responseMessage);
+		}
+	}
+	
+
+	private void handleCertificateAcceptedResponseMessage(
+			CertificateAcceptedResponseMessage carm) {
+		byte[] payload = securityManager.symmetricDecryptMessage(
+				carm.fromUci, carm.getPayload(), SymmetricEncryption.AES_CBC_PKCS5);
+		
+		// convert byte array to integer
+		int nonce = ByteBuffer.wrap(payload).getInt();
+		
+		if(nonce == (Integer)securityManager.getFromDataPool("nonce")){
+			System.out.println("[Bootstrap] Certificate has been safely accepted!");
+			
+			// remove the nonce from the data pool
+			securityManager.removeFromDataPool("nonce");
+		}
+		
+	}
+
 	private void handleCertificateResponseMessage(
 			CertificateResponseMessage crm) {
 		

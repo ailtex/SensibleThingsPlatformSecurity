@@ -1,4 +1,4 @@
-package se.sensiblethings.addinlayer.extensions.security.communication;
+package se.sensiblethings.addinlayer.extensions.security.communication.message;
 
 import se.sensiblethings.disseminationlayer.communication.Message;
 import se.sensiblethings.interfacelayer.SensibleThingsNode;
@@ -15,6 +15,7 @@ public class SessionKeyExchangeMessage extends Message{
 	
 	private byte[] secretKeyPayload;
 	private byte[] secretKeyPayloadSignature;
+	
 	private byte[] certificatePayload;
 	
 	public SessionKeyExchangeMessage(String toUci, String fromUci, SensibleThingsNode toNode,
@@ -48,6 +49,7 @@ public class SessionKeyExchangeMessage extends Message{
 	public void setSecretKeyPayloadSignature(byte[] secretKeyPayloadSignature) {
 		this.secretKeyPayloadSignature = secretKeyPayloadSignature;
 	}
+
 	
 	
 }
