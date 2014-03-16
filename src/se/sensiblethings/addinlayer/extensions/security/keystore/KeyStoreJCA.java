@@ -30,11 +30,12 @@ public class KeyStoreJCA implements KeyStoreTemplate{
 	private KeyStore ks = null;
 	private String keyStoreFile = null;
 	
-	public void keyStoreJCA(){
-		
+	public KeyStoreJCA(){}
+	
+	public KeyStoreJCA(String keyStoreFile, char[] password) throws IOException{
 		// "KeyStore" the file name, which stores the keys
 		// "password" the password of the keystore
-		// createKeyStore("KeyStore", "password".toCharArray());
+		loadKeyStore(keyStoreFile, password);
 	}
 	
 	public void loadKeyStore(String keyStoreFile, char[] password) throws  IOException {
@@ -93,7 +94,7 @@ public class KeyStoreJCA implements KeyStoreTemplate{
 	}
 	
 	
-	public void createKeyStore(String KeyStoreFile, char[] password){
+	public boolean createKeyStore(String KeyStoreFile, char[] password){
 		// There is a built-in default keystore implementation type known as
 		// "jks" that is provided by Sun Microsystems.
 		// It implements the keystore as a file, utilizing a proprietary
@@ -126,6 +127,7 @@ public class KeyStoreJCA implements KeyStoreTemplate{
 			e.printStackTrace();
 		}
 		
+		return true;
 	}
 	
 	public Key getPublicKey(String alias){

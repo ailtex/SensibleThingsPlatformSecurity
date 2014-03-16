@@ -87,7 +87,7 @@ public class SecurityExtension implements Extension, MessageListener{
 		communication.registerMessageListener(SessionKeyExchangeMessage.class.getName(), this);
 		communication.registerMessageListener(SessionKeyResponseMessage.class.getName(), this);
 		communication.registerMessageListener(CertificateExchangeMessage.class.getName(), this);
-		
+		communication.registerMessageListener(SecureMessage.class.getName(), this);
 	}
 
 	@Override
@@ -131,7 +131,6 @@ public class SecurityExtension implements Extension, MessageListener{
 	}
 	
 	
-	
 	@Override
 	public void handleMessage(Message message) {
 		if(message instanceof SslConnectionMessage) {
@@ -173,7 +172,18 @@ public class SecurityExtension implements Extension, MessageListener{
 		}else if(message instanceof CertificateExchangeResponseMessage){
 			CertificateExchangeResponseMessage cxrm = (CertificateExchangeResponseMessage)message;
 			secureCommunication.handleCertificateExchangeResponseMessage(cxrm);
+			
+		}else if(message instanceof SecureMessage){
+			SecureMessage sm = (SecureMessage)message;
+			String plainText = secureCommunication.handleSecureMessage(sm);
+			
+			// call securityListener
+			if(securityListener != null){
+				securityListener.receivedSecureMessageEvent(plainText, sm.fromUci, sm.getFromNode());
+			}
+			
 		}
 		
 	}
+	
 }

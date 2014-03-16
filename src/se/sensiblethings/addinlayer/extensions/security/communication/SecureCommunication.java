@@ -114,10 +114,17 @@ public class SecureCommunication {
 			
 			exchangeSessionKey(toUci, toNode);			
 			sendToPostOffice(encapsulateSecueMessage(message, toUci, toNode));
+			
 		}else{
+			
 			exchangeCertificate(toUci, toNode);
 			sendToPostOffice(encapsulateSecueMessage(message, toUci, toNode));
+			
 		}
+	}
+	
+	public String handleSecureMessage(SecureMessage sm){
+		return decapsulateSecureMessage(sm);
 	}
 	
 	public void handleSslConnectionMessage(SslConnectionMessage scm) {
@@ -468,7 +475,14 @@ public class SecureCommunication {
 		
 		sendMessage(cxm);
 	}
-
+	
+	private String decapsulateSecureMessage(SecureMessage sm){
+		byte[] payload = securityManager.symmetricDecryptMessage(sm.fromUci, 
+				sm.getPayload(), SymmetricEncryption.AES_CBC_PKCS5);
+		
+		return new String(payload);
+	}
+	
 	private SecureMessage encapsulateSecueMessage(String message, String toUci,
 			SensibleThingsNode toNode) {
 		SecureMessage sm = new SecureMessage(toUci, securityManager.getOperator(),
