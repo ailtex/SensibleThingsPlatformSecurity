@@ -32,6 +32,7 @@ import se.sensiblethings.addinlayer.extensions.security.communication.payload.Ce
 import se.sensiblethings.addinlayer.extensions.security.communication.payload.SecretKeyPayload;
 import se.sensiblethings.addinlayer.extensions.security.encryption.AsymmetricEncryption;
 import se.sensiblethings.addinlayer.extensions.security.encryption.SymmetricEncryption;
+import se.sensiblethings.addinlayer.extensions.security.parameters.SecurityLevel;
 import se.sensiblethings.addinlayer.extensions.security.signature.SignatureOperations;
 import se.sensiblethings.disseminationlayer.communication.Communication;
 import se.sensiblethings.disseminationlayer.communication.DestinationNotReachableException;
@@ -47,15 +48,18 @@ public class SecureCommunication {
 	Communication communication = null;
 	
 	SecurityManager securityManager = null;
+	SecurityLevel securityParameters = null;
 	
 	Map<String, Vector<SecureMessage>> postOffice = null;
 	
-	public SecureCommunication(SensibleThingsPlatform platform, SecurityManager securityManager){
+	public SecureCommunication(SensibleThingsPlatform platform, 
+			SecurityManager securityManager, SecurityLevel securityParameters){
 		this.platform = platform;
 		this.core = platform.getDisseminationCore();
 		this.communication = core.getCommunication();
 		
 		this.securityManager = securityManager;
+		this.securityParameters = securityParameters;
 		
 		postOffice = new HashMap<String, Vector<SecureMessage>>();
 	}
@@ -247,7 +251,8 @@ public class SecureCommunication {
 		if(isValid){
 			// Decapsulate the key
 			byte[] secretKeyPayload = skxm.getPayload();
-			byte[] decryptSecretKeyPayload = securityManager.asymmetricDecryptMessage(secretKeyPayload, "RSA");
+			byte[] decryptSecretKeyPayload = 
+					securityManager.asymmetricDecryptMessage(secretKeyPayload, securityParameters.getAsymmetricAlgorithm());
 			
 			// check the payload signature
 			if(!securityManager.verifySignature(decryptSecretKeyPayload, skxm.getSignature(),
@@ -278,7 +283,8 @@ public class SecureCommunication {
 
 			byte[] responsePayloadInByte = SerializationUtils.serialize(responsePayload);
 			
-			responseMessage.setSignature(securityManager.signMessage(responsePayloadInByte, SignatureOperations.SHA256WITHRSA));
+			responseMessage.setSignature(securityManager.signMessage(responsePayloadInByte, 
+					securityParameters.getSignatureAlgorithm()));
 
 			responseMessage.setPayload(securityManager.symmetricEncryptMessage(
 							skxm.fromUci, responsePayloadInByte,
@@ -292,7 +298,7 @@ public class SecureCommunication {
 	public void handleCertificateAcceptedResponseMessage(
 			CertificateAcceptedResponseMessage carm) {
 		byte[] payload = securityManager.symmetricDecryptMessage(
-				carm.fromUci, carm.getPayload(), SymmetricEncryption.AES_CBC_PKCS5);
+				carm.fromUci, carm.getPayload(), securityParameters.getSymmetricAlgorithm());
 		
 		// convert byte array to integer
 		int nonce = ByteBuffer.wrap(payload).getInt();

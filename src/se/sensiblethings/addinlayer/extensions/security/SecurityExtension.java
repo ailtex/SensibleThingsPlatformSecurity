@@ -42,6 +42,7 @@ import se.sensiblethings.addinlayer.extensions.security.encryption.AsymmetricEnc
 import se.sensiblethings.addinlayer.extensions.security.encryption.SymmetricEncryption;
 import se.sensiblethings.addinlayer.extensions.security.keystore.KeyStoreTemplate;
 import se.sensiblethings.addinlayer.extensions.security.keystore.SQLiteDatabase;
+import se.sensiblethings.addinlayer.extensions.security.parameters.SecurityLevel;
 import se.sensiblethings.addinlayer.extensions.security.signature.SignatureOperations;
 import se.sensiblethings.disseminationlayer.communication.Communication;
 import se.sensiblethings.disseminationlayer.communication.DestinationNotReachableException;
@@ -61,13 +62,12 @@ public class SecurityExtension implements Extension, MessageListener{
 	SecurityListener securityListener = null;
 	SecurityManager securityManager = null;
 	SecureCommunication secureCommunication = null;
+	SecurityLevel securityParameters = null;
 	
 	
-	
-	public SecurityExtension(){}
-	
-	public SecurityExtension(SecurityListener listener){
+	public SecurityExtension(SecurityListener listener, SecurityLevel level){
 		this.securityListener = listener;
+		this.securityParameters = level;
 	}
 	
 
@@ -93,8 +93,11 @@ public class SecurityExtension implements Extension, MessageListener{
 	@Override
 	public void startAddIn() {
 		securityManager = new SecurityManager();
-		secureCommunication = new SecureCommunication(this.platform, this.securityManager);
-
+		
+		if(this.securityParameters == null){
+			this.securityParameters = SecurityLevel.Low;
+		}
+		secureCommunication = new SecureCommunication(this.platform, this.securityManager, this.securityParameters);
 	}
 
 	@Override
@@ -109,6 +112,14 @@ public class SecurityExtension implements Extension, MessageListener{
 		
 	}
 	
+	public SecurityLevel getSecurityParameters() {
+		return securityParameters;
+	}
+
+	public void setSecurityParameters(SecurityLevel securityParameters) {
+		this.securityParameters = securityParameters;
+	}
+
 	public SecurityListener getSecurityListener() {
 		return securityListener;
 	}
