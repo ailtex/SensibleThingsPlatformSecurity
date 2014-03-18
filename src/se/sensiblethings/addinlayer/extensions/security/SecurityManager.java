@@ -27,6 +27,7 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 
+import org.bouncycastle.crypto.tls.SecurityParameters;
 import org.bouncycastle.jce.PKCS10CertificationRequest;
 
 import se.sensiblethings.addinlayer.extensions.security.certificate.CertificateOperations;
@@ -35,6 +36,7 @@ import se.sensiblethings.addinlayer.extensions.security.keystore.KeyStoreJCA;
 import se.sensiblethings.addinlayer.extensions.security.keystore.KeyStoreTemplate;
 import se.sensiblethings.addinlayer.extensions.security.keystore.SQLiteDatabase;
 import se.sensiblethings.addinlayer.extensions.security.messagedigest.MessageDigestOperations;
+import se.sensiblethings.addinlayer.extensions.security.parameters.SecurityLevel;
 import se.sensiblethings.addinlayer.extensions.security.signature.SignatureOperations;
 import se.sensiblethings.addinlayer.extensions.security.encryption.SymmetricEncryption;
 
@@ -47,15 +49,10 @@ public class SecurityManager {
 	
 	private KeyStoreJCA keyStore = null;
 	private Map<String, Object> noncePool = new HashMap<String, Object>();
+	private SecurityLevel securityParameters = null;
 	
-	public SecurityManager(){
-		/*
-		keyStore = new SQLiteDatabase();
-		// firstly connect to permanent key store
-		keyStore.getConnection(SQLiteDatabase.PKS_keystore_URL);
-		//initial the database
-		keyStore.configureAndInitialize();
-		*/
+	public SecurityManager(SecurityLevel securityParameters){
+
 		keyStore = new KeyStoreJCA();
 		
 		try {
@@ -65,6 +62,7 @@ public class SecurityManager {
 			e.printStackTrace();
 		}
 		
+		this.securityParameters = securityParameters;
 	}
 	
 	public void initializePermanentKeyStore(String uci){
@@ -144,7 +142,8 @@ public class SecurityManager {
 		// Reason to see : http://www.oracle.com/technetwork/java/faq-sun-packages-142232.html
 		KeyPair keyPair = null;
 		try {
-			 keyPair = AsymmetricEncryption.generateKey(AsymmetricEncryption.RSA, 2048);
+			 keyPair = AsymmetricEncryption.generateKey(securityParameters.getAsymmetricAlgorithm(),
+					 securityParameters.getSymmetricKeyLength());
 		} catch (NoSuchAlgorithmException e) {
 			
 			e.printStackTrace();

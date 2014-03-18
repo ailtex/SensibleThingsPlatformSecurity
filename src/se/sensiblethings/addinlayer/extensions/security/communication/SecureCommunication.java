@@ -212,7 +212,7 @@ public class SecureCommunication {
 	
 	public void handleSessionKeyResponseMessage(SessionKeyResponseMessage skrm) {
 		byte[] payload = securityManager.symmetricDecryptMessage(skrm.fromUci, skrm.getPayload(), 
-				SymmetricEncryption.AES_CBC_PKCS5);
+				securityParameters.getSymmetricAlgorithm());
 		
 		// verify the signature
 		if(securityManager.verifySignature(payload, skrm.getSignature(), skrm.fromUci, skrm.getSignatureAlgorithm())){
@@ -317,11 +317,12 @@ public class SecureCommunication {
 		
 		byte[] encryptSecretKey = crm.getEncryptSecretKey();
 		// decrypt the secret key
-		byte[] secretKey = securityManager.asymmetricDecryptMessage(encryptSecretKey, AsymmetricEncryption.RSA);
+		byte[] secretKey = securityManager.asymmetricDecryptMessage(encryptSecretKey, 
+				securityParameters.getAsymmetricAlgorithm());
 		
 		// decrypt the certificates and nonces
 		byte[] payload = securityManager.symmetricDecryptMessage(secretKey, crm.getPayload(), 
-				SymmetricEncryption.AES_CBC_PKCS5);
+				securityParameters.getSymmetricAlgorithm());
 		// deserialize
 		CertificateResponsePayload responsePayload = (CertificateResponsePayload)
 				SerializationUtils.deserialize(payload);
@@ -332,7 +333,7 @@ public class SecureCommunication {
 			securityManager.removeFromNoncePool(crm.fromUci);
 			
 			// store the secret key
-			securityManager.storeSecretKey(crm.fromUci, secretKey, SymmetricEncryption.AES_CBC_PKCS5, "password");
+			securityManager.storeSecretKey(crm.fromUci, secretKey, securityParameters.getSymmetricAlgorithm(), "password");
 			securityManager.storeCertificateChain(securityManager.getOperator(), responsePayload.getCertChain(), "password");
 			
 			//send back CertificateAcceptedResponseMessage
@@ -342,7 +343,7 @@ public class SecureCommunication {
 			
 			int nonce =  responsePayload.getFromNonce();
 			carm.setPayload(securityManager.symmetricEncryptMessage(crm.fromUci, 
-					String.valueOf(nonce), SymmetricEncryption.AES_CBC_PKCS5).getBytes());
+					String.valueOf(nonce), securityParameters.getSymmetricAlgorithm()).getBytes());
 			
 			sendMessage(carm);
 			
@@ -353,7 +354,8 @@ public class SecureCommunication {
 		byte[] cipherText = crm.getPayload();
 		
 		// decrypt the payload
-		byte[] plainText = securityManager.asymmetricDecryptMessage(cipherText, "RSA");
+		byte[] plainText = securityManager.asymmetricDecryptMessage(cipherText, 
+				securityParameters.getAsymmetricAlgorithm());
 		// deserialize the payload
 		CertificateRequestPayload payload = (CertificateRequestPayload)SerializationUtils.deserialize(plainText);
 		// Get the certificate signing request
@@ -372,7 +374,7 @@ public class SecureCommunication {
 			certRespMesg.setEncryptSecretKey(securityManager.asymmetricEncryptMessage(
 								crm.fromUci, 
 								securityManager.getSecretKey(crm.fromUci, "password".toCharArray()).getEncoded(),
-								SymmetricEncryption.AES_CBC_PKCS5));
+								securityParameters.getSymmetricAlgorithm()));
 			
 			CertificateResponsePayload responsePayload = new CertificateResponsePayload();
 			
@@ -386,7 +388,7 @@ public class SecureCommunication {
 			responsePayload.setCertChain(certs);
 			
 			byte[] encryptPayload = securityManager.symmetricEncryptMessage(crm.fromUci, 
-					SerializationUtils.serialize(responsePayload), SymmetricEncryption.AES_CBC_PKCS5);
+					SerializationUtils.serialize(responsePayload), securityParameters.getSymmetricAlgorithm());
 			
 			certRespMesg.setPayload(encryptPayload);
 			
@@ -428,7 +430,8 @@ public class SecureCommunication {
 			// use apache.commons.lang.SerializationUtils to serialize objects
 			byte[] plainText = SerializationUtils.serialize(payload);
 			// encrypt message
-			byte[] cipherText = securityManager.asymmetricEncryptMessage(rrm.uci, plainText, "RSA");
+			byte[] cipherText = securityManager.asymmetricEncryptMessage(rrm.uci, plainText, 
+					securityParameters.getAsymmetricAlgorithm());
 			// set the encrypted payload
 			crm.setPayload(cipherText);
 			
@@ -454,13 +457,13 @@ public class SecureCommunication {
 		registrationResponseMessage.setCertificate(securityManager.getCertificate());
 		
 		// set the signature algorithm of the message
-		registrationResponseMessage.setSignatureAlgorithm(SignatureOperations.SHA256WITHRSA);
+		registrationResponseMessage.setSignatureAlgorithm(securityParameters.getSignatureAlgorithm());
 		
 		// signed the request message
 		String toBeSignedMessage =  registrationRequestMessage.fromUci + "," + 
 									 registrationRequestMessage.getRegistrationRequestTime();
 		
-		String signature = securityManager.signMessage(toBeSignedMessage, SignatureOperations.SHA256WITHRSA);
+		String signature = securityManager.signMessage(toBeSignedMessage, securityParameters.getSignatureAlgorithm());
 		registrationResponseMessage.setSignatue(signature);
 		
 		// send out the message
@@ -477,14 +480,14 @@ public class SecureCommunication {
 		
 		byte[] payload = SerializationUtils.serialize(cxp);
 		cxm.setPayload(payload);
-		cxm.setSignature(securityManager.signMessage(payload, SignatureOperations.SHA256WITHRSA));
+		cxm.setSignature(securityManager.signMessage(payload, securityParameters.getSignatureAlgorithm()));
 		
 		sendMessage(cxm);
 	}
 	
 	private String decapsulateSecureMessage(SecureMessage sm){
 		byte[] payload = securityManager.symmetricDecryptMessage(sm.fromUci, 
-				sm.getPayload(), SymmetricEncryption.AES_CBC_PKCS5);
+				sm.getPayload(), securityParameters.getSymmetricAlgorithm());
 		
 		return new String(payload);
 	}
@@ -495,7 +498,7 @@ public class SecureCommunication {
 				toNode, communication.getLocalSensibleThingsNode());
 		
 		sm.setPayload(securityManager.symmetricEncryptMessage(toUci, message.getBytes(), 
-				SymmetricEncryption.AES_CBC_PKCS5));
+				securityParameters.getSymmetricAlgorithm()));
 		
 		return sm;
 	}
@@ -510,8 +513,8 @@ public class SecureCommunication {
 		securityManager.generateSymmetricSecurityKey(toUci);
 		SecretKeyPayload secretKeyPayload = new SecretKeyPayload(
 				(SecretKey)securityManager.getSecretKey(toUci, "password".toCharArray()),
-				SymmetricEncryption.AES_CBC_PKCS5,
-				lifeTimeInHours);
+				securityParameters.getSymmetricAlgorithm(),
+				securityParameters.getSymmetricKeyLifeTime());
 		
 		// set nonce and add it to the data pool
 		int nonce = new Random().nextInt();
@@ -519,12 +522,13 @@ public class SecureCommunication {
 		securityManager.addToNoncePool(toUci, nonce);
 		
 		byte[] payload = SerializationUtils.serialize(secretKeyPayload);
-		byte[] encryptPayload = securityManager.asymmetricEncryptMessage(toUci, payload, "RSA");
+		byte[] encryptPayload = securityManager.asymmetricEncryptMessage(toUci, payload, 
+				securityParameters.getAsymmetricAlgorithm());
 		skxm.setPayload(encryptPayload);
 		
 		// set the secret key payload signature and the algorithm
-		skxm.setSignature(securityManager.signMessage(payload, SignatureOperations.SHA256WITHRSA));
-		skxm.setSignatureAlgorithm(SignatureOperations.SHA256WITHRSA);
+		skxm.setSignature(securityManager.signMessage(payload, securityParameters.getSignatureAlgorithm()));
+		skxm.setSignatureAlgorithm(securityParameters.getSignatureAlgorithm());
 		
 		// set the certificatePayload
 		byte[] certificatePayload = SerializationUtils.serialize(
