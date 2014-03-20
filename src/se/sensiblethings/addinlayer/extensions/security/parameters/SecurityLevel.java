@@ -3,7 +3,8 @@ package se.sensiblethings.addinlayer.extensions.security.parameters;
 public enum SecurityLevel {
 	// The high security level parameters
 	// Level: 5
-	// Symmetric Encryption Algorithm: AES, with CBC Mode, and PKCS5Padding method
+	// Symmetric Encryption Algorithm: AES,
+	// Symmetric Encryption Mode : CBC Mode, and PKCS5Padding method
 	// Symmetric key length : 256
 	// Symmetric key lifetime : 5 min = 5*60*1000 ms
 	// Asymmetric Encryption Algorthm: RSA

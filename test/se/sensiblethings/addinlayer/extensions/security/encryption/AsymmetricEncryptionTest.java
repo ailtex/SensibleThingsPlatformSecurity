@@ -4,6 +4,8 @@ import static org.junit.Assert.*;
 
 import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 
 import org.junit.Test;
 
@@ -22,37 +24,57 @@ public class AsymmetricEncryptionTest {
 		}
         
         assertTrue(keyPair != null);
-
 	}
 
 	@Test
 	public void testLoadKeyByteArrayStringString() {
-		fail("Not yet implemented");
+		AsymmetricEncryption encrypt = new AsymmetricEncryption();
+		try {
+			KeyPair keyPair = AsymmetricEncryption.generateKey("RSA", 1024);
+			PublicKey publicKey = (PublicKey)encrypt.loadKey(keyPair.getPublic().getEncoded(), encrypt.publicKey, "RSA");
+			PrivateKey privateKey = (PrivateKey)encrypt.loadKey(keyPair.getPrivate().getEncoded(), encrypt.privateKey, "RSA");
+			
+			assertTrue(publicKey.equals(keyPair.getPublic()));
+			assertTrue(privateKey.equals(keyPair.getPrivate()));
+			
+		} catch (NoSuchAlgorithmException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
 	}
 
 	@Test
 	public void testEncrypt() {
-		fail("Not yet implemented");
+		try {
+			String plainText = "Hello World";
+			KeyPair keyPair = AsymmetricEncryption.generateKey("RSA", 1024);
+			byte[] cipherText = AsymmetricEncryption.encrypt(keyPair.getPublic(), plainText.getBytes(), "RSA");
+			
+			byte[] text = AsymmetricEncryption.decrypt(keyPair.getPrivate(), cipherText, "RSA");
+			assertTrue( new String(text).equals(plainText));
+			
+		} catch (NoSuchAlgorithmException e) {
+			e.printStackTrace();
+		}
+		
 	}
 
 	@Test
 	public void testDecrypt() {
-		fail("Not yet implemented");
+		// same as testEncrypt except the length of the key
+		try {
+			String plainText = "Hello World";
+			KeyPair keyPair = AsymmetricEncryption.generateKey("RSA", 2048);
+			byte[] cipherText = AsymmetricEncryption.encrypt(keyPair.getPublic(), plainText.getBytes(), "RSA");
+			
+			byte[] text = AsymmetricEncryption.decrypt(keyPair.getPrivate(), cipherText, "RSA");
+			assertTrue( new String(text).equals(plainText));
+			
+		} catch (NoSuchAlgorithmException e) {
+			e.printStackTrace();
+		}
 	}
 
-	@Test
-	public void testSign() {
-		fail("Not yet implemented");
-	}
-
-	@Test
-	public void testSaveKey() {
-		fail("Not yet implemented");
-	}
-
-	@Test
-	public void testLoadKeyStringInt() {
-		fail("Not yet implemented");
-	}
 
 }

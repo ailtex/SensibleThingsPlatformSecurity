@@ -1,5 +1,6 @@
 package se.sensiblethings.addinlayer.extensions.security.keystore;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -9,6 +10,7 @@ import java.security.Key;
 import java.security.KeyStore;
 import java.security.KeyStore.PasswordProtection;
 import java.security.KeyStore.PrivateKeyEntry;
+import java.security.KeyStore.ProtectionParameter;
 import java.security.KeyStore.SecretKeyEntry;
 import java.security.KeyStore.TrustedCertificateEntry;
 import java.security.KeyStoreException;
@@ -19,6 +21,7 @@ import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Date;
+import java.util.Enumeration;
 
 import javax.crypto.SecretKey;
 
@@ -33,51 +36,46 @@ public class KeyStoreJCA implements KeyStoreTemplate{
 	public KeyStoreJCA(){}
 	
 	public KeyStoreJCA(String keyStoreFile, char[] password) throws IOException{
-		// "KeyStore" the file name, which stores the keys
-		// "password" the password of the keystore
-		loadKeyStore(keyStoreFile, password);
-	}
-	
-	public void loadKeyStore(String keyStoreFile, char[] password) throws  IOException {
 		
-		FileInputStream fis = null;
-		
-		try {
-			ks = KeyStore.getInstance(KeyStore.getDefaultType());
-			fis = new FileInputStream(keyStoreFile);
-			
-		} catch (KeyStoreException e) {
-			e.printStackTrace();
-		} catch(FileNotFoundException e){
-			e.printStackTrace();
-			
+		File file = new File(keyStoreFile);
+		// this file may not exist
+		if(!file.exists()){
 			// if this file not found, it should create a new one
 			// then load the new one
 			createKeyStore(keyStoreFile, password);
-			fis = new FileInputStream(keyStoreFile);
-		} 
+		}
 		
+		// "KeyStore" the file name, which stores the keys
+		// "password" the password of the keystore
+		loadKeyStore(keyStoreFile, password);
+		
+	}
+	
+	
+	public void loadKeyStore(String keyStoreFile, char[] password) throws  IOException {
 		
 		try {
+			ks = KeyStore.getInstance(KeyStore.getDefaultType());
+			FileInputStream fis = new FileInputStream(keyStoreFile);
 			ks.load(fis, password);
-		} catch (NoSuchAlgorithmException | CertificateException e) {
 			
+			if(fis != null) fis.close();
+			
+		} catch (KeyStoreException | FileNotFoundException | 
+				NoSuchAlgorithmException | CertificateException e) {
 			e.printStackTrace();
 		}
 		
 		this.keyStoreFile = keyStoreFile;
-		
-		if(fis != null) fis.close();
 	}
 	
-	private boolean updataKeyStore(char[] password){
+	private void updataKeyStore(char[] password){
 		
 		FileOutputStream fos = null;
 		try {
 			fos = new FileOutputStream(keyStoreFile);
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
-			return false;
 		}
 		
 		try {
@@ -87,14 +85,12 @@ public class KeyStoreJCA implements KeyStoreTemplate{
 		} catch (KeyStoreException | NoSuchAlgorithmException
 				| CertificateException | IOException e) {
 			e.printStackTrace();
-			return false;
 		}
-		
-		return true;
+
 	}
 	
 	
-	public boolean createKeyStore(String KeyStoreFile, char[] password){
+	public void createKeyStore(String KeyStoreFile, char[] password){
 		// There is a built-in default keystore implementation type known as
 		// "jks" that is provided by Sun Microsystems.
 		// It implements the keystore as a file, utilizing a proprietary
@@ -126,8 +122,6 @@ public class KeyStoreJCA implements KeyStoreTemplate{
 			
 			e.printStackTrace();
 		}
-		
-		return true;
 	}
 	
 	public Key getPublicKey(String alias){
@@ -147,11 +141,11 @@ public class KeyStoreJCA implements KeyStoreTemplate{
 	}
 	
 	
-	public Key getPrivateKey(String alias, char[] password) {
+	public Key getPrivateKey(String alias, char[] privateKeyPassword) {
 		
 		Key key = null;
 		try {
-			PrivateKeyEntry pkEntry = (PrivateKeyEntry) ks.getEntry(alias,  new PasswordProtection(password));
+			PrivateKeyEntry pkEntry = (PrivateKeyEntry) ks.getEntry(alias,  new PasswordProtection(privateKeyPassword));
 			key = pkEntry.getPrivateKey();
 		} catch (NoSuchAlgorithmException | UnrecoverableEntryException
 				| KeyStoreException e) {
@@ -161,10 +155,10 @@ public class KeyStoreJCA implements KeyStoreTemplate{
 	}
 	
 	
-	public Key getSecretKey(String alias, char[] password){
+	public Key getSecretKey(String alias, char[] secretKeyPassword){
 		Key key = null;
 		try {
-			SecretKeyEntry pkEntry = (SecretKeyEntry) ks.getEntry(alias,  new PasswordProtection(password));
+			SecretKeyEntry pkEntry = (SecretKeyEntry) ks.getEntry(alias,  new PasswordProtection(secretKeyPassword));
 			key = pkEntry.getSecretKey();
 			
 		} catch (NoSuchAlgorithmException | UnrecoverableEntryException
@@ -184,61 +178,64 @@ public class KeyStoreJCA implements KeyStoreTemplate{
 	 * @return
 	 * @throws KeyStoreException
 	 */
-	public boolean storePrivateKey(String alias, 
+	public void storePrivateKey(String alias, 
 			PrivateKey privateKey, 
-			char[] password, 
+			char[] privateKeyPassword, char[] keyStorePassword,
 			Certificate[] certs) throws KeyStoreException{
 
 		// the certificate chain is required to store the private key
 		// Generate the certificate chain
 		// password same as the keystore
-		ks.setKeyEntry(alias, privateKey, password, certs);
+		ks.setKeyEntry(alias, privateKey, privateKeyPassword, certs);
 		
 		// keystore password needed
-		return updataKeyStore(password);
+		updataKeyStore(keyStorePassword);
 		
 	}
 	
-	public boolean storeSecretKey(String alias, byte[] secretKey, char[] password) throws 
+	public void storeSecretKey(String alias, byte[] secretKey, String keyType, char[] secretKeyPassword, char[] keyStorePassword) throws 
 	KeyStoreException, InvalidKeyException, NoSuchAlgorithmException, InvalidKeySpecException{
 		
 		// firstly transform the secretKey
-		SymmetricEncryption aes = new SymmetricEncryption();
-		SecretKey sk = (SecretKey)aes.loadKey(secretKey, aes.AES);
+		SecretKey sk = (SecretKey)SymmetricEncryption.loadKey(secretKey, keyType);
 		
 		SecretKeyEntry skEntry = new SecretKeyEntry(sk);
 		
-		ks.setEntry(alias, skEntry, new PasswordProtection(password));
+		ks.setEntry(alias, skEntry, new PasswordProtection(secretKeyPassword));
 	
 		// password needed
 		
-		return updataKeyStore("password".toCharArray());
+		updataKeyStore(keyStorePassword);
 		
 	}
 	
-	public boolean storeSecretKey(String alias, SecretKey secretKey, char[] password) throws 
+	public void storeSecretKey(String alias, SecretKey secretKey, char[] secretKeyPassword, char[] keyStorePassword) throws 
 	KeyStoreException, InvalidKeyException, NoSuchAlgorithmException, InvalidKeySpecException{
 		
 		SecretKeyEntry skEntry = new SecretKeyEntry(secretKey);
 		
 		// ProtectionParameter implemented by PasswordProtection
-		ks.setEntry(alias, skEntry, new PasswordProtection(password));
+		ks.setEntry(alias, skEntry, new PasswordProtection(secretKeyPassword));
 		
 		// password needed
-		return updataKeyStore("password".toCharArray());
+		updataKeyStore(keyStorePassword);
 		
 	}
 	
-	public boolean storeCertificate(String alias, Certificate certificate, char[] password) throws KeyStoreException{
+	public void storeCertificate(String alias, Certificate certificate, char[] password) throws KeyStoreException{
 		
 		TrustedCertificateEntry cerEntry = new TrustedCertificateEntry(certificate);
-		ks.setCertificateEntry(alias, certificate);
-		
+		// The 3rd ProtectionParameter should be set null, otherwise it will throw an exception
+		// This problem could be found from the source code at
+		// "java.security.KeyStoreSpi.engineSetEntry(KeyStoreSpi.java:522)"
+		ks.setEntry(alias, cerEntry, null);
+		//ks.setEntry(alias, cerEntry, new PasswordProtection(password));
+	
 		// password needed
-		return updataKeyStore(password);
+		updataKeyStore(password);
 		
 	}
-	
+
 	
 	public boolean hasKey(String alias){
 		try {
@@ -280,4 +277,35 @@ public class KeyStoreJCA implements KeyStoreTemplate{
 		}
 		return null;
 	}
+
+	public int getSize(){
+		try {
+			return ks.size();
+		} catch (KeyStoreException e) {
+			e.printStackTrace();
+		}
+		return 0;
+	}
+	
+	public Enumeration<String> getAllAlias(){
+		try {
+			return ks.aliases();
+		} catch (KeyStoreException e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+
+	@Override
+	public String toString() {
+		String string = null;
+		string =  "==KeyStoreJCA== \n[keyStoreFile] = " + keyStoreFile + "\n[Size] = "
+				+ getSize() + "\n[All Alias] = ";
+		
+		for (Enumeration<String> e = getAllAlias(); e.hasMoreElements();)
+		       string += e.nextElement()+", ";
+		return string;
+		
+	}
+	
 }

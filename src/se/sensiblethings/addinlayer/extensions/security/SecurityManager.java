@@ -154,7 +154,8 @@ public class SecurityManager {
 		// String subjectName = "CN=" + uci + ",OU=ComputerColleage,O=MIUN,C=Sweden";
 		String subjectName = uci;
 		
-		Certificate cert = CertificateOperations.generateSelfSignedcertificate(subjectName, keyPair);
+		// set the life time to 1 year
+		Certificate cert = CertificateOperations.generateSelfSignedcertificate(subjectName, keyPair, 1*365*24*60*60*1000);
 		
 		try {
 			// store the private key with the self signed certificate

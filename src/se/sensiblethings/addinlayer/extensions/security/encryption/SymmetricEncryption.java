@@ -16,13 +16,15 @@ import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.DESKeySpec;
+import javax.crypto.spec.SecretKeySpec;
 
 public class SymmetricEncryption {
-	
+	// These are encryption algorithms
 	public static final String AES = "AES";
 	public static final String DES = "DES";
 	public static final String DESede = "DESede";
 	
+	// These are  encryption modes with different same padding
 	public static final String DES_ECB_PKCS5 = "DES/ECB/PKCS5Padding";
 	public static final String DES_CBC_PKCS5 = "DES/CBC/PKCS5Padding";
 	public static final String DESede_CBC_PKCS5 = "DESede/CBC/PKCS5Padding";
@@ -30,44 +32,32 @@ public class SymmetricEncryption {
 	public static final String AES_CBC_PKCS5 = "AES/CBC/PKCS5Padding";
 	public static final String AES_ECB_PKCS5 = "AES/ECB/PKCS5Padding";
 	
-	private static final Map<String, Integer> keySizeMap;
-	static {
-		keySizeMap = new HashMap<String,Integer>();
-		
-		keySizeMap.put("DES", 56);
-		keySizeMap.put("DESede", 168);
-		keySizeMap.put("AES", 128);
-	}
 	
-	
-	public static SecretKey generateKey(String algorithm) throws NoSuchAlgorithmException{
+	public static SecretKey generateKey(String algorithm, int keyLength) throws NoSuchAlgorithmException{
 		KeyGenerator keyGenerator = KeyGenerator.getInstance(algorithm);
 		
-		keyGenerator.init(keySizeMap.get(algorithm), new SecureRandom());
+		keyGenerator.init(keyLength, new SecureRandom());
 		return keyGenerator.generateKey();
 	}
 	
-	public static Key loadKey(byte[] key, String algorithm) throws 
-	InvalidKeyException, NoSuchAlgorithmException, InvalidKeySpecException {
+	public static Key loadKey(byte[] key, String algorithm){
 		
-		DESKeySpec des = new DESKeySpec(key);  
-	    SecretKeyFactory keyFactory = SecretKeyFactory.getInstance(algorithm);  
-	    SecretKey secretKey = keyFactory.generateSecret(des);  
+		SecretKey secretKey = new SecretKeySpec(key, algorithm);
 	    return secretKey;
 	}
 	
-	public static byte[] encrypt(SecretKey key, byte[] data) throws 
+	public static byte[] encrypt(SecretKey key, byte[] data, String mode) throws 
 	NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
 		
-		Cipher cipher = Cipher.getInstance(AES_CBC_PKCS5);
+		Cipher cipher = Cipher.getInstance(mode);
 		cipher.init(Cipher.ENCRYPT_MODE, key);
 		return cipher.doFinal(data);
 	}
 	
-	public static byte[] decrypt(SecretKey key, byte[] data) throws 
+	public static byte[] decrypt(SecretKey key, byte[] data, String mode) throws 
 	NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
 		
-		Cipher cipher = Cipher.getInstance(AES_CBC_PKCS5);
+		Cipher cipher = Cipher.getInstance(mode);
 		cipher.init(Cipher.DECRYPT_MODE, key);
 		return cipher.doFinal(data);
 	}

@@ -92,11 +92,12 @@ public class SecurityExtension implements Extension, MessageListener{
 
 	@Override
 	public void startAddIn() {
-		securityManager = new SecurityManager();
 		
 		if(this.securityParameters == null){
 			this.securityParameters = SecurityLevel.Low;
 		}
+		
+		securityManager = new SecurityManager(securityParameters);
 		secureCommunication = new SecureCommunication(this.platform, this.securityManager, this.securityParameters);
 	}
 

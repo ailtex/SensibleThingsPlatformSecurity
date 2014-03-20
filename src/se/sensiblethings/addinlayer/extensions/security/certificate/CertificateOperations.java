@@ -65,7 +65,7 @@ public class CertificateOperations {
 	 * @return 
 	 */
 	@SuppressWarnings("deprecation")
-	public static X509Certificate generateSelfSignedcertificate(String subjectName, KeyPair keyPair){
+	public static X509Certificate generateSelfSignedcertificate(String subjectName, KeyPair keyPair, long lifeTime){
 		
 		// add BouncyCastal to the security provider
 		Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
@@ -100,10 +100,9 @@ public class CertificateOperations {
 		
 		certGen.setIssuerDN(new X500Principal(subjectName));
 		
-		// set the validation time
-		
-	    certGen.setNotBefore(new Date(System.currentTimeMillis() - 50000)); // time from which certificate is valid
-	    certGen.setNotAfter(new Date(System.currentTimeMillis() + 50000));  // time after which certificate is not valid
+		// set the validation time ： 1 year
+	    certGen.setNotBefore(new Date(System.currentTimeMillis() - lifeTime)); // time from which certificate is valid
+	    certGen.setNotAfter(new Date(System.currentTimeMillis() + lifeTime));  // time after which certificate is not valid
 	    
 	    certGen.setSubjectDN(new X500Principal(subjectName));
 	    certGen.setPublicKey(keyPair.getPublic());
@@ -239,7 +238,7 @@ public class CertificateOperations {
 	}
 	
 	
-	public void standOutInPemEncoded(X509Certificate cert){
+	public static void standOutInPemEncoded(X509Certificate cert){
 		PEMWriter pemWrt = new PEMWriter(new OutputStreamWriter(System.out));
 		try {
 			pemWrt.writeObject(cert);
