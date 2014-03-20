@@ -32,7 +32,7 @@ import org.bouncycastle.jce.PKCS10CertificationRequest;
 
 import se.sensiblethings.addinlayer.extensions.security.certificate.CertificateOperations;
 import se.sensiblethings.addinlayer.extensions.security.encryption.AsymmetricEncryption;
-import se.sensiblethings.addinlayer.extensions.security.keystore.KeyStoreJCA;
+import se.sensiblethings.addinlayer.extensions.security.keystore.KeyStoreJCEKS;
 import se.sensiblethings.addinlayer.extensions.security.keystore.KeyStoreTemplate;
 import se.sensiblethings.addinlayer.extensions.security.keystore.SQLiteDatabase;
 import se.sensiblethings.addinlayer.extensions.security.messagedigest.MessageDigestOperations;
@@ -47,13 +47,13 @@ public class SecurityManager {
 	private PublicKey publicKey = null;
 	private String bootStrapUci = null;
 	
-	private KeyStoreJCA keyStore = null;
+	private KeyStoreJCEKS keyStore = null;
 	private Map<String, Object> noncePool = new HashMap<String, Object>();
 	private SecurityLevel securityParameters = null;
 	
 	public SecurityManager(SecurityLevel securityParameters){
 
-		keyStore = new KeyStoreJCA();
+		keyStore = new KeyStoreJCEKS();
 		
 		try {
 			keyStore.loadKeyStore("KeyStore", "password".toCharArray());

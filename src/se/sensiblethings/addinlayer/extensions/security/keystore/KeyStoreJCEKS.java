@@ -8,9 +8,8 @@ import java.io.IOException;
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.KeyStore;
-import java.security.KeyStore.PasswordProtection;
 import java.security.KeyStore.PrivateKeyEntry;
-import java.security.KeyStore.ProtectionParameter;
+import java.security.KeyStore.PasswordProtection;
 import java.security.KeyStore.SecretKeyEntry;
 import java.security.KeyStore.TrustedCertificateEntry;
 import java.security.KeyStoreException;
@@ -25,17 +24,18 @@ import java.util.Enumeration;
 
 import javax.crypto.SecretKey;
 
-import se.sensiblethings.addinlayer.extensions.security.encryption.AsymmetricEncryption;
 import se.sensiblethings.addinlayer.extensions.security.encryption.SymmetricEncryption;
 
-public class KeyStoreJCA implements KeyStoreTemplate{
+public class KeyStoreJCEKS implements KeyStoreTemplate{
+	
+	public static final String KEY_STORE_TYPE = "jceks";
 	
 	private KeyStore ks = null;
 	private String keyStoreFile = null;
 	
-	public KeyStoreJCA(){}
+	public KeyStoreJCEKS(){}
 	
-	public KeyStoreJCA(String keyStoreFile, char[] password) throws IOException{
+	public KeyStoreJCEKS(String keyStoreFile, char[] password) throws IOException{
 		
 		File file = new File(keyStoreFile);
 		// this file may not exist
@@ -55,7 +55,7 @@ public class KeyStoreJCA implements KeyStoreTemplate{
 	public void loadKeyStore(String keyStoreFile, char[] password) throws  IOException {
 		
 		try {
-			ks = KeyStore.getInstance(KeyStore.getDefaultType());
+			ks = KeyStore.getInstance(KEY_STORE_TYPE);
 			FileInputStream fis = new FileInputStream(keyStoreFile);
 			ks.load(fis, password);
 			
@@ -89,25 +89,31 @@ public class KeyStoreJCA implements KeyStoreTemplate{
 
 	}
 	
-	
+	/**
+	 * There is a built-in default keystore implementation type known as
+	 * "jks" that is provided by Sun Microsystems.
+	 * It implements the keystore as a file, utilizing a proprietary keystore type (format).
+	 * 
+	 * It protects each private key with its own individual password,
+	 * and also protects the integrity of the entire keystore with a (possibly different) password.
+	 * 
+	 * "jceks" is an alternate proprietary keystore format to "jks" that
+	 * uses much stronger encryption in the form of Password-Based Encryption with Triple-DES.
+	 * 
+	 * Keystore type designations are not case-sensitive.
+	 * "jks" can only store private keys and certificates but not secret keys
+	 *  So here adopt "jceks" this type
+	 *  
+	 * @param KeyStoreFile
+	 * @param password
+	 */
 	public void createKeyStore(String KeyStoreFile, char[] password){
-		// There is a built-in default keystore implementation type known as
-		// "jks" that is provided by Sun Microsystems.
-		// It implements the keystore as a file, utilizing a proprietary
-		// keystore type (format).
-		// It protects each private key with its own individual password,
-		// and also protects the integrity of the entire keystore with a
-		// (possibly different) password.
-		//
-		// "jceks" is an alternate proprietary keystore format to "jks" that
-		// uses much stronger encryption in the form of Password-Based
-		// Encryption with Triple-DES.
-		//
-		// Keystore type designations are not case-sensitive.
+		
 		KeyStore ks = null;
 		
 		try {
-			ks = KeyStore.getInstance(KeyStore.getDefaultType());
+			ks = KeyStore.getInstance(KEY_STORE_TYPE);
+			//ks = KeyStore.getInstance(KeyStore.getDefaultType());
 			
 			// set the password
 			ks.load(null, password);
@@ -129,6 +135,7 @@ public class KeyStoreJCA implements KeyStoreTemplate{
 		Key key = null;
 		try {
 			key = ks.getCertificate(alias).getPublicKey();
+			
 		} catch (KeyStoreException e) {
 			e.printStackTrace();
 		}
@@ -188,7 +195,7 @@ public class KeyStoreJCA implements KeyStoreTemplate{
 		// password same as the keystore
 		ks.setKeyEntry(alias, privateKey, privateKeyPassword, certs);
 		
-		// keystore password needed
+		// keystore password needed to write into file
 		updataKeyStore(keyStorePassword);
 		
 	}
@@ -203,8 +210,7 @@ public class KeyStoreJCA implements KeyStoreTemplate{
 		
 		ks.setEntry(alias, skEntry, new PasswordProtection(secretKeyPassword));
 	
-		// password needed
-		
+		// password needed to write into file
 		updataKeyStore(keyStorePassword);
 		
 	}
@@ -217,7 +223,7 @@ public class KeyStoreJCA implements KeyStoreTemplate{
 		// ProtectionParameter implemented by PasswordProtection
 		ks.setEntry(alias, skEntry, new PasswordProtection(secretKeyPassword));
 		
-		// password needed
+		// password needed to write into file
 		updataKeyStore(keyStorePassword);
 		
 	}
@@ -231,7 +237,7 @@ public class KeyStoreJCA implements KeyStoreTemplate{
 		ks.setEntry(alias, cerEntry, null);
 		//ks.setEntry(alias, cerEntry, new PasswordProtection(password));
 	
-		// password needed
+		// password needed to write into file
 		updataKeyStore(password);
 		
 	}

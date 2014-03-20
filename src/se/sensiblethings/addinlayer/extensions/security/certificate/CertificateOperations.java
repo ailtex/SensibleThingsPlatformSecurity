@@ -237,8 +237,14 @@ public class CertificateOperations {
 		return new X509Certificate[] { issuedCert, rootCert };
 	}
 	
-	
-	public static void standOutInPemEncoded(X509Certificate cert){
+	/**
+	 * For certificates, the available formats are PEM, DER and PKCS12 
+	 * In general, the PEM formats are mostly used in the Unix world, 
+	 * PCKS12 in the Microsoft world and DER in the Java world.
+	 * 
+	 * @param cert
+	 */
+	public void standOutInPemEncoded(X509Certificate cert){
 		PEMWriter pemWrt = new PEMWriter(new OutputStreamWriter(System.out));
 		try {
 			pemWrt.writeObject(cert);
@@ -246,5 +252,6 @@ public class CertificateOperations {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		
 	}
 }

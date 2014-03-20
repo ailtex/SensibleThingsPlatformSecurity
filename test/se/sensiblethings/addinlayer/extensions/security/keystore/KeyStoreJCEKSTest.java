@@ -8,9 +8,11 @@ import java.security.InvalidKeyException;
 import java.security.KeyPair;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
 import java.security.cert.Certificate;
 import java.util.Enumeration;
 import java.security.cert.X509Certificate;
+import java.security.interfaces.RSAPublicKey;
 import java.security.spec.InvalidKeySpecException;
 
 import javax.crypto.SecretKey;
@@ -21,24 +23,24 @@ import se.sensiblethings.addinlayer.extensions.security.certificate.CertificateO
 import se.sensiblethings.addinlayer.extensions.security.encryption.AsymmetricEncryption;
 import se.sensiblethings.addinlayer.extensions.security.encryption.SymmetricEncryption;
 
-public class KeyStoreJCATest {
+public class KeyStoreJCEKSTest {
 
 	private String keyStoreFile = "resouces/KeyStore.db";
 	
 	@Test
-	public void testKeyStoreJCA() {
+	public void testKeyStoreJCEKS() {
 		try {
-			KeyStoreJCA keyStore = new KeyStoreJCA(keyStoreFile,"password".toCharArray());
+			KeyStoreJCEKS keyStore = new KeyStoreJCEKS(keyStoreFile,"password".toCharArray());
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		File file = new File(keyStoreFile);
-		assertTrue("[Test Key StroreJCA constructor]", file.exists());
+		assertTrue("[Test Key StroreJCEKS constructor]", file.exists());
 	}
 
 	@Test
 	public void testLoadKeyStore() {
-		KeyStoreJCA keyStore = new KeyStoreJCA();
+		KeyStoreJCEKS keyStore = new KeyStoreJCEKS();
 		try {
 			keyStore.loadKeyStore(keyStoreFile, "password".toCharArray());
 		} catch (IOException e) {
@@ -51,7 +53,7 @@ public class KeyStoreJCATest {
 
 	@Test
 	public void testCreateKeyStore() {
-		KeyStoreJCA keyStore = new KeyStoreJCA();
+		KeyStoreJCEKS keyStore = new KeyStoreJCEKS();
 		keyStore.createKeyStore(keyStoreFile, "password".toCharArray());
 		
 		// ???
@@ -60,24 +62,30 @@ public class KeyStoreJCATest {
 
 	@Test
 	public void testGetPublicKey() {
-		String uci = "Bootstrap";
+		String uci = "Bootstrap-1";
 		char[] password = "password".toCharArray();
 		
 		try {
-			KeyStoreJCA keyStore = new KeyStoreJCA(keyStoreFile, password);
+			KeyStoreJCEKS keyStore = new KeyStoreJCEKS(keyStoreFile, password);
 					
 			KeyPair keyPair = AsymmetricEncryption.generateKey("RSA", 1024);
-			Certificate cert = CertificateOperations.generateSelfSignedcertificate("CN=Bootstrap",keyPair, 1*365*24*60*60*1000);
+			Certificate cert = CertificateOperations.generateSelfSignedcertificate("CN="+uci,keyPair, 1*365*24*60*60*1000L);
 			
 			keyStore.storePrivateKey(uci, keyPair.getPrivate(), password, password, new Certificate[]{cert});
 				
 			assertTrue(keyStore.containAlias(uci));
 			
+			//System.out.println(cert.toString());
+			
+			System.out.println(keyPair.getPublic().toString());
+			System.out.println(keyStore.getPublicKey(uci).toString());
+			
 			// convert the public key to Hex format, and then compare them
-			assertSame("[Test Get PulicKey]", AsymmetricEncryption.toHexString(keyPair.getPublic().getEncoded()),
-					AsymmetricEncryption.toHexString(keyStore.getPublicKey(uci).getEncoded()));
+			assertSame("[Test Get PulicKey]", keyPair.getPublic(), keyStore.getPublicKey(uci));
+			
 			assertTrue("[Test Get PulicKey]",AsymmetricEncryption.toHexString(keyStore.getPublicKey(uci).getEncoded()).equals(
-					AsymmetricEncryption.toHexString(keyPair.getPublic().getEncoded())));
+					AsymmetricEncryption.toHexString(((PublicKey)keyPair.getPublic()).getEncoded())));
+			System.out.println(keyStore.toString());
 
 			
 		} catch (IOException| KeyStoreException | NoSuchAlgorithmException e) {
@@ -93,17 +101,19 @@ public class KeyStoreJCATest {
 		char[] password = "password".toCharArray();
 		
 		try {
-			KeyStoreJCA keyStore = new KeyStoreJCA(keyStoreFile, password);
+			KeyStoreJCEKS keyStore = new KeyStoreJCEKS(keyStoreFile, password);
 			
 			KeyPair keyPair = AsymmetricEncryption.generateKey("RSA", 2048);
-			Certificate cert = CertificateOperations.generateSelfSignedcertificate("CN=Bootstrap",keyPair, 1*365*24*60*60*1000);
+			Certificate cert = CertificateOperations.generateSelfSignedcertificate("CN="+uci,keyPair, 1*365*24*60*60*1000L);
 			keyStore.storeCertificate(uci, cert,password);
 			
 			assertTrue("[Test Get Certificate]",keyStore.getCertificate(uci).equals(cert));
 			assertSame("[Test Get Certificate]",cert, keyStore.getCertificate(uci));
 			
-			CertificateOperations.standOutInPemEncoded((X509Certificate)cert);
-			CertificateOperations.standOutInPemEncoded((X509Certificate)keyStore.getCertificate(uci));
+			//System.out.println(keyStore.toString());
+			//new CertificateOperations().standOutInPemEncoded((X509Certificate)cert);
+			//System.out.println(keyStore.toString());
+			//new  CertificateOperations().standOutInPemEncoded((X509Certificate)keyStore.getCertificate(uci));
 			
 		} catch (IOException| KeyStoreException | NoSuchAlgorithmException e) {
 			
@@ -117,18 +127,21 @@ public class KeyStoreJCATest {
 		char[] password = "password".toCharArray();
 		
 		try {
-			KeyStoreJCA keyStore = new KeyStoreJCA(keyStoreFile, password);
+			KeyStoreJCEKS keyStore = new KeyStoreJCEKS(keyStoreFile, password);
 			
 			KeyPair keyPair = AsymmetricEncryption.generateKey("RSA", 1024);
-			Certificate cert = CertificateOperations.generateSelfSignedcertificate("CN=Bootstrap",keyPair, 1*365*24*60*60*1000);
+			Certificate cert = CertificateOperations.generateSelfSignedcertificate("CN="+uci,keyPair, 1*365*24*60*60*1000L);
 			
 			keyStore.storePrivateKey(uci, keyPair.getPrivate(), password, password, new Certificate[]{cert});
 				
-			assertTrue(keyStore.containAlias(uci));
+			
+			assertSame("[Test Get Private Key]",keyPair.getPrivate(), keyStore.getPrivateKey(uci, password));
+			
+			assertSame("[Test Get Private Key]",AsymmetricEncryption.toHexString(keyPair.getPrivate().getEncoded()), 
+					AsymmetricEncryption.toHexString(keyStore.getPrivateKey(uci, password).getEncoded()));
+			
 			assertTrue(AsymmetricEncryption.toHexString(keyStore.getPrivateKey(uci, password).getEncoded()).equals(
 					AsymmetricEncryption.toHexString(keyPair.getPrivate().getEncoded())));
-			
-			//System.out.println(keyStore.toString());
 			
 		} catch (IOException| KeyStoreException | NoSuchAlgorithmException e) {
 			// TODO Auto-generated catch block
@@ -142,9 +155,11 @@ public class KeyStoreJCATest {
 		char[] password = "password".toCharArray();
 		
 		try {
-			KeyStoreJCA keyStore = new KeyStoreJCA(keyStoreFile, password);
+			KeyStoreJCEKS keyStore = new KeyStoreJCEKS(keyStoreFile, password);
 						
 			SecretKey secretKey = SymmetricEncryption.generateKey(SymmetricEncryption.AES, 128);
+			
+			if(secretKey == null) System.err.println("SecretKey == null");
 			keyStore.storeSecretKey(uci, secretKey, password, password);
 			
 			assertTrue(keyStore.containAlias(uci));
