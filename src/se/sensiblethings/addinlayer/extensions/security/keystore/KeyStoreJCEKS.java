@@ -228,7 +228,7 @@ public class KeyStoreJCEKS implements KeyStoreTemplate{
 		
 	}
 	
-	public void storeCertificate(String alias, Certificate certificate, char[] password) throws KeyStoreException{
+	public void storeCertificate(String alias, Certificate certificate, char[] keyStorePassword) throws KeyStoreException{
 		
 		TrustedCertificateEntry cerEntry = new TrustedCertificateEntry(certificate);
 		// The 3rd ProtectionParameter should be set null, otherwise it will throw an exception
@@ -238,7 +238,7 @@ public class KeyStoreJCEKS implements KeyStoreTemplate{
 		//ks.setEntry(alias, cerEntry, new PasswordProtection(password));
 	
 		// password needed to write into file
-		updataKeyStore(password);
+		updataKeyStore(keyStorePassword);
 		
 	}
 

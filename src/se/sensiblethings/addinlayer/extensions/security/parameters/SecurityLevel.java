@@ -11,7 +11,7 @@ public enum SecurityLevel {
 	// Asymmetric key length: 2048
 	// Signature algorithm: SHA512 with RSA
 	High(5, "AES","AES/CBC/PKCS5Padding", 256, 5*60*1000L, "RSA", 2048, "SHA512withRSA"),
-	Middle(3, "AES","AES/CBC/PKCS5Padding", 192, 60*60*1000L, "RSA", 2048, "SHA256withRSA"),
+	Medium(3, "AES","AES/CBC/PKCS5Padding", 192, 60*60*1000L, "RSA", 2048, "SHA256withRSA"),
 	Low(1, "AES", "AES/CBC/PKCS5Padding", 128, 24*60*60*1000L, "RSA", 1024, "SHA1withRSA");
 	
 	private int securityLevel;

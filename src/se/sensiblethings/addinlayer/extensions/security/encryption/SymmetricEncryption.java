@@ -1,12 +1,10 @@
 package se.sensiblethings.addinlayer.extensions.security.encryption;
 
+import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
-import java.security.spec.InvalidKeySpecException;
-import java.util.HashMap;
-import java.util.Map;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -14,8 +12,7 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.KeyGenerator;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
-import javax.crypto.SecretKeyFactory;
-import javax.crypto.spec.DESKeySpec;
+import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
 public class SymmetricEncryption {
@@ -33,6 +30,8 @@ public class SymmetricEncryption {
 	public static final String AES_ECB_PKCS5 = "AES/ECB/PKCS5Padding";
 	
 	
+	public static IvParameterSpec initializationVector = null;
+	
 	public static SecretKey generateKey(String algorithm, int keyLength) throws NoSuchAlgorithmException{
 		KeyGenerator keyGenerator = KeyGenerator.getInstance(algorithm);
 		
@@ -46,19 +45,83 @@ public class SymmetricEncryption {
 	    return secretKey;
 	}
 	
-	public static byte[] encrypt(SecretKey key, byte[] data, String mode) throws 
-	NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
+	public static byte[] encrypt(SecretKey key, byte[] data, String algorithmModePadding) throws 
+	NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, 
+	BadPaddingException, InvalidAlgorithmParameterException{
 		
-		Cipher cipher = Cipher.getInstance(mode);
-		cipher.init(Cipher.ENCRYPT_MODE, key);
-		return cipher.doFinal(data);
+		String mode = algorithmModePadding.split("/")[1];
+		
+		if(mode.equalsIgnoreCase("ECB")){
+			Cipher cipher = Cipher.getInstance(algorithmModePadding);
+			cipher.init(Cipher.ENCRYPT_MODE, key, new SecureRandom());
+			//cipher.init(Cipher.ENCRYPT_MODE, key);
+			return cipher.doFinal(data);
+			
+		}else if(mode.equalsIgnoreCase("CBC") || 
+				mode.equalsIgnoreCase("CFB")  ||
+				mode.equalsIgnoreCase("CTR")  ||
+				mode.equalsIgnoreCase("OFB")  ||
+				mode.equalsIgnoreCase("PCBC") ){
+			
+			Cipher cipher = Cipher.getInstance(algorithmModePadding);
+			
+			initializationVector = generateIVParameter(cipher.getBlockSize());
+			cipher.init(Cipher.ENCRYPT_MODE, key, initializationVector, new SecureRandom());
+			
+			return cipher.doFinal(data);
+		}else{
+			System.err.println("NOT SUPPORTED " + mode.split("/")[1] + " mode");
+			return null;
+		}
 	}
 	
-	public static byte[] decrypt(SecretKey key, byte[] data, String mode) throws 
+	
+	public static byte[] decrypt(SecretKey key, byte[] data, String algorithmModePadding) throws 
 	NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
 		
-		Cipher cipher = Cipher.getInstance(mode);
-		cipher.init(Cipher.DECRYPT_MODE, key);
-		return cipher.doFinal(data);
+		String mode = algorithmModePadding.split("/")[1];
+		
+		if(mode.equalsIgnoreCase("ECB")){
+			Cipher cipher = Cipher.getInstance(algorithmModePadding);
+			cipher.init(Cipher.DECRYPT_MODE, key, new SecureRandom());
+			//cipher.init(Cipher.ENCRYPT_MODE, key);
+			return cipher.doFinal(data);
+			
+		}else{
+			System.err.println("NOT SUPPORTED " + mode.split("/")[1] + " mode");
+			return null;
+		}
 	}
+	
+	public static byte[] decrypt(SecretKey key, byte[] data, String algorithmModePadding, IvParameterSpec ivParameterSpec) throws 
+	NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, 
+	BadPaddingException, InvalidAlgorithmParameterException{
+		
+		String mode = algorithmModePadding.split("/")[1];
+		
+		if(mode.equalsIgnoreCase("CBC") || 
+				mode.equalsIgnoreCase("CFB")  ||
+				mode.equalsIgnoreCase("CTR")  ||
+				mode.equalsIgnoreCase("OFB")  ||
+				mode.equalsIgnoreCase("PCBC")){
+			
+			Cipher cipher = Cipher.getInstance(algorithmModePadding);
+			cipher.init(Cipher.DECRYPT_MODE, key, ivParameterSpec, new SecureRandom());
+			
+			return cipher.doFinal(data);
+			
+		}else{
+			System.err.println("NOT SUPPORTED " + mode.split("/")[1] + " mode");
+			return null;
+		}
+		
+	}
+	
+	private static IvParameterSpec generateIVParameter(int cipherBlockSize){
+		byte[]  ivBytes = new byte[cipherBlockSize];
+        new SecureRandom().nextBytes(ivBytes);
+        return new IvParameterSpec(ivBytes);
+	}
+	
+	
 }
