@@ -4,7 +4,7 @@ public enum SecurityLevel {
 	// The high security level parameters
 	// Level: 5
 	// Symmetric Encryption Algorithm: AES,
-	// Symmetric Encryption Mode : CBC Mode, and PKCS5Padding method
+	// Symmetric Mode : CBC Mode, and PKCS5Padding method
 	// Symmetric key length : 256
 	// Symmetric key lifetime : 5 min = 5*60*1000 ms
 	// Asymmetric Encryption Algorthm: RSA
@@ -17,7 +17,7 @@ public enum SecurityLevel {
 	private int securityLevel;
 	
 	private String symmetricAlgorithm;
-	private String symmetricEncryptionMode;
+	private String symmetricMode;
 	private int symmetricKeyLength;
 	private long symmetricKeyLifeTime;
 	
@@ -26,13 +26,13 @@ public enum SecurityLevel {
 	
 	private String signatureAlgorithm;
 
-	private SecurityLevel(int securityLevel, String symmetricAlgorithm, String symmetricEncryptionMode,
+	private SecurityLevel(int securityLevel, String symmetricAlgorithm, String symmetricMode,
 			int symmetricKeyLength, long symmetricKeyLifeTime,
 			String asymmetricAlgorithm, int asymmetricKeyLength,
 			String signatureAlgorithm) {
 		this.securityLevel = securityLevel;
 		this.symmetricAlgorithm = symmetricAlgorithm;
-		this.symmetricEncryptionMode = symmetricEncryptionMode;
+		this.symmetricMode = symmetricMode;
 		this.symmetricKeyLength = symmetricKeyLength;
 		this.symmetricKeyLifeTime = symmetricKeyLifeTime;
 		this.asymmetricAlgorithm = asymmetricAlgorithm;
@@ -50,8 +50,8 @@ public enum SecurityLevel {
 		return symmetricAlgorithm;
 	}
 
-	public String getSymmetricEncryptionMode(){
-		return symmetricEncryptionMode;
+	public String getSymmetricMode(){
+		return symmetricMode;
 	}
 
 	public int getSymmetricKeyLength() {

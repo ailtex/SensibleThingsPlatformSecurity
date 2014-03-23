@@ -2,6 +2,7 @@ package se.sensiblethings.addinlayer.extensions.security;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.KeyPair;
@@ -159,7 +160,8 @@ public class SecurityManager {
 		
 		try {
 			// store the private key with the self signed certificate
-			keyStore.storePrivateKey(uci, keyPair.getPrivate(), "password".toCharArray(), new Certificate[]{cert});
+			keyStore.storePrivateKey(uci, keyPair.getPrivate(), "password".toCharArray(), 
+					"password".toCharArray(), new Certificate[]{cert});
 			
 			// store the self signed certificate
 			keyStore.storeCertificate(uci, cert, "password".toCharArray());
@@ -277,7 +279,7 @@ public class SecurityManager {
 	public void storeCertificateChain(String uci, Certificate[] certs, String password){
 		try {
 			keyStore.storePrivateKey(uci, (PrivateKey)keyStore.getPrivateKey(uci, "password".toCharArray()),
-					password.toCharArray(), certs);
+					password.toCharArray(),password.toCharArray(), certs);
 		} catch (KeyStoreException e) {
 			
 			e.printStackTrace();
@@ -412,11 +414,11 @@ public class SecurityManager {
 		SecretKey secretKey = (SecretKey) keyStore.getSecretKey(toUci, "password".toCharArray());
 		byte[] plainText = null;
 		try {
-			plainText = SymmetricEncryption.encrypt(secretKey, message);
+			plainText = SymmetricEncryption.encrypt(secretKey, message, securityParameters.getSymmetricMode());
 			
 		} catch (InvalidKeyException | NoSuchAlgorithmException
 				| NoSuchPaddingException | IllegalBlockSizeException
-				| BadPaddingException e) {
+				| BadPaddingException | InvalidAlgorithmParameterException e) {
 			e.printStackTrace();
 		}
 
@@ -433,7 +435,7 @@ public class SecurityManager {
 		
 		byte[] plainText = null;
 		try {
-			plainText = SymmetricEncryption.decrypt(secretKey, message);
+			plainText = SymmetricEncryption.decrypt(secretKey, message, securityParameters.getSymmetricMode());
 			
 		} catch (InvalidKeyException | NoSuchAlgorithmException
 				| NoSuchPaddingException | IllegalBlockSizeException
@@ -450,7 +452,7 @@ public class SecurityManager {
 		
 		byte[] plainText = null;
 		try {
-			plainText = SymmetricEncryption.decrypt(key, message);
+			plainText = SymmetricEncryption.decrypt(key, message, securityParameters.getSymmetricMode());
 			
 		} catch (InvalidKeyException | NoSuchAlgorithmException
 				| NoSuchPaddingException | IllegalBlockSizeException
@@ -464,12 +466,7 @@ public class SecurityManager {
 	private SecretKey symmetricLoadKey(byte[] secretKey, String algorithm){
 		SecretKey key = null;
 		
-		try {
-			key = (SecretKey)SymmetricEncryption.loadKey(secretKey, algorithm);
-		} catch (InvalidKeyException | NoSuchAlgorithmException
-				| InvalidKeySpecException e1) {
-			e1.printStackTrace();
-		}
+		key = (SecretKey)SymmetricEncryption.loadKey(secretKey, algorithm);
 		
 		return key;
 	}
@@ -480,7 +477,8 @@ public class SecurityManager {
 		SecretKey secretKey = null;
 		
 		try {
-			secretKey = SymmetricEncryption.generateKey(SymmetricEncryption.AES);
+			secretKey = SymmetricEncryption.generateKey(securityParameters.getSymmetricAlgorithm(),  
+					securityParameters.getSymmetricKeyLength());
 			
 			// store the security key
 			storeSecretKey(uci, secretKey, "password");
@@ -495,7 +493,7 @@ public class SecurityManager {
 	
 	public void storeSecretKey(String uci, SecretKey secretKey, String password){
 		try {
-			keyStore.storeSecretKey(uci, secretKey, password.toCharArray());
+			keyStore.storeSecretKey(uci, secretKey, password.toCharArray(), password.toCharArray());
 		} catch (InvalidKeyException | KeyStoreException
 				| NoSuchAlgorithmException | InvalidKeySpecException e) {
 			
