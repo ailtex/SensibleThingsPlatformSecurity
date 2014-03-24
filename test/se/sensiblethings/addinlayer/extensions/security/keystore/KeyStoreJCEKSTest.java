@@ -27,6 +27,7 @@ import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 
 import org.bouncycastle.util.encoders.Base64;
+import org.junit.Before;
 import org.junit.Test;
 
 import se.sensiblethings.addinlayer.extensions.security.certificate.CertificateOperations;
@@ -35,56 +36,49 @@ import se.sensiblethings.addinlayer.extensions.security.encryption.SymmetricEncr
 
 public class KeyStoreJCEKSTest {
 
-	private String keyStoreFile = "resouces/KeyStore.db";
+	private String keyStoreFile = "resources/KeyStore.db";
+	
+	private KeyStoreJCEKS keyStore;
+	private char[] password = "password".toCharArray();
+	
+	@Before
+	public void setUp() {
+		try {
+			keyStore = new KeyStoreJCEKS(keyStoreFile, password);
+		} catch (IOException e) {
+			
+			e.printStackTrace();
+		}
+	}
 	
 	@Test
 	public void testKeyStoreJCEKS() {
-		try {
-			KeyStoreJCEKS keyStore = new KeyStoreJCEKS(keyStoreFile,"password".toCharArray());
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+	
 		File file = new File(keyStoreFile);
 		assertTrue("[Test Key StroreJCEKS constructor]", file.exists());
 	}
 
-	@Test
-	public void testLoadKeyStore() {
-		KeyStoreJCEKS keyStore = new KeyStoreJCEKS();
-		try {
-			keyStore.loadKeyStore(keyStoreFile, "password".toCharArray());
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		
-		// ???
-		assertNotNull("[Test Load Key Store]", keyStore);
-	}
 
 	@Test
 	public void testCreateKeyStore() {
 		KeyStoreJCEKS keyStore = new KeyStoreJCEKS();
-		keyStore.createKeyStore(keyStoreFile, "password".toCharArray());
+		keyStore.createKeyStore(keyStoreFile, password);
 		
 		// ???
 		assertNotNull("[Test Create KeyStore]", keyStore);
 	}
-
+	
+	
 	@Test
 	public void testGetPublicKey() {
 		String uci = "Bootstrap-1";
-		char[] password = "password".toCharArray();
 		
-		try {
-			KeyStoreJCEKS keyStore = new KeyStoreJCEKS(keyStoreFile, password);
-					
+		try {	
 			KeyPair keyPair = AsymmetricEncryption.generateKey("RSA", 1024);
 			
 			Certificate cert = CertificateOperations.generateSelfSignedcertificate("CN="+uci,keyPair, 1*365*24*60*60*1000L);
-			keyStore.storePrivateKey(uci, keyPair.getPrivate(), password, password, new Certificate[]{cert});
 			
-			// It's wired of this test, even convert them to the Hex
-			// assertSame("[Test Get PulicKey]",keyStore.getPublicKey(uci).getEncoded(), ((PublicKey)keyPair.getPublic()).getEncoded());
+			keyStore.storePrivateKey(uci, keyPair.getPrivate(), password, password, new Certificate[]{cert});
 			
 			// convert the public key to Hex format, and then compare them
 			assertTrue("[Test Get PulicKey]",AsymmetricEncryption.toHexString(keyStore.getPublicKey(uci).getEncoded()).equals(
@@ -97,15 +91,16 @@ public class KeyStoreJCEKSTest {
 			byte[] plainText1 = AsymmetricEncryption.decrypt((PrivateKey)keyStore.getPrivateKey(uci, password), cipherTest1, "RSA");
 			
 			assertTrue("[Test Get PulicKey]", text.equals(new String(plainText1)));
-			System.out.println(new String(plainText1));
+			//System.out.println(new String(plainText1));
 			
 			
 			byte[] cipherTest2 = AsymmetricEncryption.encrypt((PublicKey)keyStore.getPublicKey(uci), text.getBytes(), "RSA");
 			byte[] plainText2 = AsymmetricEncryption.decrypt(keyPair.getPrivate(), cipherTest1, "RSA");
-			assertTrue("[Test Get PulicKey]", text.equals(new String(plainText2)));
-			System.out.println(new String(plainText2));
 			
-		} catch (IOException| KeyStoreException | NoSuchAlgorithmException e) {
+			assertTrue("[Test Get PulicKey]", text.equals(new String(plainText2)));
+			//System.out.println(new String(plainText2));
+			
+		} catch (KeyStoreException | NoSuchAlgorithmException e) {
 			
 			e.printStackTrace();
 		}
@@ -115,10 +110,8 @@ public class KeyStoreJCEKSTest {
 	@Test
 	public void testGetCertificate() {
 		String uci = "Bootstrap-2";
-		char[] password = "password".toCharArray();
 		
 		try {
-			KeyStoreJCEKS keyStore = new KeyStoreJCEKS(keyStoreFile, password);
 			
 			KeyPair keyPair = AsymmetricEncryption.generateKey("RSA", 2048);
 			Certificate cert = CertificateOperations.generateSelfSignedcertificate("CN="+uci,keyPair, 1*365*24*60*60*1000L);
@@ -127,7 +120,7 @@ public class KeyStoreJCEKSTest {
 			assertTrue("[Test Get Certificate]",keyStore.getCertificate(uci).equals(cert));
 			assertSame("[Test Get Certificate]",cert, keyStore.getCertificate(uci));
 			
-		} catch (IOException| KeyStoreException | NoSuchAlgorithmException e) {
+		} catch (KeyStoreException | NoSuchAlgorithmException e) {
 			
 			e.printStackTrace();
 		}
@@ -136,26 +129,24 @@ public class KeyStoreJCEKSTest {
 	@Test
 	public void testGetPrivateKey() {
 		String uci = "Bootstrap-3";
-		char[] password = "password".toCharArray();
 		
 		try {
-			KeyStoreJCEKS keyStore = new KeyStoreJCEKS(keyStoreFile, password);
 			
 			KeyPair keyPair = AsymmetricEncryption.generateKey("RSA", 1024);
 			Certificate cert = CertificateOperations.generateSelfSignedcertificate("CN="+uci,keyPair, 1*365*24*60*60*1000L);
 			
 			keyStore.storePrivateKey(uci, keyPair.getPrivate(), password, password, new Certificate[]{cert});
 				
-			assertSame("[Test Get Private Key]",keyPair.getPrivate(), keyStore.getPrivateKey(uci, password));
+			assertEquals("[Test Get Private Key]",keyPair.getPrivate(), keyStore.getPrivateKey(uci, password));
 			
-			assertSame("[Test Get Private Key]",AsymmetricEncryption.toHexString(keyPair.getPrivate().getEncoded()), 
+			assertEquals("[Test Get Private Key]",AsymmetricEncryption.toHexString(keyPair.getPrivate().getEncoded()), 
 					AsymmetricEncryption.toHexString(keyStore.getPrivateKey(uci, password).getEncoded()));
 			
 			assertTrue(AsymmetricEncryption.toHexString(keyStore.getPrivateKey(uci, password).getEncoded()).equals(
 					AsymmetricEncryption.toHexString(keyPair.getPrivate().getEncoded())));
 			
-		} catch (IOException| KeyStoreException | NoSuchAlgorithmException e) {
-			// TODO Auto-generated catch block
+		} catch (KeyStoreException | NoSuchAlgorithmException e) {
+			
 			e.printStackTrace();
 		}
 	}
@@ -163,10 +154,8 @@ public class KeyStoreJCEKSTest {
 	@Test
 	public void testGetSecretKey(){
 		String uci = "Bootstrap-4";
-		char[] password = "password".toCharArray();
 		
 		try {
-			KeyStoreJCEKS keyStore = new KeyStoreJCEKS(keyStoreFile, password);
 						
 			SecretKey secretKey = SymmetricEncryption.generateKey(SymmetricEncryption.AES, 256);
 			keyStore.storeSecretKey(uci, secretKey, password, password);
@@ -187,80 +176,80 @@ public class KeyStoreJCEKSTest {
 			byte[] cipherText = null;
 			byte[] plainText = null;
 			// Test AES ECB MODE with PKCS5 Padding
-			Date start, end;
+			long start, end;
 			
-			start = new Date();
+			start = System.currentTimeMillis();
 			cipherText = SymmetricEncryption.encrypt(secretKey, text, SymmetricEncryption.AES_ECB_PKCS5);
 			plainText = SymmetricEncryption.decrypt(secretKey, cipherText, SymmetricEncryption.AES_ECB_PKCS5);
-			end = new Date();
-			System.out.println("ECB = " + (end.getTime() - start.getTime()));
+			end = System.currentTimeMillis();
+			System.out.println("ECB = " + (end - start));
 			
 			//assertTrue("[Test Get SecretKey]", text.equals(plainText));
 			//System.out.println("[" + SymmetricEncryption.AES_ECB_PKCS5 + "] " + Base64.toBase64String(plainText));
 			
 			
 			// Test AES CBC MODE with PKCS5 Padding
-			start = new Date();
+			start = System.currentTimeMillis();
 			cipherText = SymmetricEncryption.encrypt(secretKey, text, SymmetricEncryption.AES_CBC_PKCS5);
 			plainText = SymmetricEncryption.decrypt(secretKey, cipherText, SymmetricEncryption.AES_CBC_PKCS5,
 					SymmetricEncryption.initializationVector);
 			
-			end = new Date();
-			System.out.println("CBC = " + (end.getTime() - start.getTime()));
+			end = System.currentTimeMillis();
+			System.out.println("CBC = " + (end - start));
 			
 			//assertTrue("[Test Get SecretKey]", text.equals(plainText));
 			//System.out.println("[" + SymmetricEncryption.AES_CBC_PKCS5 + "] " + Base64.toBase64String(plainText));
 			
 			// Test AES CTR Mode with PKCS5 Padding
-			start = new Date();
+			start = System.currentTimeMillis();
 			cipherText = SymmetricEncryption.encrypt(secretKey, text, "AES/CTR/PKCS5Padding");
 			plainText = SymmetricEncryption.decrypt(secretKey, cipherText, "AES/CTR/PKCS5Padding",
 					SymmetricEncryption.initializationVector);
 			
-			end = new Date();
-			System.out.println("CTR = " + (end.getTime() - start.getTime()));
+			end = System.currentTimeMillis();
+			System.out.println("CTR = " + (end - start));
 			
 			//assertTrue("[Test Get SecretKey]", text.equals(plainText));
 			//System.out.println("[AES/CTR/PKCS5Padding] " + Base64.toBase64String(plainText));
 			
 			// Test AES CFB Mode with PKCS5 Padding
-			start = new Date();
+			start = System.currentTimeMillis();
 			cipherText = SymmetricEncryption.encrypt(secretKey, text, "AES/CFB/PKCS5Padding");
 			plainText = SymmetricEncryption.decrypt(secretKey, cipherText, "AES/CFB/PKCS5Padding",
 					SymmetricEncryption.initializationVector);
 			
-			end = new Date();
-			System.out.println("CFB = " + (end.getTime() - start.getTime()));
+			end = System.currentTimeMillis();
+			System.out.println("CFB = " + (end - start));
 			
 			//assertTrue("[Test Get SecretKey]", text.equals(plainText));
 			//System.out.println("[AES/CFB/PKCS5Padding] " + Base64.toBase64String(plainText));
 			
 			// Test AES OFB Mode with PKCS5 Padding
-			start = new Date();
+			start = System.currentTimeMillis();
 			cipherText = SymmetricEncryption.encrypt(secretKey, text, "AES/OFB/PKCS5Padding");
 			plainText = SymmetricEncryption.decrypt(secretKey, cipherText, "AES/OFB/PKCS5Padding",
 					SymmetricEncryption.initializationVector);
 			
-			end = new Date();
-			System.out.println("OFB = " + (end.getTime() - start.getTime()));
+			end = System.currentTimeMillis();
+			System.out.println("OFB = " + (end - start));
 			
 			//assertTrue("[Test Get SecretKey]", text.equals(plainText));
 			//System.out.println("[AES/OFB/PKCS5Padding] " + Base64.toBase64String(plainText));
 			
 			// Test AES PCBC Mode with PKCS5 Padding
-			start = new Date();
+			start = System.currentTimeMillis();
 			cipherText = SymmetricEncryption.encrypt(secretKey, text, "AES/PCBC/PKCS5Padding");
 		    plainText = SymmetricEncryption.decrypt(secretKey, cipherText, "AES/PCBC/PKCS5Padding",
 			SymmetricEncryption.initializationVector);
 				
-		    end = new Date();
-			System.out.println("PCBC = " + (end.getTime() - start.getTime()));
+		    end = System.currentTimeMillis();
+			System.out.println("PCBC = " + (end - start));
 			
 			//assertTrue("[Test Get SecretKey]", text.equals(plainText));
 			//System.out.println("[AES/PCBC/PKCS5Padding] " + Base64.toBase64String(plainText));
 			
 			
-		} catch (IOException| KeyStoreException | NoSuchAlgorithmException | 
+		} catch (KeyStoreException | NoSuchAlgorithmException | 
 				InvalidKeyException | InvalidKeySpecException | NoSuchPaddingException | 
 				IllegalBlockSizeException | BadPaddingException | InvalidAlgorithmParameterException e) {
 			
@@ -270,42 +259,118 @@ public class KeyStoreJCEKSTest {
 
 	@Test
 	public void testStorePrivateKey() {
-		fail("Not yet implemented");
+		String uci = "Bootstrap-5";
+
+		KeyPair keyPair;
+		try {
+			keyPair = AsymmetricEncryption.generateKey("RSA", 2048);
+			Certificate cert = CertificateOperations
+					.generateSelfSignedcertificate("CN=" + uci, keyPair, 1
+							* 365 * 24 * 60 * 60 * 1000L);
+
+			keyStore.storePrivateKey(uci, keyPair.getPrivate(), password,
+					password, new Certificate[] { cert });
+
+		} catch (NoSuchAlgorithmException | KeyStoreException e) {
+			e.printStackTrace();
+		}
+		assertTrue("[Test Store Private Key]", keyStore.containAlias(uci));
+		//System.out.println(keyStore.toString());	
 	}
 
 	@Test
 	public void testStoreSecretKeyStringByteArrayCharArray() {
-		fail("Not yet implemented");
-	}
-
-	@Test
-	public void testStoreSecretKeyStringSecretKeyCharArray() {
-		fail("Not yet implemented");
+		String uci = "Bootstrap-6";
+		SecretKey secretKey;
+		try {
+			secretKey = SymmetricEncryption.generateKey(SymmetricEncryption.AES, 256);
+			keyStore.storeSecretKey(uci, secretKey.getEncoded(), "AES", password, password);
+			
+		} catch (NoSuchAlgorithmException | InvalidKeyException | KeyStoreException | InvalidKeySpecException e) {
+			
+			e.printStackTrace();
+		}
+		assertTrue("[Test Store Private Key by ByteArray]", keyStore.hasKey(uci));
 	}
 
 	@Test
 	public void testStoreCertificate() {
-		fail("Not yet implemented");
+		String uci = "Bootstrap-7";
+		System.out.println(keyStore.toString());
+		KeyPair keyPair;
+		try {
+			keyPair = AsymmetricEncryption.generateKey("RSA", 2048);
+			Certificate cert = CertificateOperations
+					.generateSelfSignedcertificate("CN=" + uci, keyPair, 1
+							* 365 * 24 * 60 * 60 * 1000L);
+
+			keyStore.storeCertificate(uci, cert, password);
+
+		} catch (NoSuchAlgorithmException | KeyStoreException e) {
+			e.printStackTrace();
+		}
+		System.out.println(keyStore.toString());
+		assertTrue("[Test Store Certificate]", keyStore.hasCertificate(uci));
 	}
 
 	@Test
 	public void testHasKey() {
-		fail("Not yet implemented");
+		String uci = "Bootstrap-8";
+		SecretKey secretKey;
+		try {
+			secretKey = SymmetricEncryption.generateKey(SymmetricEncryption.AES, 256);
+			keyStore.storeSecretKey(uci, secretKey, password, password);
+			
+		} catch (NoSuchAlgorithmException | InvalidKeyException | KeyStoreException | InvalidKeySpecException e) {
+			
+			e.printStackTrace();
+		}
+		
+		assertTrue("[Test has Key]", keyStore.hasKey(uci));
 	}
 
 	@Test
 	public void testHasCertificate() {
-		fail("Not yet implemented");
+		// same as testStoreCertificate()
 	}
 
 	@Test
 	public void testContainAlias() {
-		fail("Not yet implemented");
+		String uci = "Bootstrap-x";
+		KeyPair keyPair;
+		try {
+			keyPair = AsymmetricEncryption.generateKey("RSA", 2048);
+			Certificate cert = CertificateOperations
+					.generateSelfSignedcertificate("CN=" + uci, keyPair, 1
+							* 365 * 24 * 60 * 60 * 1000L);
+
+			keyStore.storePrivateKey(uci, keyPair.getPrivate(), password,
+					password, new Certificate[] { cert });
+
+		} catch (NoSuchAlgorithmException | KeyStoreException e) {
+			e.printStackTrace();
+		}
+		assertTrue("[Test Store Private Key]", keyStore.containAlias(uci));
 	}
 
 	@Test
 	public void testGetCreationData() {
-		fail("Not yet implemented");
+		String uci = "Bootstrap-9";
+		SecretKey secretKey;
+		Date created = null;
+		try {
+			secretKey = SymmetricEncryption.generateKey(SymmetricEncryption.AES, 128);
+			created = new Date();
+			
+			keyStore.storeSecretKey(uci, secretKey, password, password);
+			
+		} catch (NoSuchAlgorithmException | InvalidKeyException | KeyStoreException | InvalidKeySpecException e) {
+			
+			e.printStackTrace();
+		}
+		
+		assertTrue("[Test Get Creation Data]", new Date().after(created));
+		
 	}
 
 }

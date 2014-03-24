@@ -24,11 +24,16 @@ public class SymmetricEncryption {
 	// These are  encryption modes with different same padding
 	public static final String DES_ECB_PKCS5 = "DES/ECB/PKCS5Padding";
 	public static final String DES_CBC_PKCS5 = "DES/CBC/PKCS5Padding";
+	
 	public static final String DESede_CBC_PKCS5 = "DESede/CBC/PKCS5Padding";
 	public static final String DESede_ECB_PKCS5 = "DESede/ECB/PKCS5Padding";
+	
 	public static final String AES_CBC_PKCS5 = "AES/CBC/PKCS5Padding";
 	public static final String AES_ECB_PKCS5 = "AES/ECB/PKCS5Padding";
-	
+	public static final String AES_CFB_PKCS5 = "AES/CFB/PKCS5Padding";
+	public static final String AES_OFB_PKCS5 = "AES/OFB/PKCS5Padding";
+	public static final String AES_PCBC_PKCS5 = "AES/PCBC/PKCS5Padding";
+	public static final String AES_CTR_PKCS5 = "AES/CTR/PKCS5Padding";
 	
 	public static IvParameterSpec initializationVector = null;
 	
@@ -70,7 +75,7 @@ public class SymmetricEncryption {
 			
 			return cipher.doFinal(data);
 		}else{
-			System.err.println("NOT SUPPORTED " + mode.split("/")[1] + " mode");
+			System.err.println("NOT SUPPORT " + mode.split("/")[1] + " mode");
 			return null;
 		}
 	}
@@ -88,7 +93,7 @@ public class SymmetricEncryption {
 			return cipher.doFinal(data);
 			
 		}else{
-			System.err.println("NOT SUPPORTED " + mode.split("/")[1] + " mode");
+			System.err.println("NOT SUPPORT " + mode.split("/")[1] + " mode");
 			return null;
 		}
 	}
@@ -111,7 +116,7 @@ public class SymmetricEncryption {
 			return cipher.doFinal(data);
 			
 		}else{
-			System.err.println("NOT SUPPORTED " + mode.split("/")[1] + " mode");
+			System.err.println("NOT SUPPORT " + mode.split("/")[1] + " mode");
 			return null;
 		}
 		
