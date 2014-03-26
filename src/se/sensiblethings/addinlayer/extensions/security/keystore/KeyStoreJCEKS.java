@@ -26,7 +26,7 @@ import javax.crypto.SecretKey;
 
 import se.sensiblethings.addinlayer.extensions.security.encryption.SymmetricEncryption;
 
-public class KeyStoreJCEKS implements KeyStoreTemplate{
+public class KeyStoreJCEKS implements IKeyStore{
 	
 	public static final String KEY_STORE_TYPE = "jceks";
 	

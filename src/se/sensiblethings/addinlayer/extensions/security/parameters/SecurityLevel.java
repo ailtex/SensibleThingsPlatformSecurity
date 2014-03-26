@@ -10,9 +10,10 @@ public enum SecurityLevel {
 	// Asymmetric Encryption Algorthm: RSA
 	// Asymmetric key length: 2048
 	// Signature algorithm: SHA512 with RSA
-	High(5, "AES","AES/CBC/PKCS5Padding", 256, 5*60*1000L, "RSA", 2048, "SHA512withRSA"),
-	Medium(3, "AES","AES/CBC/PKCS5Padding", 192, 60*60*1000L, "RSA", 2048, "SHA256withRSA"),
-	Low(1, "AES", "AES/CBC/PKCS5Padding", 128, 24*60*60*1000L, "RSA", 1024, "SHA1withRSA");
+	// Asymmetric Key lifetime : 365*24*60*60*1000;
+	High(5, "AES","AES/CBC/PKCS5Padding", 256, 5*60*1000L, "RSA", 2048, "SHA512withRSA", 365*24*60*60*1000),
+	Medium(3, "AES","AES/CBC/PKCS5Padding", 192, 60*60*1000L, "RSA", 2048, "SHA256withRSA", 365*24*60*60*1000),
+	Low(1, "AES", "AES/CBC/PKCS5Padding", 128, 24*60*60*1000L, "RSA", 1024, "SHA1withRSA", 365*24*60*60*1000);
 	
 	private int securityLevel;
 	
@@ -25,11 +26,12 @@ public enum SecurityLevel {
 	private int asymmetricKeyLength;
 	
 	private String signatureAlgorithm;
-
+	private long asymmetricKeyLifetime;
+	
 	private SecurityLevel(int securityLevel, String symmetricAlgorithm, String symmetricMode,
 			int symmetricKeyLength, long symmetricKeyLifeTime,
 			String asymmetricAlgorithm, int asymmetricKeyLength,
-			String signatureAlgorithm) {
+			String signatureAlgorithm, long asymmetricKeyLifetime) {
 		this.securityLevel = securityLevel;
 		this.symmetricAlgorithm = symmetricAlgorithm;
 		this.symmetricMode = symmetricMode;
@@ -38,13 +40,12 @@ public enum SecurityLevel {
 		this.asymmetricAlgorithm = asymmetricAlgorithm;
 		this.asymmetricKeyLength = asymmetricKeyLength;
 		this.signatureAlgorithm = signatureAlgorithm;
+		this.asymmetricKeyLifetime = asymmetricKeyLifetime;
 	}
 
 	public int getSecurityLevel() {
 		return securityLevel;
 	}
-
-
 
 	public String getSymmetricAlgorithm() {
 		return symmetricAlgorithm;
@@ -80,6 +81,14 @@ public enum SecurityLevel {
 
 	public String getSignatureAlgorithm() {
 		return signatureAlgorithm;
+	}
+
+	public long getAsymmetricKeyLifetime() {
+		return asymmetricKeyLifetime;
+	}
+
+	public void setAsymmetricKeyLifetime(long asymmetricKeyLifetime) {
+		this.asymmetricKeyLifetime = asymmetricKeyLifetime;
 	}
 
 	

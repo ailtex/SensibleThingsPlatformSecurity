@@ -4,7 +4,7 @@ import java.security.Key;
 import java.util.Date;
 
 
-public interface KeyStoreTemplate {
+public interface IKeyStore {
 
 
 }

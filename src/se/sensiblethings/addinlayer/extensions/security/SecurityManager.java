@@ -34,7 +34,7 @@ import org.bouncycastle.jce.PKCS10CertificationRequest;
 import se.sensiblethings.addinlayer.extensions.security.certificate.CertificateOperations;
 import se.sensiblethings.addinlayer.extensions.security.encryption.AsymmetricEncryption;
 import se.sensiblethings.addinlayer.extensions.security.keystore.KeyStoreJCEKS;
-import se.sensiblethings.addinlayer.extensions.security.keystore.KeyStoreTemplate;
+import se.sensiblethings.addinlayer.extensions.security.keystore.IKeyStore;
 import se.sensiblethings.addinlayer.extensions.security.keystore.SQLiteDatabase;
 import se.sensiblethings.addinlayer.extensions.security.messagedigest.MessageDigestOperations;
 import se.sensiblethings.addinlayer.extensions.security.parameters.SecurityLevel;
@@ -223,7 +223,8 @@ public class SecurityManager {
 		Certificate[] certs = null;
 		
 		try {
-			certs =  CertificateOperations.buildChain(certRequest, (X509Certificate)keyStore.getCertificate(operator), keyPair);
+			certs =  CertificateOperations.buildChain(certRequest, (X509Certificate)keyStore.getCertificate(operator), keyPair, 
+					securityParameters.getAsymmetricKeyLifetime());
 			
 			// store the issued certificate into keystore
 			keyStore.storeCertificate(uci, certs[0], "password".toCharArray());

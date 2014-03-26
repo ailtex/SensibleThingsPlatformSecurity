@@ -40,7 +40,7 @@ import se.sensiblethings.addinlayer.extensions.security.communication.payload.Ce
 import se.sensiblethings.addinlayer.extensions.security.communication.payload.SecretKeyPayload;
 import se.sensiblethings.addinlayer.extensions.security.encryption.AsymmetricEncryption;
 import se.sensiblethings.addinlayer.extensions.security.encryption.SymmetricEncryption;
-import se.sensiblethings.addinlayer.extensions.security.keystore.KeyStoreTemplate;
+import se.sensiblethings.addinlayer.extensions.security.keystore.IKeyStore;
 import se.sensiblethings.addinlayer.extensions.security.keystore.SQLiteDatabase;
 import se.sensiblethings.addinlayer.extensions.security.parameters.SecurityLevel;
 import se.sensiblethings.addinlayer.extensions.security.signature.SignatureOperations;

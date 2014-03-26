@@ -44,19 +44,21 @@ import org.bouncycastle.asn1.x509.KeyUsage;
 import org.bouncycastle.asn1.x509.X509Extension;
 import org.bouncycastle.asn1.x509.X509Extensions;
 import org.bouncycastle.asn1.x509.X509Name;
-import org.bouncycastle.jce.PKCS10CertificationRequest;
 import org.bouncycastle.x509.X509V1CertificateGenerator;
 import org.bouncycastle.x509.X509V3CertificateGenerator;
 import org.bouncycastle.x509.extension.AuthorityKeyIdentifierStructure;
 import org.bouncycastle.x509.extension.SubjectKeyIdentifierStructure;
+import org.bouncycastle.jce.PKCS10CertificationRequest;
 import org.bouncycastle.openssl.PEMWriter;
+
 
 public class CertificateOperations {
 	
+	private static final String SIGNATURE_ALGORITHM = "SHA256WithRSAEncryption";
 	/**
 	 * There is one solution to generate the X509 certificate without using the Bouncy Castle
-	 * Detail can be found from below (Actually it's similar to doSelfCert from the keytool souce code):
-	 * 1, http://stackoverflow.com/questions/1615871/creating-an-x509-certificate-in-java-without-bouncycastle
+	 * Detail can be found from below (Actually it's similar to doSelfCert from the keytool souce code):</p>
+	 * 1, http://stackoverflow.com/questions/1615871/creating-an-x509-certificate-in-java-without-bouncycastle</p>
 	 * 2, http://bfo.com/blog/2011/03/08/odds_and_ends_creating_a_new_x_509_certificate.html
 	 * While sun.security.* package is required which has some contradiction with support/ stable principle
 	 * So here decide to use Bouncy Castle to implement this
@@ -100,13 +102,12 @@ public class CertificateOperations {
 		
 		certGen.setIssuerDN(new X500Principal(subjectName));
 		
-		// set the validation time ： 1 year
-	    certGen.setNotBefore(new Date(System.currentTimeMillis() - lifeTime)); // time from which certificate is valid
+	    certGen.setNotBefore(new Date(System.currentTimeMillis() )); // time from which certificate is valid
 	    certGen.setNotAfter(new Date(System.currentTimeMillis() + lifeTime));  // time after which certificate is not valid
 	    
 	    certGen.setSubjectDN(new X500Principal(subjectName));
 	    certGen.setPublicKey(keyPair.getPublic());
-	    certGen.setSignatureAlgorithm("SHA256WithRSAEncryption");
+	    certGen.setSignatureAlgorithm(SIGNATURE_ALGORITHM);
 	    
 	    try {
 			cert = certGen.generateX509Certificate(keyPair.getPrivate(), "BC");
@@ -131,7 +132,7 @@ public class CertificateOperations {
 		// Including an email address in the SubjectAlternative name extension
 		// create the extension value
 		GeneralNames subjectAltName = new GeneralNames(
-		                   new GeneralName(GeneralName.rfc822Name, "example@example.org"));
+		                   new GeneralName(GeneralName.rfc822Name, "bootstrap@miun.se"));
 
 		// create the extensions object and add it as an attribute
 		Vector oids = new Vector();
@@ -155,7 +156,6 @@ public class CertificateOperations {
 		                           PKCSObjectIdentifiers.pkcs_9_at_extensionRequest,
 		                           new DERSet(extensions));
 		
-		
 		try {
 			return new PKCS10CertificationRequest(
 			          "SHA256withRSA",
@@ -172,7 +172,7 @@ public class CertificateOperations {
 	}
 	
 	@SuppressWarnings("deprecation")
-	public static X509Certificate[] buildChain(PKCS10CertificationRequest request, X509Certificate rootCert, KeyPair rootPair) throws
+	public static X509Certificate[] buildChain(PKCS10CertificationRequest request, X509Certificate rootCert, KeyPair rootPair, long lifeTime) throws
 	InvalidKeyException, NoSuchAlgorithmException, NoSuchProviderException, SignatureException, CertificateParsingException{
 		
 		// add BouncyCastal to the security provider
@@ -189,10 +189,10 @@ public class CertificateOperations {
 		certGen.setSerialNumber(BigInteger.valueOf(System.currentTimeMillis()));
 		certGen.setIssuerDN(rootCert.getSubjectX500Principal());
 		certGen.setNotBefore(new Date(System.currentTimeMillis()));
-		certGen.setNotAfter(new Date(System.currentTimeMillis() + 50000));
+		certGen.setNotAfter(new Date(System.currentTimeMillis() + lifeTime));
 		certGen.setSubjectDN(new X500Principal(request.getCertificationRequestInfo().getSubject().toString()));
 		certGen.setPublicKey(request.getPublicKey("BC"));
-		certGen.setSignatureAlgorithm("SHA256WithRSAEncryption");
+		certGen.setSignatureAlgorithm(SIGNATURE_ALGORITHM);
 
 		certGen.addExtension(X509Extensions.AuthorityKeyIdentifier, false,
 				new AuthorityKeyIdentifierStructure(rootCert));
