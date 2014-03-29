@@ -18,6 +18,7 @@ import java.security.PrivateKey;
 import java.security.UnrecoverableEntryException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Date;
 import java.util.Enumeration;
@@ -291,6 +292,19 @@ public class KeyStoreJCEKS implements IKeyStore{
 			e.printStackTrace();
 		}
 		return 0;
+	}
+	
+	public X509Certificate getIssuredCertificate(String alias){
+		return (X509Certificate) getCertificateChain(alias)[0];
+	}
+	
+	public Certificate[] getCertificateChain(String alias){
+		try {
+			return ks.getCertificateChain(alias);
+		} catch (KeyStoreException e) {
+			e.printStackTrace();
+		}
+		return null;
 	}
 	
 	public Enumeration<String> getAllAlias(){

@@ -42,7 +42,7 @@ import se.sensiblethings.addinlayer.extensions.security.encryption.AsymmetricEnc
 import se.sensiblethings.addinlayer.extensions.security.encryption.SymmetricEncryption;
 import se.sensiblethings.addinlayer.extensions.security.keystore.IKeyStore;
 import se.sensiblethings.addinlayer.extensions.security.keystore.SQLiteDatabase;
-import se.sensiblethings.addinlayer.extensions.security.parameters.SecurityLevel;
+import se.sensiblethings.addinlayer.extensions.security.parameters.SecurityConfigurations;
 import se.sensiblethings.addinlayer.extensions.security.signature.SignatureOperations;
 import se.sensiblethings.disseminationlayer.communication.Communication;
 import se.sensiblethings.disseminationlayer.communication.DestinationNotReachableException;
@@ -62,10 +62,10 @@ public class SecurityExtension implements Extension, MessageListener{
 	SecurityListener securityListener = null;
 	SecurityManager securityManager = null;
 	SecureCommunication secureCommunication = null;
-	SecurityLevel securityParameters = null;
+	SecurityConfigurations securityParameters = null;
 	
 	
-	public SecurityExtension(SecurityListener listener, SecurityLevel level){
+	public SecurityExtension(SecurityListener listener, SecurityConfigurations level){
 		this.securityListener = listener;
 		this.securityParameters = level;
 	}
@@ -94,17 +94,23 @@ public class SecurityExtension implements Extension, MessageListener{
 	public void startAddIn() {
 		
 		if(this.securityParameters == null){
-			this.securityParameters = SecurityLevel.Low;
+			this.securityParameters = SecurityConfigurations.Low;
 		}
 		
 		securityManager = new SecurityManager(securityParameters);
 		secureCommunication = new SecureCommunication(this.platform, this.securityManager, this.securityParameters);
+		
+		// Check if it's has the signed certificate
+		// if it's not, it should connect to the Bootstrap and get the signed certificate
+		if(!securityManager.isRegisted(securityParameters.getBootstrapUci())){
+			SensibleThingsNode bootstrapNode = new SensibleThingsNode(bootstrapIp, 9009);
+			
+		}
 	}
 
 	@Override
 	public void stopAddIn() {
 		// TODO Auto-generated method stub
-		
 	}
 
 	@Override
@@ -113,11 +119,11 @@ public class SecurityExtension implements Extension, MessageListener{
 		
 	}
 	
-	public SecurityLevel getSecurityParameters() {
+	public SecurityConfigurations getSecurityParameters() {
 		return securityParameters;
 	}
 
-	public void setSecurityParameters(SecurityLevel securityParameters) {
+	public void setSecurityParameters(SecurityConfigurations securityParameters) {
 		this.securityParameters = securityParameters;
 	}
 
@@ -129,7 +135,7 @@ public class SecurityExtension implements Extension, MessageListener{
 		this.securityListener = listener;
 	}
 	
-	public void createSslConnection(String uci, SensibleThingsNode node){
+	private void createSslConnection(String uci, SensibleThingsNode node){
 		secureCommunication.createSslConnection(uci, node);
 	}
 	

@@ -8,6 +8,7 @@ import java.net.UnknownHostException;
 import se.sensiblethings.addinlayer.AddInManager;
 import se.sensiblethings.addinlayer.extensions.security.SecurityExtension;
 import se.sensiblethings.addinlayer.extensions.security.SecurityListener;
+import se.sensiblethings.addinlayer.extensions.security.parameters.SecurityConfigurations;
 import se.sensiblethings.disseminationlayer.communication.Communication;
 import se.sensiblethings.disseminationlayer.lookupservice.LookupService;
 import se.sensiblethings.disseminationlayer.lookupservice.kelips.KelipsLookup;
@@ -39,7 +40,7 @@ public class SecurityTestMainNode implements SensibleThingsListener, SecurityLis
 		
 		AddInManager addInManager = platform.getAddInManager();
     	
-    	secureExt = new SecurityExtension(this);
+    	secureExt = new SecurityExtension(this, SecurityConfigurations.Low);
     	addInManager.loadAddIn(secureExt);
 		//platform = new SensibleThingsPlatform(LookupService.KELIPS, Communication.SSL, this);
 
@@ -51,7 +52,8 @@ public class SecurityTestMainNode implements SensibleThingsListener, SecurityLis
 			
 			platform.register("gausszhang@gmail.com/nodeOne");
 			
-			platform.resolve("gausszhang@gmail.com/server");
+			platform.resolve("gausszhang@gmail.com/bootstrap");
+			
 			
 	        System.out.println("Press any key to shut down");
 	        BufferedReader in = new BufferedReader(new InputStreamReader(System.in));    	
@@ -80,9 +82,8 @@ public class SecurityTestMainNode implements SensibleThingsListener, SecurityLis
 	@Override
 	public void resolveResponse(String uci, SensibleThingsNode node) {
 		System.out.println("[ResolveResponse] " + uci + ": " + node);
-
-		platform.notify(node, uci, "Secure Connection");
 		
+		secureExt.createSslConnection(uci, node);
 	}
 
 	@Override
@@ -112,6 +113,13 @@ public class SecurityTestMainNode implements SensibleThingsListener, SecurityLis
 
 	@Override
 	public void sslConnectionRequestEvent(String uci,
+			SensibleThingsNode fromNode) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void receivedSecureMessageEvent(String message, String uci,
 			SensibleThingsNode fromNode) {
 		// TODO Auto-generated method stub
 		

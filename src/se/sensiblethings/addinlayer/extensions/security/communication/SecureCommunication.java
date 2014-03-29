@@ -32,7 +32,7 @@ import se.sensiblethings.addinlayer.extensions.security.communication.payload.Ce
 import se.sensiblethings.addinlayer.extensions.security.communication.payload.SecretKeyPayload;
 import se.sensiblethings.addinlayer.extensions.security.encryption.AsymmetricEncryption;
 import se.sensiblethings.addinlayer.extensions.security.encryption.SymmetricEncryption;
-import se.sensiblethings.addinlayer.extensions.security.parameters.SecurityLevel;
+import se.sensiblethings.addinlayer.extensions.security.parameters.SecurityConfigurations;
 import se.sensiblethings.addinlayer.extensions.security.signature.SignatureOperations;
 import se.sensiblethings.disseminationlayer.communication.Communication;
 import se.sensiblethings.disseminationlayer.communication.DestinationNotReachableException;
@@ -48,12 +48,12 @@ public class SecureCommunication {
 	Communication communication = null;
 	
 	SecurityManager securityManager = null;
-	SecurityLevel securityParameters = null;
+	SecurityConfigurations securityParameters = null;
 	
 	Map<String, Vector<SecureMessage>> postOffice = null;
 	
 	public SecureCommunication(SensibleThingsPlatform platform, 
-			SecurityManager securityManager, SecurityLevel securityParameters){
+			SecurityManager securityManager, SecurityConfigurations securityParameters){
 		this.platform = platform;
 		this.core = platform.getDisseminationCore();
 		this.communication = core.getCommunication();
@@ -407,6 +407,9 @@ public class SecureCommunication {
 	  	// verify the public key and the signature
 		if(securityManager.verifySignature(originalRequest, 
 				rrm.getSignature(), rrm.getCertificate(), rrm.getSignatureAlgorithm())){
+			
+			// store the bootstrap's root certificate(X509V1 version)
+			securityManager.storeCertificate(rrm.uci, rrm.getCertificate(), "password");
 			
 			// the request is valid
 			// send the ID, CSR, nonce to bootstrap node

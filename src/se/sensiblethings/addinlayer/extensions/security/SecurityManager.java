@@ -37,7 +37,7 @@ import se.sensiblethings.addinlayer.extensions.security.keystore.KeyStoreJCEKS;
 import se.sensiblethings.addinlayer.extensions.security.keystore.IKeyStore;
 import se.sensiblethings.addinlayer.extensions.security.keystore.SQLiteDatabase;
 import se.sensiblethings.addinlayer.extensions.security.messagedigest.MessageDigestOperations;
-import se.sensiblethings.addinlayer.extensions.security.parameters.SecurityLevel;
+import se.sensiblethings.addinlayer.extensions.security.parameters.SecurityConfigurations;
 import se.sensiblethings.addinlayer.extensions.security.signature.SignatureOperations;
 import se.sensiblethings.addinlayer.extensions.security.encryption.SymmetricEncryption;
 
@@ -50,9 +50,9 @@ public class SecurityManager {
 	
 	private KeyStoreJCEKS keyStore = null;
 	private Map<String, Object> noncePool = new HashMap<String, Object>();
-	private SecurityLevel securityParameters = null;
+	private SecurityParameters securityParameters = null;
 	
-	public SecurityManager(SecurityLevel securityParameters){
+	public SecurityManager(SecurityParameters securityParameters){
 
 		keyStore = new KeyStoreJCEKS();
 		
@@ -128,6 +128,12 @@ public class SecurityManager {
 			return false;
 		}
 		
+	}
+	
+	
+	public boolean isRegisted(String bootstrapUci){
+		return keyStore.hasCertificate(bootstrapUci) && 
+				keyStore.getIssuredCertificate(bootstrapUci).getIssuerX500Principal().getName().equals("CN="+bootstrapUci);
 	}
 	
 	/********************************************************************************

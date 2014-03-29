@@ -13,6 +13,7 @@ import java.util.Vector;
 import se.sensiblethings.addinlayer.AddInManager;
 import se.sensiblethings.addinlayer.extensions.security.SecurityExtension;
 import se.sensiblethings.addinlayer.extensions.security.SecurityListener;
+import se.sensiblethings.addinlayer.extensions.security.parameters.SecurityConfigurations;
 import se.sensiblethings.disseminationlayer.communication.Communication;
 import se.sensiblethings.disseminationlayer.communication.rudp.RUDPCommunication;
 import se.sensiblethings.disseminationlayer.communication.ssl.SslCommunication;
@@ -47,7 +48,7 @@ public class SecurityTestMainBootstrap implements SensibleThingsListener, Securi
     	
     	AddInManager addInManager = platform.getAddInManager();
     	
-    	secureExt = new SecurityExtension(this);
+    	secureExt = new SecurityExtension(this, SecurityConfigurations.Low);
     	addInManager.loadAddIn(secureExt);
     	
     	//SslCommunication.initCommunicationPort = 9009;
@@ -58,29 +59,15 @@ public class SecurityTestMainBootstrap implements SensibleThingsListener, Securi
     	
     	
     	//platform_ssl = new SensibleThingsPlatform(LookupService.KELIPS, Communication.SSL, this);
-    	Vector<String> property= new Vector<String>();
-    	property.add("aaaa");
-    	property.add("bbbb");
-    	property.add("ccccc");
-		
-		System.out.println(property.toString());
+
 	}
 	
 	public void run(){
-    	try {	    	
-//    		platform.register("congcongzhang@gmail.com/superOne");
-//    		System.out.println("\n superOne registered!");
-    		
+    	try {	    	    		
     		System.out.println("[Bootstrap Node] booted! ");
-    		
-    		//TestSuiteRangeQuery rq = new TestSuiteRangeQuery(platform);
-	        //rq.performTests();
-            
-	        //platform.resolve("congcongzhang@gmail.com/superOne");
-    		
-    		platform.register("gausszhang@gmail.com/server");
-    		//platform_ssl.register("gausszhang@gmail.com/server_ssl");
-    		
+
+    		platform.register("bootstrap@miun.se");
+
     		
 	        System.out.println("Press any key to shut down");
 	        BufferedReader in = new BufferedReader(new InputStreamReader(System.in));    	
@@ -127,6 +114,21 @@ public class SecurityTestMainBootstrap implements SensibleThingsListener, Securi
 		
 	}
 	
+
+	@Override
+	public void sslConnectionRequestEvent(String uci,
+			SensibleThingsNode fromNode) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void receivedSecureMessageEvent(String message, String uci,
+			SensibleThingsNode fromNode) {
+		// TODO Auto-generated method stub
+		
+	}
+	
 	/*
 	 * find the local host IP address
 	 */
@@ -143,11 +145,5 @@ public class SecurityTestMainBootstrap implements SensibleThingsListener, Securi
 		return address.getHostAddress();
 	}
 
-	@Override
-	public void sslConnectionRequestEvent(String uci,
-			SensibleThingsNode fromNode) {
-		// TODO Auto-generated method stub
-		
-	}
 }
 
