@@ -4,12 +4,12 @@ import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.XMLConfiguration;
 import org.apache.commons.configuration.tree.xpath.XPathExpressionEngine;
 
-public class SecurityConfigurations {
+public class SecurityConfiguration {
 	
 	private int securityLevel;
 	private XMLConfiguration config = null;
 	
-	public SecurityConfigurations(String filePath, int securityLevel){
+	public SecurityConfiguration(String filePath, int securityLevel){
 		this.securityLevel = securityLevel;
 		
 		try {

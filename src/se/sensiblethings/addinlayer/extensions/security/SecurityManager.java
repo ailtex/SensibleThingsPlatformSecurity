@@ -37,22 +37,22 @@ import se.sensiblethings.addinlayer.extensions.security.keystore.KeyStoreJCEKS;
 import se.sensiblethings.addinlayer.extensions.security.keystore.IKeyStore;
 import se.sensiblethings.addinlayer.extensions.security.keystore.SQLiteDatabase;
 import se.sensiblethings.addinlayer.extensions.security.messagedigest.MessageDigestOperations;
-import se.sensiblethings.addinlayer.extensions.security.parameters.SecurityConfigurations;
+import se.sensiblethings.addinlayer.extensions.security.parameters.SecurityConfiguration;
 import se.sensiblethings.addinlayer.extensions.security.signature.SignatureOperations;
 import se.sensiblethings.addinlayer.extensions.security.encryption.SymmetricEncryption;
 
 public class SecurityManager {
 	
 	// the operator is the uci who owns
-	private String operator = null;
+	private String myUci = null;
 	private PublicKey publicKey = null;
 	private String bootStrapUci = null;
 	
 	private KeyStoreJCEKS keyStore = null;
 	private Map<String, Object> noncePool = new HashMap<String, Object>();
-	private SecurityParameters securityParameters = null;
+	private SecurityConfiguration config = null;
 	
-	public SecurityManager(SecurityParameters securityParameters){
+	public SecurityManager(SecurityConfiguration config){
 
 		keyStore = new KeyStoreJCEKS();
 		
@@ -63,11 +63,11 @@ public class SecurityManager {
 			e.printStackTrace();
 		}
 		
-		this.securityParameters = securityParameters;
+		this.config = config;
 	}
 	
 	public void initializePermanentKeyStore(String uci){
-		setOperator(uci);
+		setMyUci(uci);
 		
 		// check weather the store has the KeyPair
 		if(!keyStore.hasKey(uci)){
@@ -77,13 +77,17 @@ public class SecurityManager {
 		
 	}
 	
-	public String getOperator() {
-		return operator;
+	public void setSecuiryConfiguraton(SecurityConfiguration config){
+		this.config = config;
+	}
+	
+	public String getMyUci() {
+		return myUci;
 		
 	}
 
-	public void setOperator(String operator) {
-		this.operator = operator;
+	public void setMyUci(String myUci) {
+		this.myUci = myUci;
 	}
 
 	public String getBootStrapUci() {
@@ -149,8 +153,8 @@ public class SecurityManager {
 		// Reason to see : http://www.oracle.com/technetwork/java/faq-sun-packages-142232.html
 		KeyPair keyPair = null;
 		try {
-			 keyPair = AsymmetricEncryption.generateKey(securityParameters.getAsymmetricAlgorithm(),
-					 securityParameters.getSymmetricKeyLength());
+			 keyPair = AsymmetricEncryption.generateKey(config.getAsymmetricAlgorithm(),
+					 config.getSymmetricKeyLength());
 		} catch (NoSuchAlgorithmException e) {
 			
 			e.printStackTrace();
@@ -224,13 +228,13 @@ public class SecurityManager {
 	}
 	
 	public Certificate[] signCertificateSigningRequest(PKCS10CertificationRequest certRequest, String uci){
-		KeyPair keyPair = new KeyPair((PublicKey)keyStore.getPublicKey(operator), 
-									  (PrivateKey)keyStore.getPrivateKey(operator, "password".toCharArray()));
+		KeyPair keyPair = new KeyPair((PublicKey)keyStore.getPublicKey(myUci), 
+									  (PrivateKey)keyStore.getPrivateKey(myUci, "password".toCharArray()));
 		Certificate[] certs = null;
 		
 		try {
-			certs =  CertificateOperations.buildChain(certRequest, (X509Certificate)keyStore.getCertificate(operator), keyPair, 
-					securityParameters.getAsymmetricKeyLifetime());
+			certs =  CertificateOperations.buildChain(certRequest, (X509Certificate)keyStore.getCertificate(myUci), keyPair, 
+					config.getAsymmetricKeyLifetime());
 			
 			// store the issued certificate into keystore
 			keyStore.storeCertificate(uci, certs[0], "password".toCharArray());
@@ -251,7 +255,7 @@ public class SecurityManager {
 	 */
 	public Certificate getCertificate(){
 		try {
-			return keyStore.getCertificate(operator);
+			return keyStore.getCertificate(myUci);
 		} catch (KeyStoreException e) {
 			e.printStackTrace();
 		}
@@ -313,7 +317,7 @@ public class SecurityManager {
 	
 	public byte[] signMessage(byte[] message, String algorithm){
 		// load the private key
-		PrivateKey privateKey = (PrivateKey) keyStore.getPrivateKey(operator, "password".toCharArray());
+		PrivateKey privateKey = (PrivateKey) keyStore.getPrivateKey(myUci, "password".toCharArray());
 		
 		byte[] signature = null;
 		try {
@@ -393,13 +397,13 @@ public class SecurityManager {
 	
 	public byte[] asymmetricDecryptMessage(byte[] message, String algorithm){
 		// load the private key
-		PrivateKey privateKey = (PrivateKey)keyStore.getPrivateKey(operator, "password".toCharArray());
+		PrivateKey privateKey = (PrivateKey)keyStore.getPrivateKey(myUci, "password".toCharArray());
 		
 		return AsymmetricEncryption.decrypt(privateKey, message, algorithm);
 	}
 	
 	public PublicKey getPublicKey() {
-		return (PublicKey) keyStore.getPublicKey(operator);
+		return (PublicKey) keyStore.getPublicKey(myUci);
 	}
 	
 	public PublicKey getPublicKey(String uci){
@@ -421,7 +425,7 @@ public class SecurityManager {
 		SecretKey secretKey = (SecretKey) keyStore.getSecretKey(toUci, "password".toCharArray());
 		byte[] plainText = null;
 		try {
-			plainText = SymmetricEncryption.encrypt(secretKey, message, securityParameters.getSymmetricMode());
+			plainText = SymmetricEncryption.encrypt(secretKey, message, config.getSymmetricMode());
 			
 		} catch (InvalidKeyException | NoSuchAlgorithmException
 				| NoSuchPaddingException | IllegalBlockSizeException
@@ -442,7 +446,7 @@ public class SecurityManager {
 		
 		byte[] plainText = null;
 		try {
-			plainText = SymmetricEncryption.decrypt(secretKey, message, securityParameters.getSymmetricMode());
+			plainText = SymmetricEncryption.decrypt(secretKey, message, config.getSymmetricMode());
 			
 		} catch (InvalidKeyException | NoSuchAlgorithmException
 				| NoSuchPaddingException | IllegalBlockSizeException
@@ -459,7 +463,7 @@ public class SecurityManager {
 		
 		byte[] plainText = null;
 		try {
-			plainText = SymmetricEncryption.decrypt(key, message, securityParameters.getSymmetricMode());
+			plainText = SymmetricEncryption.decrypt(key, message, config.getSymmetricMode());
 			
 		} catch (InvalidKeyException | NoSuchAlgorithmException
 				| NoSuchPaddingException | IllegalBlockSizeException
@@ -484,8 +488,8 @@ public class SecurityManager {
 		SecretKey secretKey = null;
 		
 		try {
-			secretKey = SymmetricEncryption.generateKey(securityParameters.getSymmetricAlgorithm(),  
-					securityParameters.getSymmetricKeyLength());
+			secretKey = SymmetricEncryption.generateKey(config.getSymmetricAlgorithm(),  
+					config.getSymmetricKeyLength());
 			
 			// store the security key
 			storeSecretKey(uci, secretKey, "password");

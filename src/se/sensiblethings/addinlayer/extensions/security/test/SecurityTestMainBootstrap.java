@@ -13,7 +13,7 @@ import java.util.Vector;
 import se.sensiblethings.addinlayer.AddInManager;
 import se.sensiblethings.addinlayer.extensions.security.SecurityExtension;
 import se.sensiblethings.addinlayer.extensions.security.SecurityListener;
-import se.sensiblethings.addinlayer.extensions.security.parameters.SecurityConfigurations;
+import se.sensiblethings.addinlayer.extensions.security.parameters.SecurityConfiguration;
 import se.sensiblethings.disseminationlayer.communication.Communication;
 import se.sensiblethings.disseminationlayer.communication.rudp.RUDPCommunication;
 import se.sensiblethings.disseminationlayer.communication.ssl.SslCommunication;
@@ -48,7 +48,7 @@ public class SecurityTestMainBootstrap implements SensibleThingsListener, Securi
     	
     	AddInManager addInManager = platform.getAddInManager();
     	
-    	secureExt = new SecurityExtension(this, SecurityConfigurations.Low);
+    	secureExt = new SecurityExtension(this, SecurityConfiguration.Low);
     	addInManager.loadAddIn(secureExt);
     	
     	//SslCommunication.initCommunicationPort = 9009;

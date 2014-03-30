@@ -7,11 +7,11 @@ import org.junit.Test;
 
 public class SecurityConfigurationsTest {
 
-SecurityConfigurations config = null;
+SecurityConfiguration config = null;
 	
 	@Before
 	public void setUp() throws Exception {
-		config = new SecurityConfigurations("config/SecurityConfiguration.xml", 1);
+		config = new SecurityConfiguration("config/SecurityConfiguration.xml", 1);
 	}
 
 

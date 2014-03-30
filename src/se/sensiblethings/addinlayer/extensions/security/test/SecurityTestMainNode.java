@@ -8,7 +8,7 @@ import java.net.UnknownHostException;
 import se.sensiblethings.addinlayer.AddInManager;
 import se.sensiblethings.addinlayer.extensions.security.SecurityExtension;
 import se.sensiblethings.addinlayer.extensions.security.SecurityListener;
-import se.sensiblethings.addinlayer.extensions.security.parameters.SecurityConfigurations;
+import se.sensiblethings.addinlayer.extensions.security.parameters.SecurityConfiguration;
 import se.sensiblethings.disseminationlayer.communication.Communication;
 import se.sensiblethings.disseminationlayer.lookupservice.LookupService;
 import se.sensiblethings.disseminationlayer.lookupservice.kelips.KelipsLookup;
@@ -40,7 +40,7 @@ public class SecurityTestMainNode implements SensibleThingsListener, SecurityLis
 		
 		AddInManager addInManager = platform.getAddInManager();
     	
-    	secureExt = new SecurityExtension(this, SecurityConfigurations.Low);
+    	
     	addInManager.loadAddIn(secureExt);
 		//platform = new SensibleThingsPlatform(LookupService.KELIPS, Communication.SSL, this);
 
@@ -83,7 +83,7 @@ public class SecurityTestMainNode implements SensibleThingsListener, SecurityLis
 	public void resolveResponse(String uci, SensibleThingsNode node) {
 		System.out.println("[ResolveResponse] " + uci + ": " + node);
 		
-		secureExt.createSslConnection(uci, node);
+		
 	}
 
 	@Override

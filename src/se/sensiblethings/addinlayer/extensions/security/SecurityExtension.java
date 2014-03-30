@@ -21,7 +21,7 @@ import org.bouncycastle.jce.PKCS10CertificationRequest;
 import se.sensiblethings.addinlayer.extensions.Extension;
 import se.sensiblethings.addinlayer.extensions.security.communication.MessagePayload;
 import se.sensiblethings.addinlayer.extensions.security.communication.ResponsePayload;
-import se.sensiblethings.addinlayer.extensions.security.communication.SecureCommunication;
+import se.sensiblethings.addinlayer.extensions.security.communication.SecurityCommunication;
 import se.sensiblethings.addinlayer.extensions.security.communication.SecureMessage;
 import se.sensiblethings.addinlayer.extensions.security.communication.message.CertificateAcceptedResponseMessage;
 import se.sensiblethings.addinlayer.extensions.security.communication.message.CertificateExchangeMessage;
@@ -42,7 +42,7 @@ import se.sensiblethings.addinlayer.extensions.security.encryption.AsymmetricEnc
 import se.sensiblethings.addinlayer.extensions.security.encryption.SymmetricEncryption;
 import se.sensiblethings.addinlayer.extensions.security.keystore.IKeyStore;
 import se.sensiblethings.addinlayer.extensions.security.keystore.SQLiteDatabase;
-import se.sensiblethings.addinlayer.extensions.security.parameters.SecurityConfigurations;
+import se.sensiblethings.addinlayer.extensions.security.parameters.SecurityConfiguration;
 import se.sensiblethings.addinlayer.extensions.security.signature.SignatureOperations;
 import se.sensiblethings.disseminationlayer.communication.Communication;
 import se.sensiblethings.disseminationlayer.communication.DestinationNotReachableException;
@@ -61,13 +61,14 @@ public class SecurityExtension implements Extension, MessageListener{
 	
 	SecurityListener securityListener = null;
 	SecurityManager securityManager = null;
-	SecureCommunication secureCommunication = null;
-	SecurityConfigurations securityParameters = null;
+	SecurityCommunication securityCommunication = null;
+	SecurityConfiguration config = null;
 	
+	String myUci = null;
 	
-	public SecurityExtension(SecurityListener listener, SecurityConfigurations level){
+	public SecurityExtension(SecurityListener listener, SecurityConfiguration config){
 		this.securityListener = listener;
-		this.securityParameters = level;
+		this.config = config;
 	}
 	
 
@@ -92,20 +93,9 @@ public class SecurityExtension implements Extension, MessageListener{
 
 	@Override
 	public void startAddIn() {
+		securityManager = new SecurityManager(config);
+		securityCommunication = new SecurityCommunication(platform, securityManager, config);
 		
-		if(this.securityParameters == null){
-			this.securityParameters = SecurityConfigurations.Low;
-		}
-		
-		securityManager = new SecurityManager(securityParameters);
-		secureCommunication = new SecureCommunication(this.platform, this.securityManager, this.securityParameters);
-		
-		// Check if it's has the signed certificate
-		// if it's not, it should connect to the Bootstrap and get the signed certificate
-		if(!securityManager.isRegisted(securityParameters.getBootstrapUci())){
-			SensibleThingsNode bootstrapNode = new SensibleThingsNode(bootstrapIp, 9009);
-			
-		}
 	}
 
 	@Override
@@ -119,12 +109,28 @@ public class SecurityExtension implements Extension, MessageListener{
 		
 	}
 	
-	public SecurityConfigurations getSecurityParameters() {
-		return securityParameters;
-	}
+	public void securityRegister(String uci){
+		core.register(uci);
+		
+		this.myUci = uci;
+		
+		// Check if it's has the signed certificate
+		// if it's not, it should connect to the Bootstrap and get the signed
+		// certificate
+		if (!securityManager.isRegisted(config.getBootstrapUci()) && !myUci.equals(config.getBootstrapUci()) ) {
+			SensibleThingsNode bootstrapNode = new SensibleThingsNode(
+					config.getBootstrapIP(), Integer.valueOf(config.getBootstrapPort()));
+			
+			securityCommunication.createSslConnection(config.getBootstrapUci(),bootstrapNode);
 
-	public void setSecurityParameters(SecurityConfigurations securityParameters) {
-		this.securityParameters = securityParameters;
+			securityCommunication.register(config.getBootstrapUci(),bootstrapNode, myUci);
+		}
+	}
+	
+	public void setSecurityConfiguration(SecurityConfiguration config) {
+		this.config = config;
+		securityManager.setSecuiryConfiguraton(config);
+		securityCommunication.setSecuiryConfiguraton(config);
 	}
 
 	public SecurityListener getSecurityListener() {
@@ -135,17 +141,19 @@ public class SecurityExtension implements Extension, MessageListener{
 		this.securityListener = listener;
 	}
 	
+	/*
 	private void createSslConnection(String uci, SensibleThingsNode node){
-		secureCommunication.createSslConnection(uci, node);
+		securityCommunication.createSslConnection(uci, node);
 	}
+	
 	
 	public void register(String toUci, SensibleThingsNode node, String fromUci){
-		secureCommunication.register(toUci, node, fromUci);
+		securityCommunication.register(toUci, node, fromUci);
 	}
-	
+	*/
 	
 	public void sendSecureMassage(String message, String toUci, SensibleThingsNode toNode){
-		secureCommunication.sendSecureMassage(message, toUci, toNode);
+		securityCommunication.sendSecureMassage(message, toUci, toNode);
 	}
 	
 	
@@ -153,47 +161,47 @@ public class SecurityExtension implements Extension, MessageListener{
 	public void handleMessage(Message message) {
 		if(message instanceof SslConnectionMessage) {
 			SslConnectionMessage scm = (SslConnectionMessage)message;
-			secureCommunication.handleSslConnectionMessage(scm);
+			securityCommunication.handleSslConnectionMessage(scm);
 			
 		}else if(message instanceof RegistrationRequestMessage){
 			RegistrationRequestMessage registrationRequestMessage = (RegistrationRequestMessage) message;
-			secureCommunication.handleRegistrationRequestMessage(registrationRequestMessage);
+			securityCommunication.handleRegistrationRequestMessage(registrationRequestMessage);
 			
 		}else if(message instanceof RegistrationResponseMessage){
 			RegistrationResponseMessage rrm = (RegistrationResponseMessage) message;
-			secureCommunication.handleRegistrationResponseMessage(rrm);
+			securityCommunication.handleRegistrationResponseMessage(rrm);
 			
 		}else if(message instanceof CertificateRequestMessage){
 			CertificateRequestMessage crm = (CertificateRequestMessage)message;
-			secureCommunication.handleCertificateRequestMessage(crm);
+			securityCommunication.handleCertificateRequestMessage(crm);
 
 		}else if(message instanceof CertificateResponseMessage){
 			CertificateResponseMessage crm = (CertificateResponseMessage)message;
-			secureCommunication.handleCertificateResponseMessage(crm);
+			securityCommunication.handleCertificateResponseMessage(crm);
 			
 		}else if(message instanceof CertificateAcceptedResponseMessage){
 			CertificateAcceptedResponseMessage carm = (CertificateAcceptedResponseMessage)message;
-			secureCommunication.handleCertificateAcceptedResponseMessage(carm);
+			securityCommunication.handleCertificateAcceptedResponseMessage(carm);
 			
 		}else if(message instanceof SessionKeyExchangeMessage){
 			SessionKeyExchangeMessage skxm = (SessionKeyExchangeMessage)message;	
-			secureCommunication.handleSessionKeyExchangeMessage(skxm);
+			securityCommunication.handleSessionKeyExchangeMessage(skxm);
 			
 		}else if(message instanceof SessionKeyResponseMessage){
 			SessionKeyResponseMessage skrm = (SessionKeyResponseMessage)message;
-			secureCommunication.handleSessionKeyResponseMessage(skrm);
+			securityCommunication.handleSessionKeyResponseMessage(skrm);
 			
 		}else if(message instanceof CertificateExchangeMessage){
 			CertificateExchangeMessage cxm = (CertificateExchangeMessage)message;
-			secureCommunication.handleCertificateExchangeMessage(cxm);
+			securityCommunication.handleCertificateExchangeMessage(cxm);
 			
 		}else if(message instanceof CertificateExchangeResponseMessage){
 			CertificateExchangeResponseMessage cxrm = (CertificateExchangeResponseMessage)message;
-			secureCommunication.handleCertificateExchangeResponseMessage(cxrm);
+			securityCommunication.handleCertificateExchangeResponseMessage(cxrm);
 			
 		}else if(message instanceof SecureMessage){
 			SecureMessage sm = (SecureMessage)message;
-			String plainText = secureCommunication.handleSecureMessage(sm);
+			String plainText = securityCommunication.handleSecureMessage(sm);
 			
 			// call securityListener
 			if(securityListener != null){
