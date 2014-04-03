@@ -38,11 +38,11 @@ import se.sensiblethings.addinlayer.extensions.security.communication.payload.Ce
 import se.sensiblethings.addinlayer.extensions.security.communication.payload.CertificateRequestPayload;
 import se.sensiblethings.addinlayer.extensions.security.communication.payload.CertificateResponsePayload;
 import se.sensiblethings.addinlayer.extensions.security.communication.payload.SecretKeyPayload;
+import se.sensiblethings.addinlayer.extensions.security.configuration.SecurityConfiguration;
 import se.sensiblethings.addinlayer.extensions.security.encryption.AsymmetricEncryption;
 import se.sensiblethings.addinlayer.extensions.security.encryption.SymmetricEncryption;
 import se.sensiblethings.addinlayer.extensions.security.keystore.IKeyStore;
 import se.sensiblethings.addinlayer.extensions.security.keystore.SQLiteDatabase;
-import se.sensiblethings.addinlayer.extensions.security.parameters.SecurityConfiguration;
 import se.sensiblethings.addinlayer.extensions.security.signature.SignatureOperations;
 import se.sensiblethings.disseminationlayer.communication.Communication;
 import se.sensiblethings.disseminationlayer.communication.DestinationNotReachableException;
@@ -100,12 +100,12 @@ public class SecurityExtension implements Extension, MessageListener{
 
 	@Override
 	public void stopAddIn() {
-		// TODO Auto-generated method stub
+		
 	}
 
 	@Override
 	public void unloadAddIn() {
-		// TODO Auto-generated method stub
+		
 		
 	}
 	

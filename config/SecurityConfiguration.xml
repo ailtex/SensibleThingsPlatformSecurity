@@ -6,6 +6,11 @@
         <port>9009</port>
     </bootstrap>
     
+    <keyStore>
+        <name>KeyStore.db</name>
+        <location>resources/</location>
+    </keyStore>
+    
     <security>
         <level>1</level>
         <description>Low security level</description>

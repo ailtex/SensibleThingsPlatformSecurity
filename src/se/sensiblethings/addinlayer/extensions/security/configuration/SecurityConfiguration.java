@@ -1,4 +1,4 @@
-package se.sensiblethings.addinlayer.extensions.security.parameters;
+package se.sensiblethings.addinlayer.extensions.security.configuration;
 
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.XMLConfiguration;
@@ -40,6 +40,14 @@ public class SecurityConfiguration {
 	
 	public String getBootstrapPort(){
 		return config.getString("/bootstrap/port");
+	}
+	
+	public String getKeyStoreFileName(){
+		return config.getString("/keyStore/name");
+	}
+	
+	public String getKeyStoreFileLocation(){
+		return config.getString("/keyStore/locaiton");
 	}
 	
 	public String getSymmetricAlgorithm() {

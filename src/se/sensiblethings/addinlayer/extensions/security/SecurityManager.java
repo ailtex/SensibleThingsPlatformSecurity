@@ -32,12 +32,12 @@ import org.bouncycastle.crypto.tls.SecurityParameters;
 import org.bouncycastle.jce.PKCS10CertificationRequest;
 
 import se.sensiblethings.addinlayer.extensions.security.certificate.CertificateOperations;
+import se.sensiblethings.addinlayer.extensions.security.configuration.SecurityConfiguration;
 import se.sensiblethings.addinlayer.extensions.security.encryption.AsymmetricEncryption;
 import se.sensiblethings.addinlayer.extensions.security.keystore.KeyStoreJCEKS;
 import se.sensiblethings.addinlayer.extensions.security.keystore.IKeyStore;
 import se.sensiblethings.addinlayer.extensions.security.keystore.SQLiteDatabase;
 import se.sensiblethings.addinlayer.extensions.security.messagedigest.MessageDigestOperations;
-import se.sensiblethings.addinlayer.extensions.security.parameters.SecurityConfiguration;
 import se.sensiblethings.addinlayer.extensions.security.signature.SignatureOperations;
 import se.sensiblethings.addinlayer.extensions.security.encryption.SymmetricEncryption;
 
@@ -57,7 +57,8 @@ public class SecurityManager {
 		keyStore = new KeyStoreJCEKS();
 		
 		try {
-			keyStore.loadKeyStore("KeyStore", "password".toCharArray());
+			keyStore.loadKeyStore(config.getKeyStoreFileLocation()
+					+ myUci + "#" + config.getKeyStoreFileName(), "password".toCharArray());
 		} catch ( IOException e) {
 			// it may fail to load the key store
 			e.printStackTrace();

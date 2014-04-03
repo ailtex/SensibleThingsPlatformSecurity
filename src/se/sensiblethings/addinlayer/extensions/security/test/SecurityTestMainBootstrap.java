@@ -13,7 +13,7 @@ import java.util.Vector;
 import se.sensiblethings.addinlayer.AddInManager;
 import se.sensiblethings.addinlayer.extensions.security.SecurityExtension;
 import se.sensiblethings.addinlayer.extensions.security.SecurityListener;
-import se.sensiblethings.addinlayer.extensions.security.parameters.SecurityConfiguration;
+import se.sensiblethings.addinlayer.extensions.security.configuration.SecurityConfiguration;
 import se.sensiblethings.disseminationlayer.communication.Communication;
 import se.sensiblethings.disseminationlayer.communication.rudp.RUDPCommunication;
 import se.sensiblethings.disseminationlayer.communication.ssl.SslCommunication;
@@ -48,7 +48,7 @@ public class SecurityTestMainBootstrap implements SensibleThingsListener, Securi
     	
     	AddInManager addInManager = platform.getAddInManager();
     	
-    	secureExt = new SecurityExtension(this, SecurityConfiguration.Low);
+    	secureExt = new SecurityExtension(this, new SecurityConfiguration("config/SecurityConfiguration.xml", 1));
     	addInManager.loadAddIn(secureExt);
     	
     	//SslCommunication.initCommunicationPort = 9009;
@@ -66,8 +66,8 @@ public class SecurityTestMainBootstrap implements SensibleThingsListener, Securi
     	try {	    	    		
     		System.out.println("[Bootstrap Node] booted! ");
 
-    		platform.register("bootstrap@miun.se");
-
+    		//platform.register("bootstrap@miun.se");
+    		secureExt.securityRegister("bootstrap@miun.se/bootstrap");
     		
 	        System.out.println("Press any key to shut down");
 	        BufferedReader in = new BufferedReader(new InputStreamReader(System.in));    	

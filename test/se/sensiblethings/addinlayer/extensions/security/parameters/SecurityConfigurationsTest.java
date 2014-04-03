@@ -5,6 +5,8 @@ import static org.junit.Assert.*;
 import org.junit.Before;
 import org.junit.Test;
 
+import se.sensiblethings.addinlayer.extensions.security.configuration.SecurityConfiguration;
+
 public class SecurityConfigurationsTest {
 
 SecurityConfiguration config = null;

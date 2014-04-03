@@ -8,7 +8,7 @@ import java.net.UnknownHostException;
 import se.sensiblethings.addinlayer.AddInManager;
 import se.sensiblethings.addinlayer.extensions.security.SecurityExtension;
 import se.sensiblethings.addinlayer.extensions.security.SecurityListener;
-import se.sensiblethings.addinlayer.extensions.security.parameters.SecurityConfiguration;
+import se.sensiblethings.addinlayer.extensions.security.configuration.SecurityConfiguration;
 import se.sensiblethings.disseminationlayer.communication.Communication;
 import se.sensiblethings.disseminationlayer.lookupservice.LookupService;
 import se.sensiblethings.disseminationlayer.lookupservice.kelips.KelipsLookup;
@@ -40,7 +40,7 @@ public class SecurityTestMainNode implements SensibleThingsListener, SecurityLis
 		
 		AddInManager addInManager = platform.getAddInManager();
     	
-    	
+		secureExt = new SecurityExtension(this, new SecurityConfiguration("config/SecurityConfiguration.xml", 1));
     	addInManager.loadAddIn(secureExt);
 		//platform = new SensibleThingsPlatform(LookupService.KELIPS, Communication.SSL, this);
 
@@ -50,9 +50,10 @@ public class SecurityTestMainNode implements SensibleThingsListener, SecurityLis
 		try {	    	
 			System.out.println("Start to Register...!");
 			
-			platform.register("gausszhang@gmail.com/nodeOne");
+			//platform.register("gausszhang@gmail.com/nodeOne");
 			
-			platform.resolve("gausszhang@gmail.com/bootstrap");
+			//platform.resolve("gausszhang@gmail.com/bootstrap");
+			secureExt.securityRegister("gausszhang@gmail.com/nodeOne");
 			
 			
 	        System.out.println("Press any key to shut down");
