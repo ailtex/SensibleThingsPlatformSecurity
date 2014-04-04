@@ -15,19 +15,5 @@ public class MessagePayload implements Serializable{
 		this.fromUci = fromUci;
 		this.toUci = toUci;
 	}
-	
-	public String getFromUci() {
-		return fromUci;
-	}
-	public void setFromUci(String fromUci) {
-		this.fromUci = fromUci;
-	}
-	public String getToUci() {
-		return toUci;
-	}
-	public void setToUci(String toUci) {
-		this.toUci = toUci;
-	}
-	
-	
+		
 }

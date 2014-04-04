@@ -46,7 +46,6 @@ public class SecurityManager {
 	// the operator is the uci who owns
 	private String myUci = null;
 	private PublicKey publicKey = null;
-	private String bootStrapUci = null;
 	
 	private KeyStoreJCEKS keyStore = null;
 	private Map<String, Object> noncePool = new HashMap<String, Object>();
@@ -65,9 +64,10 @@ public class SecurityManager {
 		}
 		
 		this.config = config;
+		
 	}
 	
-	public void initializePermanentKeyStore(String uci){
+	public void initializeKeyStore(String uci){
 		setMyUci(uci);
 		
 		// check weather the store has the KeyPair
@@ -91,13 +91,6 @@ public class SecurityManager {
 		this.myUci = myUci;
 	}
 
-	public String getBootStrapUci() {
-		return bootStrapUci;
-	}
-
-	public void setBootStrapUci(String bootStrapUci) {
-		this.bootStrapUci = bootStrapUci;
-	}
 	
 	public void addToNoncePool(String name, Object value){
 		noncePool.put(name, value);
@@ -204,7 +197,7 @@ public class SecurityManager {
 		X509Certificate X509Cert = (X509Certificate) cert; 
 		
 		try {
-			X509Cert.verify((PublicKey)keyStore.getPublicKey(bootStrapUci));
+			X509Cert.verify((PublicKey)keyStore.getPublicKey(config.getBootstrapUci()));
 			X509Cert.checkValidity();
 		} catch (InvalidKeyException | CertificateException
 				| NoSuchAlgorithmException | NoSuchProviderException
@@ -217,7 +210,7 @@ public class SecurityManager {
 		if(! X509Cert.getSubjectX500Principal().getName().equals(fromUci))
 			return false;
 		
-		if(! X509Cert.getIssuerX500Principal().getName().equals(bootStrapUci)){
+		if(! X509Cert.getIssuerX500Principal().getName().equals(config.getBootstrapUci())){
 			return false;
 		}
 			

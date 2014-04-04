@@ -114,6 +114,9 @@ public class SecurityExtension implements Extension, MessageListener{
 		
 		this.myUci = uci;
 		
+		// Initialize the key Store, with generating its key pair and self signed certificate
+		securityManager.initializeKeyStore(myUci);
+		
 		// Check if it's has the signed certificate
 		// if it's not, it should connect to the Bootstrap and get the signed
 		// certificate
@@ -123,8 +126,9 @@ public class SecurityExtension implements Extension, MessageListener{
 			
 			securityCommunication.createSslConnection(config.getBootstrapUci(),bootstrapNode);
 
-			securityCommunication.register(config.getBootstrapUci(),bootstrapNode, myUci);
+			securityCommunication.register(config.getBootstrapUci(),bootstrapNode);
 		}
+
 	}
 	
 	public void setSecurityConfiguration(SecurityConfiguration config) {

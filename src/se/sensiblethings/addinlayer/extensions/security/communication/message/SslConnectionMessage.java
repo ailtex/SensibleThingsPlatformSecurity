@@ -1,24 +1,21 @@
 package se.sensiblethings.addinlayer.extensions.security.communication.message;
 
+import se.sensiblethings.addinlayer.extensions.security.communication.SecureMessage;
 import se.sensiblethings.disseminationlayer.communication.Message;
 import se.sensiblethings.interfacelayer.SensibleThingsNode;
 
-public class SslConnectionMessage extends Message{
+public class SslConnectionMessage extends SecureMessage{
 
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = 7758694573355260412L;
 	
-	public String uci;
-	
 	private String signal;
 	
-	public SslConnectionMessage(String uci, SensibleThingsNode toNode,
+	public SslConnectionMessage(String toUci, String fromUci, SensibleThingsNode toNode,
 			SensibleThingsNode fromNode) {
-		super(fromNode, toNode);
-		
-		this.uci = uci;
+		super(toUci, fromUci, fromNode, toNode);
 	}
 
 	public String getSignal() {

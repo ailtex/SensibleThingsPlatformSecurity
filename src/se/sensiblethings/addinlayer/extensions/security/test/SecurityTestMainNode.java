@@ -50,11 +50,9 @@ public class SecurityTestMainNode implements SensibleThingsListener, SecurityLis
 		try {	    	
 			System.out.println("Start to Register...!");
 			
-			//platform.register("gausszhang@gmail.com/nodeOne");
+			secureExt.securityRegister("sensiblethings@miun.se/node_1");
 			
-			//platform.resolve("gausszhang@gmail.com/bootstrap");
-			secureExt.securityRegister("gausszhang@gmail.com/nodeOne");
-			
+			platform.resolve("sensiblethings@miun.se/bootstrap");
 			
 	        System.out.println("Press any key to shut down");
 	        BufferedReader in = new BufferedReader(new InputStreamReader(System.in));    	
@@ -84,7 +82,7 @@ public class SecurityTestMainNode implements SensibleThingsListener, SecurityLis
 	public void resolveResponse(String uci, SensibleThingsNode node) {
 		System.out.println("[ResolveResponse] " + uci + ": " + node);
 		
-		
+		secureExt.sendSecureMassage("Hello world", uci, node);
 	}
 
 	@Override
@@ -112,12 +110,7 @@ public class SecurityTestMainNode implements SensibleThingsListener, SecurityLis
 		return address.getHostAddress();
 	}
 
-	@Override
-	public void sslConnectionRequestEvent(String uci,
-			SensibleThingsNode fromNode) {
-		// TODO Auto-generated method stub
-		
-	}
+
 
 	@Override
 	public void receivedSecureMessageEvent(String message, String uci,

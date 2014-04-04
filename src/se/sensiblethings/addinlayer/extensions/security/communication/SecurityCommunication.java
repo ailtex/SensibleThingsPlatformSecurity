@@ -29,6 +29,7 @@ import se.sensiblethings.addinlayer.extensions.security.communication.payload.Ce
 import se.sensiblethings.addinlayer.extensions.security.communication.payload.CertificatePayload;
 import se.sensiblethings.addinlayer.extensions.security.communication.payload.CertificateRequestPayload;
 import se.sensiblethings.addinlayer.extensions.security.communication.payload.CertificateResponsePayload;
+import se.sensiblethings.addinlayer.extensions.security.communication.payload.RegistrationPayload;
 import se.sensiblethings.addinlayer.extensions.security.communication.payload.SecretKeyPayload;
 import se.sensiblethings.addinlayer.extensions.security.configuration.SecurityConfiguration;
 import se.sensiblethings.addinlayer.extensions.security.encryption.AsymmetricEncryption;
@@ -71,7 +72,8 @@ public class SecurityCommunication {
 	 */
 	public void createSslConnection(String uci, SensibleThingsNode node){
 		//Send out the SslConnectionRequestMessage Message
-		SslConnectionMessage message = new SslConnectionMessage(uci, node, communication.getLocalSensibleThingsNode());
+		SslConnectionMessage message = new SslConnectionMessage(uci, securityManager.getMyUci(), 
+				node, communication.getLocalSensibleThingsNode());
 		
 		message.setSignal("Connect");
 		// this message may not be secure, as if some one can hijack it
@@ -88,19 +90,22 @@ public class SecurityCommunication {
 	 * @param node the bootstrap node
 	 * @param fromUci itself uci that will be registered
 	 */
-	public void register(String toUci, SensibleThingsNode node, String fromUci){
-		// check local key store, whether itself has created the key pair
+	public void register(String toUci, SensibleThingsNode node){
+
+		RegistrationRequestMessage message = new RegistrationRequestMessage(toUci, securityManager.getMyUci(), 
+				node, communication.getLocalSensibleThingsNode());
 		
-		securityManager.initializePermanentKeyStore(fromUci);
-		
-		RegistrationRequestMessage message = new RegistrationRequestMessage(toUci, fromUci, node, communication.getLocalSensibleThingsNode());
+		// set the payload
+		RegistrationPayload payload = new RegistrationPayload(securityManager.getMyUci(), toUci);
+		payload.setTimeStamp(System.currentTimeMillis());
+		byte[] payloadInBytes= SerializationUtils.serialize(payload);
+				
+		message.setPayload(payloadInBytes);
+		message.setSignature(null);
 		
 		// store the local registration Request Time
-		securityManager.addToNoncePool("registrationRequestTime", message.getRegistrationRequestTime());
-		
-		// store the bootstrap uci
-		securityManager.setBootStrapUci(toUci);
-		
+		securityManager.addToNoncePool("registrationTimeStamp", payload);
+
 		sendMessage(message);
 	}
 	
@@ -413,7 +418,7 @@ public class SecurityCommunication {
 				rrm.getSignature(), rrm.getCertificate(), rrm.getSignatureAlgorithm())){
 			
 			// store the bootstrap's root certificate(X509V1 version)
-			securityManager.storeCertificate(rrm.uci, rrm.getCertificate(), "password");
+			securityManager.storeCertificate(rrm.fromUci, rrm.getCertificate(), "password");
 			
 			// the request is valid
 			// send the ID, CSR, nonce to bootstrap node
@@ -429,7 +434,7 @@ public class SecurityCommunication {
 			int nonce = new Random().nextInt();
 			
 			// store the nonce into the data pool
-			securityManager.addToNoncePool(rrm.uci, nonce);
+			securityManager.addToNoncePool(rrm.fromUci, nonce);
 			
 			CertificateRequestPayload payload = 
 					new CertificateRequestPayload(certRequest, nonce);
@@ -437,7 +442,7 @@ public class SecurityCommunication {
 			// use apache.commons.lang.SerializationUtils to serialize objects
 			byte[] plainText = SerializationUtils.serialize(payload);
 			// encrypt message
-			byte[] cipherText = securityManager.asymmetricEncryptMessage(rrm.uci, plainText, 
+			byte[] cipherText = securityManager.asymmetricEncryptMessage(rrm.fromUci, plainText, 
 					config.getAsymmetricAlgorithm());
 			// set the encrypted payload
 			crm.setPayload(cipherText);
@@ -451,14 +456,11 @@ public class SecurityCommunication {
 	}
 
 	public void handleRegistrationRequestMessage(
-			RegistrationRequestMessage registrationRequestMessage) {
-		
-		String myUci = securityManager.getMyUci();
-		
-		securityManager.initializePermanentKeyStore(myUci);
-		
+			RegistrationRequestMessage rrm) {
+
 		RegistrationResponseMessage registrationResponseMessage = 
-				new RegistrationResponseMessage(myUci, registrationRequestMessage.getToNode(),communication.getLocalSensibleThingsNode());
+				new RegistrationResponseMessage(rrm.fromUci, securityManager.getMyUci(), 
+						rrm.getToNode(),communication.getLocalSensibleThingsNode());
 		
 		// set the Root certificate from Bootstrap and send it to the applicant
 		registrationResponseMessage.setCertificate(securityManager.getCertificate());
@@ -467,11 +469,11 @@ public class SecurityCommunication {
 		registrationResponseMessage.setSignatureAlgorithm(config.getSignatureAlgorithm());
 		
 		// signed the request message
-		String toBeSignedMessage =  registrationRequestMessage.fromUci + "," + 
-									 registrationRequestMessage.getRegistrationRequestTime();
+		String toBeSignedMessage =  rrm.fromUci + "," + rrm.getTimeStamp();
 		
 		String signature = securityManager.signMessage(toBeSignedMessage, config.getSignatureAlgorithm());
-		registrationResponseMessage.setSignatue(signature);
+		
+		registrationResponseMessage.setSignatue(signature.getBytes());
 		
 		// send out the message
 		sendMessage(registrationResponseMessage);

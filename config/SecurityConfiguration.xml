@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
     <bootstrap>
-        <uci>bootstrap@miun.se</uci>
+        <uci>sensiblethings@miun.se/bootstrap</uci>
         <ip></ip>
         <port>9009</port>
     </bootstrap>

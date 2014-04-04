@@ -66,8 +66,7 @@ public class SecurityTestMainBootstrap implements SensibleThingsListener, Securi
     	try {	    	    		
     		System.out.println("[Bootstrap Node] booted! ");
 
-    		//platform.register("bootstrap@miun.se");
-    		secureExt.securityRegister("bootstrap@miun.se/bootstrap");
+    		secureExt.securityRegister("sensiblethings@miun.se/bootstrap");
     		
 	        System.out.println("Press any key to shut down");
 	        BufferedReader in = new BufferedReader(new InputStreamReader(System.in));    	
@@ -86,13 +85,6 @@ public class SecurityTestMainBootstrap implements SensibleThingsListener, Securi
 	public void getResponse(String uci, String value, SensibleThingsNode fromNode) {
 		System.out.println("[GetResponse] " + uci + ": " + fromNode + " : " + value);
 		
-		if(value.equals("Secure Connection")){
-			SslCommunication.initCommunicationPort = 9009;
-			platform.notify(fromNode, uci, "Change to SSL connetion");
-			
-			platform.changeCommunicationTo(Communication.SSL);
-		}
-		
 	}
 
 	@Override
@@ -103,7 +95,7 @@ public class SecurityTestMainBootstrap implements SensibleThingsListener, Securi
 	@Override
 	public void getEvent(SensibleThingsNode source, String uci) {
 		System.out.println("[GetEvent] " + uci + ": " + source);
-		//platform_ssl.notify(source, uci, "Hello!");
+
 		platform.notify(source, uci, "World!");
 		
 	}
@@ -115,17 +107,11 @@ public class SecurityTestMainBootstrap implements SensibleThingsListener, Securi
 	}
 	
 
-	@Override
-	public void sslConnectionRequestEvent(String uci,
-			SensibleThingsNode fromNode) {
-		// TODO Auto-generated method stub
-		
-	}
 
 	@Override
 	public void receivedSecureMessageEvent(String message, String uci,
 			SensibleThingsNode fromNode) {
-		// TODO Auto-generated method stub
+		System.out.println("[Received SecureMessage Event] " + uci + ": " + message + " : " + fromNode);
 		
 	}
 	
