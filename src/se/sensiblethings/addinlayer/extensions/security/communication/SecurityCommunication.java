@@ -81,6 +81,7 @@ public class SecurityCommunication {
 	    // the request node can just change itself communication type
 		
 		sendMessage(message);
+		
 		transformCommunication("SSL");
 	}
 	
@@ -104,7 +105,7 @@ public class SecurityCommunication {
 		message.setSignature(null);
 		
 		// store the local registration Request Time
-		securityManager.addToNoncePool("registrationTimeStamp", payload);
+		securityManager.addToNoncePool("RegistrationRequest", payload);
 
 		sendMessage(message);
 	}
@@ -113,8 +114,7 @@ public class SecurityCommunication {
 		this.config = config;
 	}
 	
-	public void sendSecureMassage(String message, String toUci, SensibleThingsNode toNode){
-		// Get the lifeTime of keys from configuration file
+	public void sendSecureMassage(String message, String toUci, SensibleThingsNode toNode){   
 		
 		if(securityManager.isKeyValid(toUci, config.getSymmetricKeyLifeTime())){
 
@@ -377,7 +377,8 @@ public class SecurityCommunication {
 								securityManager.getSecretKey(crm.fromUci, "password".toCharArray()).getEncoded(),
 								config.getSymmetricAlgorithm()));
 			
-			CertificateResponsePayload responsePayload = new CertificateResponsePayload();
+			CertificateResponsePayload responsePayload = 
+					new CertificateResponsePayload(securityManager.getMyUci(), crm.fromUci);
 			
 			responsePayload.setToNonce(payload.getNonce());
 			
@@ -401,35 +402,36 @@ public class SecurityCommunication {
 	public void handleRegistrationResponseMessage(
 			RegistrationResponseMessage rrm) {
 		
-		// Construct the original request, including itself uci and request time
-		String originalRequest = securityManager.getMyUci() + "," +
-								securityManager.getFromNoncePool("registrationRequestTime");
-		
-	  	// verify the public key and the signature
-		if(securityManager.verifySignature(originalRequest, 
+	  	// verify the signature with the given certificate from bootstrap
+		if(securityManager.verifySignature((byte[])securityManager.getFromNoncePool("RegistrationRequest"), 
 				rrm.getSignature(), rrm.getCertificate(), rrm.getSignatureAlgorithm())){
+			
+			// remove the registration request from the nonce pool
+			securityManager.removeFromNoncePool("RegistrationRequest");
 			
 			// store the bootstrap's root certificate(X509V1 version)
 			securityManager.storeCertificate(rrm.fromUci, rrm.getCertificate(), "password");
 			
 			// the request is valid
-			// send the ID, CSR, nonce to bootstrap node
-			
+			// send the certificate request message with ID, CSR, nonce 
 			CertificateRequestMessage crm = 
-					new CertificateRequestMessage(securityManager.getBootStrapUci(),
+					new CertificateRequestMessage(config.getBootstrapUci(),
 							securityManager.getMyUci(), rrm.getToNode(), communication.getLocalSensibleThingsNode());
 			
 			//generate an certificate signing request
 			PKCS10CertificationRequest certRequest = 
 					securityManager.getCertificateSigingRequest(securityManager.getMyUci());
+			
 			// set the nonce
 			int nonce = new Random().nextInt();
 			
-			// store the nonce into the data pool
+			// store the nonce into the data pool, corresponding the bootstrap's uci
 			securityManager.addToNoncePool(rrm.fromUci, nonce);
 			
 			CertificateRequestPayload payload = 
-					new CertificateRequestPayload(certRequest, nonce);
+					new CertificateRequestPayload(securityManager.getMyUci(), rrm.fromUci);
+			payload.setCertRequest(certRequest);
+			payload.setNonce(nonce);
 			
 			// use apache.commons.lang.SerializationUtils to serialize objects
 			byte[] plainText = SerializationUtils.serialize(payload);
@@ -461,22 +463,22 @@ public class SecurityCommunication {
 		registrationResponseMessage.setSignatureAlgorithm(config.getSignatureAlgorithm());
 		
 		// signed the request message
-		String toBeSignedMessage =  rrm.fromUci + "," + rrm.getTimeStamp();
+		byte[] signature = securityManager.signMessage(rrm.getPayload(), config.getSignatureAlgorithm());
 		
-		String signature = securityManager.signMessage(toBeSignedMessage, config.getSignatureAlgorithm());
-		
-		registrationResponseMessage.setSignatue(signature.getBytes());
+		// set the signature
+		registrationResponseMessage.setSignature(signature);
 		
 		// send out the message
 		sendMessage(registrationResponseMessage);
-		
 	}
 
+	
 	private void exchangeCertificate(String toUci, SensibleThingsNode toNode) {
 		CertificateExchangeMessage cxm = new CertificateExchangeMessage(toUci, securityManager.getMyUci(),
 				toNode, communication.getLocalSensibleThingsNode());
 		
-		CertificateExchangePayload cxp = new CertificateExchangePayload(securityManager.getCertificate());
+		CertificateExchangePayload cxp = new CertificateExchangePayload(securityManager.getMyUci(), toUci);
+		cxp.setCert(securityManager.getCertificate());
 		cxp.setTimeStamp(new Date());
 		
 		byte[] payload = SerializationUtils.serialize(cxp);
@@ -532,8 +534,11 @@ public class SecurityCommunication {
 		skxm.setSignatureAlgorithm(config.getSignatureAlgorithm());
 		
 		// set the certificatePayload
-		byte[] certificatePayload = SerializationUtils.serialize(
-				new CertificatePayload(securityManager.getCertificate()));
+		CertificatePayload certPayload = new CertificatePayload(securityManager.getMyUci(), toUci);
+		certPayload.setCert(securityManager.getCertificate());
+		
+		byte[] certificatePayload = SerializationUtils.serialize(certPayload);
+		
 		skxm.setCertificatePayload(certificatePayload);			
 		
 		sendMessage(skxm);

@@ -132,7 +132,7 @@ public class CertificateOperations {
 		// Including an email address in the SubjectAlternative name extension
 		// create the extension value
 		GeneralNames subjectAltName = new GeneralNames(
-		                   new GeneralName(GeneralName.rfc822Name, "bootstrap@miun.se"));
+		                   new GeneralName(GeneralName.rfc822Name, subjectName));
 
 		// create the extensions object and add it as an attribute
 		Vector oids = new Vector();

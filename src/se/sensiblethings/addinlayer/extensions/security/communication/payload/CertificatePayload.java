@@ -14,9 +14,8 @@ public class CertificatePayload extends MessagePayload{
 	
 	private Certificate cert = null;
 	
-	public CertificatePayload(Certificate cert) {
-		super();
-		this.cert = cert;
+	public CertificatePayload(String fromUci, String toUci) {
+		super(fromUci, toUci);
 	}
 
 	public Certificate getCert() {

@@ -13,9 +13,9 @@ public class CertificateRequestPayload extends MessagePayload{
 	private PKCS10CertificationRequest certRequest = null;
 	private int nonce;
 	
-	public CertificateRequestPayload(PKCS10CertificationRequest certRequest,int nonce ){
-		this.certRequest = certRequest;
-		this.nonce = nonce;
+	
+	public CertificateRequestPayload(String fromUci, String toUci){
+		super(fromUci, toUci);
 	}
 	public PKCS10CertificationRequest getCertRequest() {
 		return certRequest;

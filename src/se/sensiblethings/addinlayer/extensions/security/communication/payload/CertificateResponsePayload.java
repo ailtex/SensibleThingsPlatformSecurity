@@ -12,6 +12,10 @@ public class CertificateResponsePayload extends MessagePayload{
 	private int fromNonce;
 	private int toNonce;
 	
+	public CertificateResponsePayload(String fromUci, String toUci){
+		super(fromUci, toUci);
+	}
+	
 	public Certificate[] getCertChain() {
 		return certChain;
 	}

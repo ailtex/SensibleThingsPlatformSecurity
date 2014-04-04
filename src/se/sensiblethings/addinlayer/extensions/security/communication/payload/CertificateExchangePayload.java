@@ -12,9 +12,14 @@ public class CertificateExchangePayload extends CertificatePayload{
 	
 	private Date timeStamp = null;
 	
-	public CertificateExchangePayload(Certificate cert) {
-		super(cert);
-		// TODO Auto-generated constructor stub
+	/*
+	public CertificateExchangePayload(String fromUci, String toUci){
+		super(fromUci, toUci);
+	}
+	*/
+	
+	public CertificateExchangePayload(String fromUci, String toUci) {
+		super(fromUci, toUci);
 	}
 
 	public Date getTimeStamp() {
