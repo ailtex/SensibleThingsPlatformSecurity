@@ -24,7 +24,7 @@ import se.sensiblethings.addinlayer.extensions.security.communication.message.Re
 import se.sensiblethings.addinlayer.extensions.security.communication.message.RegistrationResponseMessage;
 import se.sensiblethings.addinlayer.extensions.security.communication.message.SessionKeyExchangeMessage;
 import se.sensiblethings.addinlayer.extensions.security.communication.message.SessionKeyResponseMessage;
-import se.sensiblethings.addinlayer.extensions.security.communication.message.SslConnectionMessage;
+import se.sensiblethings.addinlayer.extensions.security.communication.message.CommunicationShiftMessage;
 import se.sensiblethings.addinlayer.extensions.security.communication.payload.CertificateExchangePayload;
 import se.sensiblethings.addinlayer.extensions.security.communication.payload.CertificatePayload;
 import se.sensiblethings.addinlayer.extensions.security.communication.payload.CertificateRequestPayload;
@@ -72,10 +72,10 @@ public class SecurityCommunication {
 	 */
 	public void createSslConnection(String uci, SensibleThingsNode node){
 		//Send out the SslConnectionRequestMessage Message
-		SslConnectionMessage message = new SslConnectionMessage(uci, securityManager.getMyUci(), 
+		CommunicationShiftMessage message = new CommunicationShiftMessage(uci, securityManager.getMyUci(), 
 				node, communication.getLocalSensibleThingsNode());
 		
-		message.setSignal("Connect");
+		message.setSignal("SSL");
 		// this message may not be secure, as if some one can hijack it
 	    // if the bootstrap node can set up several different communications simultaneously
 	    // the request node can just change itself communication type
@@ -115,10 +115,8 @@ public class SecurityCommunication {
 	
 	public void sendSecureMassage(String message, String toUci, SensibleThingsNode toNode){
 		// Get the lifeTime of keys from configuration file
-		// Here for simple
-		long lifeTimeInHours = 60 * 60 * 1000 * 5; 
 		
-		if(securityManager.isKeyValid(toUci, lifeTimeInHours)){
+		if(securityManager.isKeyValid(toUci, config.getSymmetricKeyLifeTime())){
 
 			sendToPostOffice(encapsulateSecueMessage(message, toUci, toNode));
 			sendOutSecureMessage(toUci);
@@ -140,17 +138,11 @@ public class SecurityCommunication {
 		return decapsulateSecureMessage(sm);
 	}
 	
-	public void handleSslConnectionMessage(SslConnectionMessage scm) {
-		if(scm.getSignal().equals("Connect")){
-			// change connection type
-			transformCommunication("SSL");
-			
-			//SslConnectionMessage requestMessage = (SslConnectionMessage)message;
-			//securityListener.sslConnectionRequestEvent(requestMessage.uci, requestMessage.getFromNode());
-			
-		}else if(scm.getSignal().equals("Disconnect")){
-			transformCommunication("RUDP");
+	public void handleSslConnectionMessage(CommunicationShiftMessage scm) {
+		if(scm.getSignal() != null){
+			transformCommunication(scm.getSignal());
 		}
+		
 	}
 
 	public void handleCertificateExchangeResponseMessage(

@@ -32,7 +32,7 @@ import se.sensiblethings.addinlayer.extensions.security.communication.message.Re
 import se.sensiblethings.addinlayer.extensions.security.communication.message.RegistrationResponseMessage;
 import se.sensiblethings.addinlayer.extensions.security.communication.message.SessionKeyExchangeMessage;
 import se.sensiblethings.addinlayer.extensions.security.communication.message.SessionKeyResponseMessage;
-import se.sensiblethings.addinlayer.extensions.security.communication.message.SslConnectionMessage;
+import se.sensiblethings.addinlayer.extensions.security.communication.message.CommunicationShiftMessage;
 import se.sensiblethings.addinlayer.extensions.security.communication.payload.CertificateExchangePayload;
 import se.sensiblethings.addinlayer.extensions.security.communication.payload.CertificatePayload;
 import se.sensiblethings.addinlayer.extensions.security.communication.payload.CertificateRequestPayload;
@@ -79,7 +79,7 @@ public class SecurityExtension implements Extension, MessageListener{
 		this.communication = core.getCommunication();
 		
 		//Register our own message types in the post office
-		communication.registerMessageListener(SslConnectionMessage.class.getName(), this);
+		communication.registerMessageListener(CommunicationShiftMessage.class.getName(), this);
 		communication.registerMessageListener(RegistrationRequestMessage.class.getName(), this);
 		communication.registerMessageListener(RegistrationResponseMessage.class.getName(), this);
 		communication.registerMessageListener(CertificateRequestMessage.class.getName(), this);
@@ -163,8 +163,8 @@ public class SecurityExtension implements Extension, MessageListener{
 	
 	@Override
 	public void handleMessage(Message message) {
-		if(message instanceof SslConnectionMessage) {
-			SslConnectionMessage scm = (SslConnectionMessage)message;
+		if(message instanceof CommunicationShiftMessage) {
+			CommunicationShiftMessage scm = (CommunicationShiftMessage)message;
 			securityCommunication.handleSslConnectionMessage(scm);
 			
 		}else if(message instanceof RegistrationRequestMessage){

@@ -4,7 +4,7 @@ import se.sensiblethings.addinlayer.extensions.security.communication.SecureMess
 import se.sensiblethings.disseminationlayer.communication.Message;
 import se.sensiblethings.interfacelayer.SensibleThingsNode;
 
-public class SslConnectionMessage extends SecureMessage{
+public class CommunicationShiftMessage extends SecureMessage{
 
 	/**
 	 * 
@@ -13,7 +13,7 @@ public class SslConnectionMessage extends SecureMessage{
 	
 	private String signal;
 	
-	public SslConnectionMessage(String toUci, String fromUci, SensibleThingsNode toNode,
+	public CommunicationShiftMessage(String toUci, String fromUci, SensibleThingsNode toNode,
 			SensibleThingsNode fromNode) {
 		super(toUci, fromUci, fromNode, toNode);
 	}
