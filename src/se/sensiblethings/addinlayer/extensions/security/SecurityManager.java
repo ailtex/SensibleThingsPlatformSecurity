@@ -113,14 +113,14 @@ public class SecurityManager {
 		}
 	}
 	
-	public boolean isKeyValid(String uci, long lifeTimeInHours){
+	public boolean isKeyValid(String uci, long lifeTime){
 		return keyStore.hasKey(uci) && 
-				checkKeyLifetime(keyStore.getCreationData(uci), lifeTimeInHours);
+				checkKeyLifetime(keyStore.getCreationData(uci), lifeTime);
 	}
 	
-	private boolean checkKeyLifetime(Date creationTime, long lifeTimeInHours){
-		long time = (new Date().getTime() - creationTime.getTime()) / (60 * 60 * 1000);
-		if(time < lifeTimeInHours){
+	private boolean checkKeyLifetime(Date creationTime, long lifeTime){
+		long time = (new Date().getTime() - creationTime.getTime()) ;
+		if(time < lifeTime){
 			return true;
 		}else{
 			return false;
@@ -160,7 +160,8 @@ public class SecurityManager {
 		String subjectName = uci;
 		
 		// set the life time to 1 year
-		Certificate cert = CertificateOperations.generateSelfSignedcertificate(subjectName, keyPair, 1*365*24*60*60*1000);
+		Certificate cert = CertificateOperations.generateSelfSignedcertificate(subjectName, 
+				keyPair, config.getAsymmetricKeyLifetime());
 		
 		try {
 			// store the private key with the self signed certificate
@@ -176,14 +177,12 @@ public class SecurityManager {
 	
 	public boolean isCeritificateSigningRequestValid(
 		PKCS10CertificationRequest certRequest, String fromUci) {
-
+		
+		// check the signature and the ID
 		try {
-			if (certRequest.verify()
-					&& certRequest.getCertificationRequestInfo().getSubject()
-							.equals(fromUci)) {
+			if (certRequest.verify("BC")
+					&& certRequest.getCertificationRequestInfo().getSubject().equals(fromUci)) {
 				return true;
-			} else {
-				return false;
 			}
 		} catch (InvalidKeyException | NoSuchAlgorithmException
 				| NoSuchProviderException | SignatureException e) {
@@ -282,8 +281,15 @@ public class SecurityManager {
 	}
 	
 	public void storeCertificateChain(String uci, Certificate[] certs, String password){
+		
 		try {
-			keyStore.storePrivateKey(uci, (PrivateKey)keyStore.getPrivateKey(uci, "password".toCharArray()),
+			// it can not overwrite the old certificate to same alias
+			// if it exist, it should delete it firstly
+			if(keyStore.hasCertificate(uci)){
+				keyStore.deleteCertificate(uci, password.toCharArray());
+			}
+			
+			keyStore.storePrivateKey(uci, (PrivateKey)keyStore.getPrivateKey(uci, password.toCharArray()),
 					password.toCharArray(),password.toCharArray(), certs);
 		} catch (KeyStoreException e) {
 			

@@ -145,16 +145,6 @@ public class SecurityExtension implements Extension, MessageListener{
 		this.securityListener = listener;
 	}
 	
-	/*
-	private void createSslConnection(String uci, SensibleThingsNode node){
-		securityCommunication.createSslConnection(uci, node);
-	}
-	
-	
-	public void register(String toUci, SensibleThingsNode node, String fromUci){
-		securityCommunication.register(toUci, node, fromUci);
-	}
-	*/
 	
 	public void sendSecureMassage(String message, String toUci, SensibleThingsNode toNode){
 		securityCommunication.sendSecureMassage(message, toUci, toNode);
@@ -165,7 +155,7 @@ public class SecurityExtension implements Extension, MessageListener{
 	public void handleMessage(Message message) {
 		if(message instanceof CommunicationShiftMessage) {
 			CommunicationShiftMessage scm = (CommunicationShiftMessage)message;
-			securityCommunication.handleSslConnectionMessage(scm);
+			securityCommunication.handleCommunicationShiftMessage(scm);
 			
 		}else if(message instanceof RegistrationRequestMessage){
 			RegistrationRequestMessage registrationRequestMessage = (RegistrationRequestMessage) message;
@@ -194,7 +184,7 @@ public class SecurityExtension implements Extension, MessageListener{
 		}else if(message instanceof SessionKeyResponseMessage){
 			SessionKeyResponseMessage skrm = (SessionKeyResponseMessage)message;
 			securityCommunication.handleSessionKeyResponseMessage(skrm);
-			
+				
 		}else if(message instanceof CertificateExchangeMessage){
 			CertificateExchangeMessage cxm = (CertificateExchangeMessage)message;
 			securityCommunication.handleCertificateExchangeMessage(cxm);
@@ -208,7 +198,7 @@ public class SecurityExtension implements Extension, MessageListener{
 			String plainText = securityCommunication.handleSecureMessage(sm);
 			
 			// call securityListener
-			if(securityListener != null){
+			if(securityListener != null && plainText != null){
 				securityListener.receivedSecureMessageEvent(plainText, sm.fromUci, sm.getFromNode());
 			}
 			

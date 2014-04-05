@@ -14,15 +14,12 @@ public class SecretKeyPayload extends MessagePayload{
 	
 	private SecretKey key = null;
 	private String algorithm = null;
-	private long lifeTime = 0;
-	private String fromUci = null;
+	private long lifeTime;
 	private int nonce;
 	
-	public SecretKeyPayload(SecretKey key, String algorithm, long lifeTime) {
-		super();
-		this.key = key;
-		this.algorithm = algorithm;
-		this.lifeTime = lifeTime;
+	
+	public SecretKeyPayload(String fromUci, String toUci) {
+		super(fromUci, toUci);
 	}
 
 
@@ -54,17 +51,6 @@ public class SecretKeyPayload extends MessagePayload{
 	public void setLifeTime(long lifeTime) {
 		this.lifeTime = lifeTime;
 	}
-
-
-	public String getFromUci() {
-		return fromUci;
-	}
-
-
-	public void setFromUci(String fromUci) {
-		this.fromUci = fromUci;
-	}
-
 
 	public int getNonce() {
 		return nonce;

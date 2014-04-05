@@ -243,6 +243,12 @@ public class KeyStoreJCEKS implements IKeyStore{
 		
 	}
 
+	public void deleteCertificate(String alias, char[] keyStorePassword) throws KeyStoreException{
+		ks.deleteEntry(alias);
+		
+		// password needed to write into file
+		updataKeyStore(keyStorePassword);
+	}
 	
 	public boolean hasKey(String alias){
 		try {
@@ -297,6 +303,7 @@ public class KeyStoreJCEKS implements IKeyStore{
 	public X509Certificate getIssuredCertificate(String alias){
 		return (X509Certificate) getCertificateChain(alias)[0];
 	}
+	
 	
 	public Certificate[] getCertificateChain(String alias){
 		try {

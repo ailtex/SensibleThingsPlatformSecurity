@@ -10,7 +10,7 @@ public class CertificateExchangeMessage extends SecureMessage{
 	public CertificateExchangeMessage(String toUci, String fromUci,
 			SensibleThingsNode toNode, SensibleThingsNode fromNode) {
 		super(toUci, fromUci, toNode, fromNode);
-		// TODO Auto-generated constructor stub
+		
 	}
 
 }

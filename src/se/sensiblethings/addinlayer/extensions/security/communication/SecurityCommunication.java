@@ -83,6 +83,7 @@ public class SecurityCommunication {
 		sendMessage(message);
 		
 		transformCommunication("SSL");
+		System.out.println("[Communication] communication type shift to SSL mode");
 	}
 	
 	/**
@@ -117,50 +118,54 @@ public class SecurityCommunication {
 	public void sendSecureMassage(String message, String toUci, SensibleThingsNode toNode){   
 		
 		if(securityManager.isKeyValid(toUci, config.getSymmetricKeyLifeTime())){
-
 			sendToPostOffice(encapsulateSecueMessage(message, toUci, toNode));
 			sendOutSecureMessage(toUci);
-			
 		}else if(securityManager.hasCertificate(toUci)){
-			
 			exchangeSessionKey(toUci, toNode);			
 			sendToPostOffice(encapsulateSecueMessage(message, toUci, toNode));
-			
 		}else{
-			
 			exchangeCertificate(toUci, toNode);
-			sendToPostOffice(encapsulateSecueMessage(message, toUci, toNode));
-			
+			sendToPostOffice(encapsulateSecueMessage(message, toUci, toNode));	
 		}
 	}
 	
 	public String handleSecureMessage(SecureMessage sm){
-		return decapsulateSecureMessage(sm);
+		byte[] signature = sm.getSignature();
+		String plainText = decapsulateSecureMessage(sm);
+		if(securityManager.verifySignature(plainText.getBytes(), signature, sm.fromUci, config.getSignatureAlgorithm())){
+			return plainText;
+		}else{
+			return null;
+		}
+				
 	}
 	
-	public void handleSslConnectionMessage(CommunicationShiftMessage scm) {
-		if(scm.getSignal() != null){
-			transformCommunication(scm.getSignal());
+	public void handleCommunicationShiftMessage(CommunicationShiftMessage csm) {
+		if(csm.getSignal() != null){
+			transformCommunication(csm.getSignal());
+			System.out.println("[Communication] communication type shift to "+ csm.getSignal() +" mode");
 		}
-		
+	
 	}
 
 	public void handleCertificateExchangeResponseMessage(
 			CertificateExchangeResponseMessage cxrm) {
 		//Decapsulte the Certificate
-		byte[] payload = cxrm.getPayload();
+		byte[] encryptPayload = cxrm.getPayload();
+		byte[] payload = securityManager.asymmetricDecryptMessage(encryptPayload, config.getAsymmetricAlgorithm());
+		
 		CertificateExchangePayload cxp = (CertificateExchangePayload)SerializationUtils.deserialize(payload);
 		Certificate cert = cxp.getCert();
 		
 		// check signature
-		if(!securityManager.verifySignature(cxrm.getPayload(), cxrm.getPayload(), cert, cxrm.getSignatureAlgorithm())){
-			System.out.println("[Signature] Error!");
+		if(!securityManager.verifySignature(payload, cxrm.getSignature(), cert, cxrm.getSignatureAlgorithm())){
+			System.out.println("[Handle Certificate Exchange Response Message] Signature Error!");
 			return;
 		}
 		
 		// check the source ID and 
 		if(!cxp.getFromUci().equals(cxrm.fromUci) || !cxp.getToUci().equals(cxrm.toUci)){
-			System.out.println("[ID] Error!");
+			System.out.println("[Handle Certificate Exchange Response Message] ID Error!");
 			return;
 		}
 		
@@ -180,8 +185,9 @@ public class SecurityCommunication {
 		Certificate cert = cxp.getCert();
 		
 		// check signature
-		if(!securityManager.verifySignature(cxm.getPayload(), cxm.getPayload(), cert, cxm.getSignatureAlgorithm())){
-			System.out.println("[Signature] Error!");
+		if(!securityManager.verifySignature(cxm.getPayload(), cxm.getSignature(), cert, cxm.getSignatureAlgorithm())){
+			System.out.println("[Handle Certificate Exchange Message] Signature Error!");
+			return;
 		}
 		
 		// verify the certificate
@@ -193,17 +199,18 @@ public class SecurityCommunication {
 			CertificateExchangeResponseMessage cxrm = new CertificateExchangeResponseMessage(cxm.fromUci,
 					securityManager.getMyUci(), cxm.getFromNode(), communication.getLocalSensibleThingsNode());
 			
-			// add the uci
+			// reuse the CertificateExchangePayload
 			cxp.setFromUci(securityManager.getMyUci());
 			cxp.setToUci(cxm.fromUci);
+			cxp.setCert(securityManager.getCertificate());
 			
 			byte[] cxrmPayload = SerializationUtils.serialize(cxp);
+			
 			// set the payload
-			cxrm.setPayload(cxrmPayload);
+			cxrm.setPayload(securityManager.asymmetricEncryptMessage(cxm.fromUci, cxrmPayload, config.getAsymmetricAlgorithm()));
 			// set the signature
 			cxrm.setSignature(securityManager.signMessage(cxrmPayload, cxm.getSignatureAlgorithm()));
-			// set the certificate
-			cxrm.setCert(securityManager.getCertificate());
+			
 			// send
 			sendMessage(cxrm);
 		}
@@ -220,8 +227,8 @@ public class SecurityCommunication {
 			
 			ResponsePayload responsePayload = (ResponsePayload)SerializationUtils.deserialize(payload);
 			if(responsePayload.getToNonce() == (Integer)securityManager.getFromNoncePool(skrm.fromUci)){
-				sendOutSecureMessage(skrm.fromUci);
 				securityManager.removeFromNoncePool("nonce");
+				sendOutSecureMessage(skrm.fromUci);
 			}
 		}
 		
@@ -258,7 +265,7 @@ public class SecurityCommunication {
 			// check the payload signature
 			if(!securityManager.verifySignature(decryptSecretKeyPayload, skxm.getSignature(),
 					securityManager.getPublicKey(skxm.fromUci), skxm.getSignatureAlgorithm())){
-				System.out.println("[Signature] Error");
+				System.out.println("[Handle Session Key Exchange Message] Signature Error");
 				return;
 			}
 			
@@ -274,11 +281,11 @@ public class SecurityCommunication {
 
 			ResponsePayload responsePayload = new ResponsePayload(skxm.fromUci, securityManager.getMyUci());
 
-			responsePayload.setFromNonce(payload.getNonce());
-
 			// set the nonce
 			int nonce = new Random().nextInt();
-			responsePayload.setToNonce(nonce);
+			responsePayload.setToNonce(payload.getNonce());
+			responsePayload.setFromNonce(nonce);
+			
 			// add it to the data pool
 			securityManager.addToNoncePool(skxm.fromUci, nonce);
 
@@ -305,7 +312,7 @@ public class SecurityCommunication {
 		int nonce = ByteBuffer.wrap(payload).getInt();
 		
 		if(nonce == (Integer)securityManager.getFromNoncePool("nonce")){
-			System.out.println("[Bootstrap] Certificate has been safely accepted!");
+			System.out.println("[Bootstrap] Certificate has been safely transmitted!");
 			
 			// remove the nonce from the data pool
 			securityManager.removeFromNoncePool("nonce");
@@ -348,6 +355,16 @@ public class SecurityCommunication {
 			
 			sendMessage(carm);
 			
+			
+			// send the communication shift message 
+			CommunicationShiftMessage csm = new CommunicationShiftMessage(crm.fromUci, securityManager.getMyUci(), 
+					crm.getFromNode(), communication.getLocalSensibleThingsNode());
+			csm.setSignal("RUDP");
+			
+			transformCommunication(csm.getSignal());
+			
+		}else{
+			System.out.println("[Hanle Certificate Response Message] Wrong Nonce !");
 		}
 	}
 
@@ -357,16 +374,18 @@ public class SecurityCommunication {
 		// decrypt the payload
 		byte[] plainText = securityManager.asymmetricDecryptMessage(cipherText, 
 				config.getAsymmetricAlgorithm());
+		
 		// deserialize the payload
 		CertificateRequestPayload payload = (CertificateRequestPayload)SerializationUtils.deserialize(plainText);
+		
 		// Get the certificate signing request
 		PKCS10CertificationRequest certRequest = payload.getCertRequest();
 		
-		// check the certificate signing request
+		// varify the certificate signing request
 		if(securityManager.isCeritificateSigningRequestValid(certRequest, crm.fromUci)){
 			Certificate[] certs = (Certificate[]) securityManager.signCertificateSigningRequest(certRequest, crm.fromUci);
 			
-			// generate the session key
+			// generate the session key and  store it locally
 			securityManager.generateSymmetricSecurityKey(crm.fromUci);
 			
 			CertificateResponseMessage certRespMesg = new CertificateResponseMessage(securityManager.getMyUci(), crm.fromUci,
@@ -380,13 +399,15 @@ public class SecurityCommunication {
 			CertificateResponsePayload responsePayload = 
 					new CertificateResponsePayload(securityManager.getMyUci(), crm.fromUci);
 			
+			// set the nonces
 			responsePayload.setToNonce(payload.getNonce());
 			
-			int toNonce = new Random().nextInt();
-			responsePayload.setFromNonce(toNonce);
+			int fromNonce = new Random().nextInt();
+			responsePayload.setFromNonce(fromNonce);
 			// store into the data pool
-			securityManager.addToNoncePool(crm.fromUci, toNonce);
+			securityManager.addToNoncePool(crm.fromUci, fromNonce);
 			
+			// set the certificate chain, which contains the signed certificate and root certificate of Bootstrap
 			responsePayload.setCertChain(certs);
 			
 			byte[] encryptPayload = securityManager.symmetricEncryptMessage(crm.fromUci, 
@@ -479,7 +500,7 @@ public class SecurityCommunication {
 		
 		CertificateExchangePayload cxp = new CertificateExchangePayload(securityManager.getMyUci(), toUci);
 		cxp.setCert(securityManager.getCertificate());
-		cxp.setTimeStamp(new Date());
+		cxp.setTimeStamp(System.currentTimeMillis());
 		
 		byte[] payload = SerializationUtils.serialize(cxp);
 		cxm.setPayload(payload);
@@ -503,21 +524,24 @@ public class SecurityCommunication {
 		sm.setPayload(securityManager.symmetricEncryptMessage(toUci, message.getBytes(), 
 				config.getSymmetricAlgorithm()));
 		
+		byte[] signature = securityManager.signMessage(message, config.getSignatureAlgorithm()).getBytes();
+		sm.setSignature(signature);
+		
 		return sm;
 	}
 
 	private void exchangeSessionKey(String toUci, SensibleThingsNode toNode) {
-		long lifeTimeInHours = 60 * 60 * 1000 * 5; 
 		
 		SessionKeyExchangeMessage skxm = new SessionKeyExchangeMessage(toUci, securityManager.getMyUci(),
 				toNode, communication.getLocalSensibleThingsNode());
 		
 		// set the secret key payload
 		securityManager.generateSymmetricSecurityKey(toUci);
-		SecretKeyPayload secretKeyPayload = new SecretKeyPayload(
-				(SecretKey)securityManager.getSecretKey(toUci, "password".toCharArray()),
-				config.getSymmetricAlgorithm(),
-				config.getSymmetricKeyLifeTime());
+		SecretKeyPayload secretKeyPayload = new SecretKeyPayload(securityManager.getMyUci(), toUci);
+		
+		secretKeyPayload.setAlgorithm(config.getSymmetricAlgorithm());
+		secretKeyPayload.setKey((SecretKey)securityManager.getSecretKey(toUci, "password".toCharArray()));
+		secretKeyPayload.setLifeTime(config.getSymmetricKeyLifeTime());
 		
 		// set nonce and add it to the data pool
 		int nonce = new Random().nextInt();
