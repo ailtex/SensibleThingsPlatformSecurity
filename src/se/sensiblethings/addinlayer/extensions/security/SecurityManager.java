@@ -21,7 +21,9 @@ import java.security.interfaces.RSAPublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Vector;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
@@ -32,6 +34,7 @@ import org.bouncycastle.crypto.tls.SecurityParameters;
 import org.bouncycastle.jce.PKCS10CertificationRequest;
 
 import se.sensiblethings.addinlayer.extensions.security.certificate.CertificateOperations;
+import se.sensiblethings.addinlayer.extensions.security.communication.SecureMessage;
 import se.sensiblethings.addinlayer.extensions.security.configuration.SecurityConfiguration;
 import se.sensiblethings.addinlayer.extensions.security.encryption.AsymmetricEncryption;
 import se.sensiblethings.addinlayer.extensions.security.keystore.KeyStoreJCEKS;
@@ -40,6 +43,7 @@ import se.sensiblethings.addinlayer.extensions.security.keystore.SQLiteDatabase;
 import se.sensiblethings.addinlayer.extensions.security.messagedigest.MessageDigestOperations;
 import se.sensiblethings.addinlayer.extensions.security.signature.SignatureOperations;
 import se.sensiblethings.addinlayer.extensions.security.encryption.SymmetricEncryption;
+import se.sensiblethings.interfacelayer.SensibleThingsNode;
 
 public class SecurityManager {
 	
@@ -113,8 +117,9 @@ public class SecurityManager {
 		}
 	}
 	
-	public boolean isKeyValid(String uci, long lifeTime){
+	public boolean isSymmetricKeyValid(String uci, long lifeTime){
 		return keyStore.hasKey(uci) && 
+				keyStore.getSecretKey(uci, "password".toCharArray()) != null &&
 				checkKeyLifetime(keyStore.getCreationData(uci), lifeTime);
 	}
 	
@@ -132,6 +137,28 @@ public class SecurityManager {
 	public boolean isRegisted(String bootstrapUci){
 		return keyStore.hasCertificate(bootstrapUci) && 
 				keyStore.getIssuredCertificate(bootstrapUci).getIssuerX500Principal().getName().equals("CN="+bootstrapUci);
+	}
+	
+	public String decapsulateSecureMessage(SecureMessage sm){
+		byte[] payload = symmetricDecryptMessage(sm.fromUci, 
+				sm.getPayload(), config.getSymmetricAlgorithm());
+		
+		return new String(payload);
+	}
+	
+	
+	
+	public void encapsulateSecueMessage(Map<String, Vector<SecureMessage>> postOffice, String toUci) {
+		if(postOffice.containsKey(toUci)){
+			Iterator<SecureMessage> it = postOffice.get(toUci).iterator();
+			while(it.hasNext()){
+				SecureMessage sm = it.next();
+				byte[] message = sm.getPayload();
+				sm.setPayload(symmetricEncryptMessage(toUci, message, config.getSymmetricAlgorithm()));
+				sm.setSignature(this.signMessage(message, config.getSignatureAlgorithm()));
+				sm.setSignatureAlgorithm(config.getSignatureAlgorithm());
+			}
+		}
 	}
 	
 	/********************************************************************************

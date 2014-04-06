@@ -117,21 +117,29 @@ public class SecurityCommunication {
 	
 	public void sendSecureMassage(String message, String toUci, SensibleThingsNode toNode){   
 		
-		if(securityManager.isKeyValid(toUci, config.getSymmetricKeyLifeTime())){
-			sendToPostOffice(encapsulateSecueMessage(message, toUci, toNode));
+		// create the secureMessage without encrypting the message
+		SecureMessage secureMessage = new SecureMessage(toUci, securityManager.getMyUci(), 
+				toNode, communication.getLocalSensibleThingsNode());
+		
+		secureMessage.setPayload(message.getBytes());
+				
+		if(securityManager.isSymmetricKeyValid(toUci, config.getSymmetricKeyLifeTime())){
+			sendToPostOffice(secureMessage);
+			securityManager.encapsulateSecueMessage(postOffice, toUci);
 			sendOutSecureMessage(toUci);
+			
 		}else if(securityManager.hasCertificate(toUci)){
 			exchangeSessionKey(toUci, toNode);			
-			sendToPostOffice(encapsulateSecueMessage(message, toUci, toNode));
+			sendToPostOffice(secureMessage);
 		}else{
 			exchangeCertificate(toUci, toNode);
-			sendToPostOffice(encapsulateSecueMessage(message, toUci, toNode));	
+			sendToPostOffice(secureMessage);	
 		}
 	}
 	
 	public String handleSecureMessage(SecureMessage sm){
 		byte[] signature = sm.getSignature();
-		String plainText = decapsulateSecureMessage(sm);
+		String plainText = securityManager.decapsulateSecureMessage(sm);
 		if(securityManager.verifySignature(plainText.getBytes(), signature, sm.fromUci, config.getSignatureAlgorithm())){
 			return plainText;
 		}else{
@@ -228,6 +236,9 @@ public class SecurityCommunication {
 			ResponsePayload responsePayload = (ResponsePayload)SerializationUtils.deserialize(payload);
 			if(responsePayload.getToNonce() == (Integer)securityManager.getFromNoncePool(skrm.fromUci)){
 				securityManager.removeFromNoncePool("nonce");
+				
+				// encrypt the message
+				securityManager.encapsulateSecueMessage(postOffice, skrm.fromUci);
 				sendOutSecureMessage(skrm.fromUci);
 			}
 		}
@@ -509,26 +520,7 @@ public class SecurityCommunication {
 		sendMessage(cxm);
 	}
 	
-	private String decapsulateSecureMessage(SecureMessage sm){
-		byte[] payload = securityManager.symmetricDecryptMessage(sm.fromUci, 
-				sm.getPayload(), config.getSymmetricAlgorithm());
-		
-		return new String(payload);
-	}
-	
-	private SecureMessage encapsulateSecueMessage(String message, String toUci,
-			SensibleThingsNode toNode) {
-		SecureMessage sm = new SecureMessage(toUci, securityManager.getMyUci(),
-				toNode, communication.getLocalSensibleThingsNode());
-		
-		sm.setPayload(securityManager.symmetricEncryptMessage(toUci, message.getBytes(), 
-				config.getSymmetricAlgorithm()));
-		
-		byte[] signature = securityManager.signMessage(message, config.getSignatureAlgorithm()).getBytes();
-		sm.setSignature(signature);
-		
-		return sm;
-	}
+
 
 	private void exchangeSessionKey(String toUci, SensibleThingsNode toNode) {
 		
@@ -579,11 +571,19 @@ public class SecurityCommunication {
 		}
 	}
 	
-	private void sendOutSecureMessage(String toUci){
+	private void sendOutSecureMessage(String toUci) {
 		if(postOffice.containsKey(toUci)){
 			Iterator<SecureMessage> it = postOffice.get(toUci).iterator();
 			while(it.hasNext()){
 				sendMessage(it.next());
+				
+				// let the sender wait every 20ms 
+				try {
+					Thread.sleep(20);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 			}
 			postOffice.get(toUci).removeAllElements();
 		}
