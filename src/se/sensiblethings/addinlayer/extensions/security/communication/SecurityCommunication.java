@@ -82,8 +82,15 @@ public class SecurityCommunication {
 		
 		sendMessage(message);
 		
+		try {
+			Thread.sleep(100);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
 		transformCommunication("SSL");
-		System.out.println("[Communication] communication type shift to SSL mode");
+		System.out.println("[Node_1 : Communication] communication type shift to SSL mode");
 	}
 	
 	/**
@@ -151,7 +158,7 @@ public class SecurityCommunication {
 	public void handleCommunicationShiftMessage(CommunicationShiftMessage csm) {
 		if(csm.getSignal() != null){
 			transformCommunication(csm.getSignal());
-			System.out.println("[Communication] communication type shift to "+ csm.getSignal() +" mode");
+			System.out.println("[" + csm.toUci + " : Communication] communication type shift to "+ csm.getSignal() +" mode");
 		}
 	
 	}

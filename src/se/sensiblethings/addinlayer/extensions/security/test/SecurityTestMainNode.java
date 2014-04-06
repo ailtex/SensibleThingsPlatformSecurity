@@ -48,7 +48,7 @@ public class SecurityTestMainNode implements SensibleThingsListener, SecurityLis
 	
 	private void run() {
 		try {	    	
-			System.out.println("Start to Register...!");
+			System.out.println("[Node_1] Start to Register...!");
 			
 			secureExt.securityRegister("sensiblethings@miun.se/node_1");
 			
@@ -70,17 +70,13 @@ public class SecurityTestMainNode implements SensibleThingsListener, SecurityLis
 	@Override
 	public void getResponse(String uci, String value,
 			SensibleThingsNode fromNode) {
-		System.out.println("[GetResponse] " + uci + ": " + fromNode + " : " + value);
+		System.out.println("[Node_1 : GetResponse] " + uci + ": " + fromNode + " : " + value);
 		
-		if(value.equals("Change to SSL connetion")){
-			platform.changeCommunicationTo(Communication.SSL);
-			platform.set(uci, "SSL", fromNode);
-		}
 	}
 
 	@Override
 	public void resolveResponse(String uci, SensibleThingsNode node) {
-		System.out.println("[ResolveResponse] " + uci + ": " + node);
+		System.out.println("[Node_1 : ResolveResponse] " + uci + ": " + node);
 		
 		secureExt.sendSecureMassage("Hello world", uci, node);
 	}

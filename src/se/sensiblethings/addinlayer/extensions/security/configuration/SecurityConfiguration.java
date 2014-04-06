@@ -46,8 +46,8 @@ public class SecurityConfiguration {
 		return config.getString("/keyStore/name");
 	}
 	
-	public String getKeyStoreFileLocation(){
-		return config.getString("/keyStore/locaiton");
+	public String getKeyStoreFileDirectory(){
+		return config.getString("/keyStore/directory");
 	}
 	
 	public String getSymmetricAlgorithm() {

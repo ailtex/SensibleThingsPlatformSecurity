@@ -39,7 +39,6 @@ import se.sensiblethings.addinlayer.extensions.security.configuration.SecurityCo
 import se.sensiblethings.addinlayer.extensions.security.encryption.AsymmetricEncryption;
 import se.sensiblethings.addinlayer.extensions.security.keystore.KeyStoreJCEKS;
 import se.sensiblethings.addinlayer.extensions.security.keystore.IKeyStore;
-import se.sensiblethings.addinlayer.extensions.security.keystore.SQLiteDatabase;
 import se.sensiblethings.addinlayer.extensions.security.messagedigest.MessageDigestOperations;
 import se.sensiblethings.addinlayer.extensions.security.signature.SignatureOperations;
 import se.sensiblethings.addinlayer.extensions.security.encryption.SymmetricEncryption;
@@ -56,23 +55,25 @@ public class SecurityManager {
 	private SecurityConfiguration config = null;
 	
 	public SecurityManager(SecurityConfiguration config){
-
-		keyStore = new KeyStoreJCEKS();
-		
-		try {
-			keyStore.loadKeyStore(config.getKeyStoreFileLocation()
-					+ myUci + "#" + config.getKeyStoreFileName(), "password".toCharArray());
-		} catch ( IOException e) {
-			// it may fail to load the key store
-			e.printStackTrace();
-		}
-		
 		this.config = config;
-		
 	}
 	
 	public void initializeKeyStore(String uci){
 		setMyUci(uci);
+		
+		String prefix = uci.split("/")[0] + "_" + uci.split("/")[1];
+		
+		String filePath = config.getKeyStoreFileDirectory() + prefix
+				+ "_" + config.getKeyStoreFileName();
+		
+		// System.out.println(filePath);
+		try {
+			keyStore = new KeyStoreJCEKS(filePath, "password".toCharArray());
+			
+		} catch (IOException e) {
+			// it may fail to load the key store
+			e.printStackTrace();
+		}
 		
 		// check weather the store has the KeyPair
 		if(!keyStore.hasKey(uci)){
@@ -175,7 +176,7 @@ public class SecurityManager {
 		KeyPair keyPair = null;
 		try {
 			 keyPair = AsymmetricEncryption.generateKey(config.getAsymmetricAlgorithm(),
-					 config.getSymmetricKeyLength());
+					 config.getAsymmetricKeyLength());
 		} catch (NoSuchAlgorithmException e) {
 			
 			e.printStackTrace();
@@ -196,7 +197,7 @@ public class SecurityManager {
 					"password".toCharArray(), new Certificate[]{cert});
 			
 			// store the self signed certificate
-			keyStore.storeCertificate(uci, cert, "password".toCharArray());
+			// keyStore.storeCertificate(uci, cert, "password".toCharArray());
 		} catch (KeyStoreException e) {
 			e.printStackTrace();
 		}

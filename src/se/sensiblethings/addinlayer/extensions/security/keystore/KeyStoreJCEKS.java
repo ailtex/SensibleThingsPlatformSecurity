@@ -34,7 +34,7 @@ public class KeyStoreJCEKS implements IKeyStore{
 	private KeyStore ks = null;
 	private String keyStoreFile = null;
 	
-	public KeyStoreJCEKS(){}
+	// public KeyStoreJCEKS(){}
 	
 	public KeyStoreJCEKS(String keyStoreFile, char[] password) throws IOException{
 		

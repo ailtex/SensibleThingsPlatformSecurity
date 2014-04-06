@@ -61,8 +61,14 @@ public class KeyStoreJCEKSTest {
 
 	@Test
 	public void testCreateKeyStore() {
-		KeyStoreJCEKS keyStore = new KeyStoreJCEKS();
-		keyStore.createKeyStore(keyStoreFile, password);
+		KeyStoreJCEKS keyStore = null;
+		try {
+			keyStore = new KeyStoreJCEKS(keyStoreFile, password);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		//keyStore.createKeyStore(keyStoreFile, password);
 		
 		// ???
 		assertNotNull("[Test Create KeyStore]", keyStore);

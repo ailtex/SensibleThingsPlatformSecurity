@@ -68,12 +68,13 @@ public class SecurityTestMainBootstrap implements SensibleThingsListener, Securi
 
     		secureExt.securityRegister("sensiblethings@miun.se/bootstrap");
     		
+    		System.out.println("[Bootstrap Node] Security Registering Successfully !");
+    		
 	        System.out.println("Press any key to shut down");
 	        BufferedReader in = new BufferedReader(new InputStreamReader(System.in));    	
 			in.readLine();
 			
 			//Shutdown all background tasks
-			//platform_ssl.shutdown();
 			platform.shutdown();
 			
 		} catch (Exception e) {
@@ -83,18 +84,18 @@ public class SecurityTestMainBootstrap implements SensibleThingsListener, Securi
 
 	@Override
 	public void getResponse(String uci, String value, SensibleThingsNode fromNode) {
-		System.out.println("[GetResponse] " + uci + ": " + fromNode + " : " + value);
+		System.out.println("[Bootstrap Node : GetResponse] " + uci + ": " + fromNode + " : " + value);
 		
 	}
 
 	@Override
 	public void resolveResponse(String uci, SensibleThingsNode node) {
-		System.out.println("[ResolveResponse] " + uci + ": " + node);
+		System.out.println("[Bootstrap Node : ResolveResponse] " + uci + ": " + node);
 	}
 
 	@Override
 	public void getEvent(SensibleThingsNode source, String uci) {
-		System.out.println("[GetEvent] " + uci + ": " + source);
+		System.out.println("[Bootstrap Node : GetEvent] " + uci + ": " + source);
 
 		platform.notify(source, uci, "World!");
 		
@@ -102,7 +103,7 @@ public class SecurityTestMainBootstrap implements SensibleThingsListener, Securi
 
 	@Override
 	public void setEvent(SensibleThingsNode fromNode, String uci, String value) {
-		System.out.println("[SetEvent] " + uci + ": " + value + " : " + fromNode);
+		System.out.println("[Bootstrap Node : SetEvent] " + uci + ": " + value + " : " + fromNode);
 		
 	}
 	
@@ -111,7 +112,7 @@ public class SecurityTestMainBootstrap implements SensibleThingsListener, Securi
 	@Override
 	public void receivedSecureMessageEvent(String message, String uci,
 			SensibleThingsNode fromNode) {
-		System.out.println("[Received SecureMessage Event] " + uci + ": " + message + " : " + fromNode);
+		System.out.println("[Bootstrap Node : Received SecureMessage Event] " + uci + ": " + message + " : " + fromNode);
 		
 	}
 	

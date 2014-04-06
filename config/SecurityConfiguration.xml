@@ -8,7 +8,7 @@
     
     <keyStore>
         <name>KeyStore.db</name>
-        <location>resources/</location>
+        <directory>resources/</directory>
     </keyStore>
     
     <security>

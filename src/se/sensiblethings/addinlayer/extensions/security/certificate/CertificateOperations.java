@@ -97,8 +97,8 @@ public class CertificateOperations {
 		// T Title
 		// 
 		
-		if(subjectName == null)
-			subjectName = "CN=Bootstrap,OU=ComputerColleage,O=MIUN,C=Sweden";
+		if(subjectName != null)
+			subjectName = "CN="+ subjectName + ",OU=ComputerColleage,O=MIUN,C=Sweden";
 		
 		certGen.setIssuerDN(new X500Principal(subjectName));
 		

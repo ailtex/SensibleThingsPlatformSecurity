@@ -42,7 +42,6 @@ import se.sensiblethings.addinlayer.extensions.security.configuration.SecurityCo
 import se.sensiblethings.addinlayer.extensions.security.encryption.AsymmetricEncryption;
 import se.sensiblethings.addinlayer.extensions.security.encryption.SymmetricEncryption;
 import se.sensiblethings.addinlayer.extensions.security.keystore.IKeyStore;
-import se.sensiblethings.addinlayer.extensions.security.keystore.SQLiteDatabase;
 import se.sensiblethings.addinlayer.extensions.security.signature.SignatureOperations;
 import se.sensiblethings.disseminationlayer.communication.Communication;
 import se.sensiblethings.disseminationlayer.communication.DestinationNotReachableException;
