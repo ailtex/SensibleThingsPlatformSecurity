@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.KeyStore;
+import java.security.KeyStore.Entry;
 import java.security.KeyStore.PrivateKeyEntry;
 import java.security.KeyStore.PasswordProtection;
 import java.security.KeyStore.SecretKeyEntry;
@@ -164,6 +165,9 @@ public class KeyStoreJCEKS implements IKeyStore{
 	
 	
 	public Key getSecretKey(String alias, char[] secretKeyPassword){
+		
+		alias = addSecreKeyAliasSuffix(alias);
+		
 		Key key = null;
 		try {
 			SecretKeyEntry pkEntry = (SecretKeyEntry) ks.getEntry(alias,  new PasswordProtection(secretKeyPassword));
@@ -209,6 +213,9 @@ public class KeyStoreJCEKS implements IKeyStore{
 		
 		SecretKeyEntry skEntry = new SecretKeyEntry(sk);
 		
+		// adds the secret key suffix
+		alias = addSecreKeyAliasSuffix(alias);
+		
 		ks.setEntry(alias, skEntry, new PasswordProtection(secretKeyPassword));
 	
 		// password needed to write into file
@@ -221,6 +228,9 @@ public class KeyStoreJCEKS implements IKeyStore{
 		
 		SecretKeyEntry skEntry = new SecretKeyEntry(secretKey);
 		
+		// adds the secret key suffix
+		alias = addSecreKeyAliasSuffix(alias);
+		
 		// ProtectionParameter implemented by PasswordProtection
 		ks.setEntry(alias, skEntry, new PasswordProtection(secretKeyPassword));
 		
@@ -231,16 +241,18 @@ public class KeyStoreJCEKS implements IKeyStore{
 	
 	public void storeCertificate(String alias, Certificate certificate, char[] keyStorePassword) throws KeyStoreException{
 		
-		TrustedCertificateEntry cerEntry = new TrustedCertificateEntry(certificate);
+		//TrustedCertificateEntry cerEntry = new TrustedCertificateEntry(certificate);
+		
 		// The 3rd ProtectionParameter should be set null, otherwise it will throw an exception
 		// This problem could be found from the source code at
 		// "java.security.KeyStoreSpi.engineSetEntry(KeyStoreSpi.java:522)"
-		ks.setEntry(alias, cerEntry, null);
 		//ks.setEntry(alias, cerEntry, new PasswordProtection(password));
-	
+		
+		//ks.setEntry(alias, cerEntry, null);
+		
+		ks.setCertificateEntry(alias, certificate);
 		// password needed to write into file
 		updataKeyStore(keyStorePassword);
-		
 	}
 
 	public void deleteCertificate(String alias, char[] keyStorePassword) throws KeyStoreException{
@@ -255,6 +267,29 @@ public class KeyStoreJCEKS implements IKeyStore{
 			return ks.isKeyEntry(alias);
 		} catch (KeyStoreException e) {
 			
+			e.printStackTrace();
+		}
+		
+		return false;
+	}
+	
+	public boolean hasSecretKey(String alias){
+		// adds the secret key alias
+		alias = addSecreKeyAliasSuffix(alias);
+		
+		try {
+			return hasKey(alias) && ks.entryInstanceOf(alias, SecretKeyEntry.class);
+		} catch (KeyStoreException e) {
+			e.printStackTrace();
+		}
+		
+		return false;
+	}
+	
+	public boolean hasPrivateKey(String alias){
+		try {
+			return hasKey(alias) && ks.entryInstanceOf(alias, PrivateKeyEntry.class);
+		} catch (KeyStoreException e) {
 			e.printStackTrace();
 		}
 		
@@ -335,4 +370,18 @@ public class KeyStoreJCEKS implements IKeyStore{
 		
 	}
 	
+	
+	/**
+	 * Adds the "/secretKey" suffix to the secrektyEntry alias
+	 * 
+	 * it may get collision or exception if the <code>TrustedCertificateEntry</code> call by <code>setEntry</code> or 
+	 * an entry created by <code>setCertificateEntry</code> with the same uci exist
+	 * so here it adds the suffix with "/certificate"
+	 * 
+	 * @param alias the alias needs suffix
+	 * @return alias with the "/secretKey" suffix
+	 */
+	private String addSecreKeyAliasSuffix(String alias){
+		return alias + "/secretKey";
+	}
 }

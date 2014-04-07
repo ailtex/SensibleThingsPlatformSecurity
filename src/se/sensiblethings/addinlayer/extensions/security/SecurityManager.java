@@ -66,7 +66,6 @@ public class SecurityManager {
 		String filePath = config.getKeyStoreFileDirectory() + prefix
 				+ "_" + config.getKeyStoreFileName();
 		
-		// System.out.println(filePath);
 		try {
 			keyStore = new KeyStoreJCEKS(filePath, "password".toCharArray());
 			
@@ -119,8 +118,7 @@ public class SecurityManager {
 	}
 	
 	public boolean isSymmetricKeyValid(String uci, long lifeTime){
-		return keyStore.hasKey(uci) && 
-				keyStore.getSecretKey(uci, "password".toCharArray()) != null &&
+		return keyStore.hasSecretKey(uci) &&
 				checkKeyLifetime(keyStore.getCreationData(uci), lifeTime);
 	}
 	
@@ -271,8 +269,14 @@ public class SecurityManager {
 	}
 	
 	/**
-	 * Get self signed certificate
-	 * @return
+	 * Return itself certificate
+	 * 
+	 * Before registration to the bootstrap, it retrieves the self signed root certificate
+	 * with X509V1 version. Otherwise, it retrieves the bootstrap issued certificate from the 
+	 * certificate chain in the keystore's <code>PrivateKeyEntry</code>. It is the first certificate
+	 * in this certificate chain.
+	 * 
+	 * @return Certificate itself certificate
 	 */
 	public Certificate getCertificate(){
 		try {
@@ -311,11 +315,6 @@ public class SecurityManager {
 	public void storeCertificateChain(String uci, Certificate[] certs, String password){
 		
 		try {
-			// it can not overwrite the old certificate to same alias
-			// if it exist, it should delete it firstly
-			if(keyStore.hasCertificate(uci)){
-				keyStore.deleteCertificate(uci, password.toCharArray());
-			}
 			
 			keyStore.storePrivateKey(uci, (PrivateKey)keyStore.getPrivateKey(uci, password.toCharArray()),
 					password.toCharArray(),password.toCharArray(), certs);
@@ -326,12 +325,17 @@ public class SecurityManager {
 	}
 	
 	public void storeCertificate(String uci, Certificate cert, String password){
+		// it may get collision or exception if the SecrekeyEntry with the same uci exist
+		// so here it adds the suffix with "/certificate" 
+		// uci = uci + "/certificate";
+		
 		try {
 			keyStore.storeCertificate(uci, cert, password.toCharArray());
 		} catch (KeyStoreException e) {
 			e.printStackTrace();
 		}
 	}
+	
 	/********************************************************************************
 	 * 
 	 *                           Signature Part

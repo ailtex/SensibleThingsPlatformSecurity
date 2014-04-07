@@ -52,6 +52,8 @@ public class SecurityTestMainNode implements SensibleThingsListener, SecurityLis
 			
 			secureExt.securityRegister("sensiblethings@miun.se/node_1");
 			
+			platform.resolve("sensiblethings@miun.se/node#1");
+			
 			platform.resolve("sensiblethings@miun.se/bootstrap");
 			
 	        System.out.println("Press any key to shut down");

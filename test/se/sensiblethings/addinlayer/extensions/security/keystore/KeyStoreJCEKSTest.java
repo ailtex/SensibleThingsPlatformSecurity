@@ -82,9 +82,20 @@ public class KeyStoreJCEKSTest {
 		try {	
 			KeyPair keyPair = AsymmetricEncryption.generateKey("RSA", 1024);
 			
-			Certificate cert = CertificateOperations.generateSelfSignedcertificate("CN="+uci,keyPair, 1*365*24*60*60*1000L);
+			Certificate cert = CertificateOperations.generateSelfSignedcertificate("CN="+uci, keyPair, 1*365*24*60*60*1000L);
+			
+			// System.out.println(keyStore.hasCertificate(uci));
+			
+			// keyStore.storeCertificate(uci, cert, password);
 			
 			keyStore.storePrivateKey(uci, keyPair.getPrivate(), password, password, new Certificate[]{cert});
+			
+			// System.out.println(keyStore.hasCertificate(uci));
+			// System.out.println(keyStore.hasPrivateKey(uci));
+			
+			// System.out.println(keyStore.hasCertificate(uci));
+			
+			// keyStore.storeCertificate(uci, cert, password);
 			
 			// convert the public key to Hex format, and then compare them
 			assertTrue("[Test Get PulicKey]",AsymmetricEncryption.toHexString(keyStore.getPublicKey(uci).getEncoded()).equals(
@@ -363,19 +374,42 @@ public class KeyStoreJCEKSTest {
 	public void testGetCreationData() {
 		String uci = "Bootstrap-9";
 		SecretKey secretKey;
-		Date created = null;
+		
 		try {
+			
+			KeyPair keyPair = AsymmetricEncryption.generateKey("RSA", 1024);
+			Certificate cert = CertificateOperations.generateSelfSignedcertificate("CN="+uci, keyPair, 1000000);
+		
+			keyStore.storeCertificate(uci, cert, password);
+			System.out.println(keyStore.hasCertificate(uci));
+			
+			//System.out.println("[Certificate] " + keyStore.getCreationData(uci));
+			
 			secretKey = SymmetricEncryption.generateKey(SymmetricEncryption.AES, 128);
-			created = new Date();
+			
+			//System.out.println("[SecreKey] " + keyStore.getCreationData(uci));
+			
+			// System.out.println(keyStore.hasSecretKey(uci));
 			
 			keyStore.storeSecretKey(uci, secretKey, password, password);
+			
+			System.out.println(keyStore.hasCertificate(uci));
+			System.out.println(keyStore.hasSecretKey(uci));
+			
+//			try {
+//				Thread.sleep(2000);
+//			} catch (InterruptedException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
 			
 		} catch (NoSuchAlgorithmException | InvalidKeyException | KeyStoreException | InvalidKeySpecException e) {
 			
 			e.printStackTrace();
 		}
 		
-		assertTrue("[Test Get Creation Data]", new Date().after(created));
+		
+		//assertTrue("[Test Get Creation Data]", keyStore.getCreationData(uci).after(created));
 		
 	}
 

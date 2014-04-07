@@ -38,6 +38,7 @@ import se.sensiblethings.addinlayer.extensions.security.signature.SignatureOpera
 import se.sensiblethings.disseminationlayer.communication.Communication;
 import se.sensiblethings.disseminationlayer.communication.DestinationNotReachableException;
 import se.sensiblethings.disseminationlayer.communication.Message;
+import se.sensiblethings.disseminationlayer.communication.rudp.RUDPCommunication;
 import se.sensiblethings.disseminationlayer.communication.ssl.SslCommunication;
 import se.sensiblethings.disseminationlayer.disseminationcore.DisseminationCore;
 import se.sensiblethings.interfacelayer.SensibleThingsNode;
@@ -81,16 +82,16 @@ public class SecurityCommunication {
 	    // the request node can just change itself communication type
 		
 		sendMessage(message);
-		
+		/*
 		try {
 			Thread.sleep(100);
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
+		*/
 		transformCommunication("SSL");
-		System.out.println("[Node_1 : Communication] communication type shift to SSL mode");
+		System.out.println("[" + securityManager.getMyUci() + " : Communication] communication type shift to SSL mode");
 	}
 	
 	/**
@@ -599,9 +600,10 @@ public class SecurityCommunication {
 	private void transformCommunication(String communicationType){
 		if(communicationType.equals("SSL")){
 			if(platform.isBehindNat()){
+				System.out.println("[System] Proxy SSL");
 				platform.changeCommunicationTo(communication.PROXY_SSL);
 			}else{
-				SslCommunication.initCommunicationPort = 9009;
+				// SslCommunication.initCommunicationPort = 9009;
 				platform.changeCommunicationTo(communication.SSL);
 			}
 			
@@ -610,7 +612,6 @@ public class SecurityCommunication {
 			if(platform.isBehindNat()){
 				platform.changeCommunicationTo(communication.PROXY_RUDP);
 			}else{
-				SslCommunication.initCommunicationPort = 9009;
 				platform.changeCommunicationTo(communication.RUDP);
 			}
 		}
