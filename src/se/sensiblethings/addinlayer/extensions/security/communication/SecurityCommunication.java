@@ -13,6 +13,7 @@ import javax.crypto.SecretKey;
 
 import org.apache.commons.lang.SerializationUtils;
 import org.bouncycastle.jce.PKCS10CertificationRequest;
+import org.bouncycastle.util.encoders.Base64;
 
 import se.sensiblethings.addinlayer.extensions.security.SecurityManager;
 import se.sensiblethings.addinlayer.extensions.security.communication.message.CertificateAcceptedResponseMessage;
@@ -91,7 +92,7 @@ public class SecurityCommunication {
 		}
 		*/
 		transformCommunication("SSL");
-		System.out.println("[" + securityManager.getMyUci() + " : Communication] communication type shift to SSL mode");
+		
 	}
 	
 	/**
@@ -114,7 +115,7 @@ public class SecurityCommunication {
 		message.setSignature(null);
 		
 		// store the local registration Request Time
-		securityManager.addToNoncePool("RegistrationRequest", payload);
+		securityManager.addToNoncePool("RegistrationRequest", payloadInBytes);
 
 		sendMessage(message);
 	}
@@ -159,7 +160,6 @@ public class SecurityCommunication {
 	public void handleCommunicationShiftMessage(CommunicationShiftMessage csm) {
 		if(csm.getSignal() != null){
 			transformCommunication(csm.getSignal());
-			System.out.println("[" + csm.toUci + " : Communication] communication type shift to "+ csm.getSignal() +" mode");
 		}
 	
 	}
@@ -206,6 +206,8 @@ public class SecurityCommunication {
 			return;
 		}
 		
+		System.out.println("Certificate : " + cert);
+		
 		// verify the certificate
 		if (securityManager.isCertificateValid(cert, cxm.fromUci)) {
 			// store the certificate
@@ -233,6 +235,21 @@ public class SecurityCommunication {
 		
 	}
 	
+	private void exchangeCertificate(String toUci, SensibleThingsNode toNode) {
+		CertificateExchangeMessage cxm = new CertificateExchangeMessage(toUci, securityManager.getMyUci(),
+				toNode, communication.getLocalSensibleThingsNode());
+		
+		CertificateExchangePayload cxp = new CertificateExchangePayload(securityManager.getMyUci(), toUci);
+		cxp.setCert(securityManager.getCertificate());
+		cxp.setTimeStamp(System.currentTimeMillis());
+		
+		byte[] payload = SerializationUtils.serialize(cxp);
+		cxm.setPayload(payload);
+		cxm.setSignature(securityManager.signMessage(payload, config.getSignatureAlgorithm()));
+		cxm.setSignatureAlgorithm(config.getSignatureAlgorithm());
+		
+		sendMessage(cxm);
+	}
 	
 	public void handleSessionKeyResponseMessage(SessionKeyResponseMessage skrm) {
 		byte[] payload = securityManager.symmetricDecryptMessage(skrm.fromUci, skrm.getPayload(), 
@@ -380,6 +397,8 @@ public class SecurityCommunication {
 					crm.getFromNode(), communication.getLocalSensibleThingsNode());
 			csm.setSignal("RUDP");
 			
+			sendMessage(csm);
+			
 			transformCommunication(csm.getSignal());
 			
 		}else{
@@ -388,20 +407,27 @@ public class SecurityCommunication {
 	}
 
 	public void handleCertificateRequestMessage(CertificateRequestMessage crm) {
-		byte[] cipherText = crm.getPayload();
+//		byte[] cipherText = crm.getPayload();
 		
 		// decrypt the payload
-		byte[] plainText = securityManager.asymmetricDecryptMessage(cipherText, 
-				config.getAsymmetricAlgorithm());
-		
-		// deserialize the payload
-		CertificateRequestPayload payload = (CertificateRequestPayload)SerializationUtils.deserialize(plainText);
-		
+//		byte[] plainText = securityManager.asymmetricDecryptMessage(cipherText, 
+//				config.getAsymmetricAlgorithm());
+//		
+//		// deserialize the payload
+//		CertificateRequestPayload payload = (CertificateRequestPayload)SerializationUtils.deserialize(plainText);
+//		
 		// Get the certificate signing request
-		PKCS10CertificationRequest certRequest = payload.getCertRequest();
+		PKCS10CertificationRequest certRequest = crm.getCertRequest();
+		
+		
+		// Get the uci
+		String uci = new String(securityManager.asymmetricDecryptMessage(crm.getUci(), config.getAsymmetricAlgorithm()));
+		
+		// Get the nonce
+		int nonce = Integer.valueOf(new String(securityManager.asymmetricDecryptMessage(crm.getNonce(), config.getAsymmetricAlgorithm()))) ;
 		
 		// varify the certificate signing request
-		if(securityManager.isCeritificateSigningRequestValid(certRequest, crm.fromUci)){
+		if(securityManager.isCeritificateSigningRequestValid(certRequest, uci)){
 			Certificate[] certs = (Certificate[]) securityManager.signCertificateSigningRequest(certRequest, crm.fromUci);
 			
 			// generate the session key and  store it locally
@@ -419,7 +445,7 @@ public class SecurityCommunication {
 					new CertificateResponsePayload(securityManager.getMyUci(), crm.fromUci);
 			
 			// set the nonces
-			responsePayload.setToNonce(payload.getNonce());
+			responsePayload.setToNonce(nonce);
 			
 			int fromNonce = new Random().nextInt();
 			responsePayload.setFromNonce(fromNonce);
@@ -456,37 +482,48 @@ public class SecurityCommunication {
 			// send the certificate request message with ID, CSR, nonce 
 			CertificateRequestMessage crm = 
 					new CertificateRequestMessage(config.getBootstrapUci(),
-							securityManager.getMyUci(), rrm.getToNode(), communication.getLocalSensibleThingsNode());
+							securityManager.getMyUci(), rrm.getFromNode(), communication.getLocalSensibleThingsNode());
 			
 			//generate an certificate signing request
 			PKCS10CertificationRequest certRequest = 
 					securityManager.getCertificateSigingRequest(securityManager.getMyUci());
 			
+			crm.setCertRequest(certRequest);
+			
 			// set the nonce
 			int nonce = new Random().nextInt();
+			crm.setNonce(securityManager.asymmetricEncryptMessage(
+					rrm.fromUci, String.valueOf(nonce).getBytes(), config.getAsymmetricAlgorithm()));
 			
 			// store the nonce into the data pool, corresponding the bootstrap's uci
 			securityManager.addToNoncePool(rrm.fromUci, nonce);
 			
-			CertificateRequestPayload payload = 
-					new CertificateRequestPayload(securityManager.getMyUci(), rrm.fromUci);
-			payload.setCertRequest(certRequest);
-			payload.setNonce(nonce);
 			
-			// use apache.commons.lang.SerializationUtils to serialize objects
-			byte[] plainText = SerializationUtils.serialize(payload);
-			// encrypt message
-			byte[] cipherText = securityManager.asymmetricEncryptMessage(rrm.fromUci, plainText, 
-					config.getAsymmetricAlgorithm());
-			// set the encrypted payload
-			crm.setPayload(cipherText);
+			// set the fromUci
+			crm.setUci(securityManager.asymmetricEncryptMessage(
+					rrm.fromUci, securityManager.getMyUci().getBytes(), config.getAsymmetricAlgorithm()));
 			
+			
+//			CertificateRequestPayload payload = 
+//					new CertificateRequestPayload(securityManager.getMyUci(), rrm.fromUci);
+			
+//			payload.setNonce(nonce);
+			
+//			// use apache.commons.lang.SerializationUtils to serialize objects
+//			byte[] plainText = SerializationUtils.serialize(payload);
+//			
+//			
+//			// encrypt message
+//			byte[] cipherText = securityManager.asymmetricEncryptMessage(rrm.fromUci, plainText, config.getAsymmetricAlgorithm());
+//			
+//			// set the encrypted payload
+//			crm.setPayload(cipherText);
+//			
 			sendMessage(crm);
 			
 		}else{
 			System.out.println("[Error] Fake signature");
 		}
-		
 	}
 
 	public void handleRegistrationRequestMessage(
@@ -494,8 +531,8 @@ public class SecurityCommunication {
 
 		RegistrationResponseMessage registrationResponseMessage = 
 				new RegistrationResponseMessage(rrm.fromUci, securityManager.getMyUci(), 
-						rrm.getToNode(),communication.getLocalSensibleThingsNode());
-		
+						rrm.getFromNode(),communication.getLocalSensibleThingsNode());
+				
 		// set the Root certificate from Bootstrap and send it to the applicant
 		registrationResponseMessage.setCertificate(securityManager.getCertificate());
 		
@@ -513,23 +550,6 @@ public class SecurityCommunication {
 	}
 
 	
-	private void exchangeCertificate(String toUci, SensibleThingsNode toNode) {
-		CertificateExchangeMessage cxm = new CertificateExchangeMessage(toUci, securityManager.getMyUci(),
-				toNode, communication.getLocalSensibleThingsNode());
-		
-		CertificateExchangePayload cxp = new CertificateExchangePayload(securityManager.getMyUci(), toUci);
-		cxp.setCert(securityManager.getCertificate());
-		cxp.setTimeStamp(System.currentTimeMillis());
-		
-		byte[] payload = SerializationUtils.serialize(cxp);
-		cxm.setPayload(payload);
-		cxm.setSignature(securityManager.signMessage(payload, config.getSignatureAlgorithm()));
-		
-		sendMessage(cxm);
-	}
-	
-
-
 	private void exchangeSessionKey(String toUci, SensibleThingsNode toNode) {
 		
 		SessionKeyExchangeMessage skxm = new SessionKeyExchangeMessage(toUci, securityManager.getMyUci(),
@@ -598,27 +618,39 @@ public class SecurityCommunication {
 	}
 	
 	private void transformCommunication(String communicationType){
-		if(communicationType.equals("SSL")){
-			if(platform.isBehindNat()){
-				System.out.println("[System] Proxy SSL");
-				platform.changeCommunicationTo(communication.PROXY_SSL);
-			}else{
-				// SslCommunication.initCommunicationPort = 9009;
-				platform.changeCommunicationTo(communication.SSL);
-			}
-			
-			
-		}else if(communicationType.equals("RUDP")){
-			if(platform.isBehindNat()){
-				platform.changeCommunicationTo(communication.PROXY_RUDP);
-			}else{
-				platform.changeCommunicationTo(communication.RUDP);
-			}
-		}
+		System.out.println("[" + securityManager.getMyUci() + 
+				" : Communication] communication type shift to "+ communicationType + " mode");
 		
-		this.core = platform.getDisseminationCore();
-		this.communication = core.getCommunication();
-		
+//		if(communicationType.equals("SSL")){
+//			
+//			SslCommunication.initCommunicationPort = communication.getLocalSensibleThingsNode().getPort();
+//			platform.changeCommunicationTo(communication.SSL);
+//			
+////			if(platform.isBehindNat()){
+////				System.out.println("[System] Proxy SSL");
+////				platform.changeCommunicationTo(communication.PROXY_SSL);
+////			}else{
+////				// SslCommunication.initCommunicationPort = 9009;
+////				platform.changeCommunicationTo(communication.SSL);
+////			}
+//			
+//			
+//		}else if(communicationType.equals("RUDP")){
+//			RUDPCommunication.initCommunicationPort = communication.getLocalSensibleThingsNode().getPort();
+//			platform.changeCommunicationTo(communication.RUDP);
+//			
+////			if(platform.isBehindNat()){
+////				platform.changeCommunicationTo(communication.PROXY_RUDP);
+////			}else{
+////				platform.changeCommunicationTo(communication.RUDP);
+////			}
+//		}
+//		
+//		// this.core = platform.getDisseminationCore();
+//		// this.communication = core.getCommunication();
+//		
+//		System.out.println("[" + securityManager.getMyUci() + 
+//				" : Communication] " + communication.getLocalSensibleThingsNode().getPort());
 	}
 	
 	

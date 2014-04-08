@@ -14,7 +14,7 @@ public class RegistrationResponseMessage extends SecureMessage{
 
 	public RegistrationResponseMessage(String toUci, String fromUci, SensibleThingsNode toNode,
 			SensibleThingsNode fromNode) {
-		super(toUci, fromUci, fromNode, toNode);
+		super(toUci, fromUci, toNode, fromNode);
 
 	}
 

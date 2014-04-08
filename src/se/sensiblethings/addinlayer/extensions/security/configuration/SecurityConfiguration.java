@@ -2,6 +2,8 @@ package se.sensiblethings.addinlayer.extensions.security.configuration;
 
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.XMLConfiguration;
+import org.apache.commons.configuration.reloading.FileChangedReloadingStrategy;
+import org.apache.commons.configuration.reloading.ReloadingStrategy;
 import org.apache.commons.configuration.tree.xpath.XPathExpressionEngine;
 
 public class SecurityConfiguration {
@@ -15,6 +17,11 @@ public class SecurityConfiguration {
 		try {
 			config =new XMLConfiguration(filePath);
 			config.setExpressionEngine(new XPathExpressionEngine());
+			
+			// reloading strategy for this configuration every 5s
+			ReloadingStrategy strategy =new FileChangedReloadingStrategy();
+			((FileChangedReloadingStrategy) strategy).setRefreshDelay(5000);
+			config.setReloadingStrategy(strategy);
 
 		} catch (ConfigurationException e) {
 			e.printStackTrace();

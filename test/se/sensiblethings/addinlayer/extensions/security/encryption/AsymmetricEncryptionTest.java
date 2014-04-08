@@ -6,7 +6,9 @@ import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.util.Random;
 
+import org.bouncycastle.util.encoders.Base64;
 import org.junit.Test;
 
 public class AsymmetricEncryptionTest {
@@ -47,12 +49,18 @@ public class AsymmetricEncryptionTest {
 	@Test
 	public void testEncrypt() {
 		try {
-			String plainText = "Hello World";
+			//String plainText = "Hello World";
+			// Data must not be longer than 117 bytes
+			byte[] plainText = new byte[117];
+			new Random().nextBytes(plainText);;
+			
 			KeyPair keyPair = AsymmetricEncryption.generateKey("RSA", 1024);
-			byte[] cipherText = AsymmetricEncryption.encrypt(keyPair.getPublic(), plainText.getBytes(), "RSA");
+			
+			byte[] cipherText = AsymmetricEncryption.encrypt(keyPair.getPublic(), plainText, "RSA");
 			
 			byte[] text = AsymmetricEncryption.decrypt(keyPair.getPrivate(), cipherText, "RSA");
-			assertTrue( new String(text).equals(plainText));
+			
+			assertEquals(Base64.toBase64String(plainText), Base64.toBase64String(text));
 			
 		} catch (NoSuchAlgorithmException e) {
 			e.printStackTrace();
@@ -64,8 +72,8 @@ public class AsymmetricEncryptionTest {
 	public void testDecrypt() {
 		// same as testEncrypt except the length of the key
 		try {
-			String plainText = "Hello World";
-			KeyPair keyPair = AsymmetricEncryption.generateKey("RSA", 2048);
+			String plainText = "sensiblethings@miun.se/node#1";
+			KeyPair keyPair = AsymmetricEncryption.generateKey("RSA", 1024);
 			byte[] cipherText = AsymmetricEncryption.encrypt(keyPair.getPublic(), plainText.getBytes(), "RSA");
 			
 			byte[] text = AsymmetricEncryption.decrypt(keyPair.getPrivate(), cipherText, "RSA");

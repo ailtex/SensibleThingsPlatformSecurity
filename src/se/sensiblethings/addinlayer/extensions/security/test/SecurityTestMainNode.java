@@ -10,6 +10,7 @@ import se.sensiblethings.addinlayer.extensions.security.SecurityExtension;
 import se.sensiblethings.addinlayer.extensions.security.SecurityListener;
 import se.sensiblethings.addinlayer.extensions.security.configuration.SecurityConfiguration;
 import se.sensiblethings.disseminationlayer.communication.Communication;
+import se.sensiblethings.disseminationlayer.communication.rudp.RUDPCommunication;
 import se.sensiblethings.disseminationlayer.lookupservice.LookupService;
 import se.sensiblethings.disseminationlayer.lookupservice.kelips.KelipsLookup;
 import se.sensiblethings.interfacelayer.SensibleThingsListener;
@@ -20,6 +21,8 @@ import se.sensiblethings.interfacelayer.SensibleThingsPlatform;
 public class SecurityTestMainNode implements SensibleThingsListener, SecurityListener{
 	SensibleThingsPlatform platform = null;
 	SecurityExtension secureExt = null;
+	
+	final static String myUci = "sensiblethings@miun.se/node#1";
 	
 	public static void main(String[] args) {
 		
@@ -36,6 +39,7 @@ public class SecurityTestMainNode implements SensibleThingsListener, SecurityLis
 		
 		KelipsLookup.bootstrapIp = getLocalHostAddress();
 		
+		RUDPCommunication.initCommunicationPort = 49890;
 		platform = new SensibleThingsPlatform(LookupService.KELIPS, Communication.RUDP, this);
 		
 		AddInManager addInManager = platform.getAddInManager();
@@ -48,13 +52,13 @@ public class SecurityTestMainNode implements SensibleThingsListener, SecurityLis
 	
 	private void run() {
 		try {	    	
-			System.out.println("[Node_1] Start to Register...!");
+			System.out.println("[Node#1] Start to Register...!");
 			
-			secureExt.securityRegister("sensiblethings@miun.se/node_1");
+			secureExt.securityRegister("sensiblethings@miun.se/node#1");
 			
-			platform.resolve("sensiblethings@miun.se/node#1");
-			
+			// platform.resolve();
 			platform.resolve("sensiblethings@miun.se/bootstrap");
+			
 			
 	        System.out.println("Press any key to shut down");
 	        BufferedReader in = new BufferedReader(new InputStreamReader(System.in));    	
@@ -72,14 +76,14 @@ public class SecurityTestMainNode implements SensibleThingsListener, SecurityLis
 	@Override
 	public void getResponse(String uci, String value,
 			SensibleThingsNode fromNode) {
-		System.out.println("[Node_1 : GetResponse] " + uci + ": " + fromNode + " : " + value);
+		System.out.println("[Node#1 : GetResponse] " + uci + ": " + fromNode + " : " + value);
 		
 	}
 
 	@Override
 	public void resolveResponse(String uci, SensibleThingsNode node) {
-		System.out.println("[Node_1 : ResolveResponse] " + uci + ": " + node);
-		
+		System.out.println("[Node#1 : ResolveResponse] " + uci + ": " + node);
+		//platform.notify(node, uci, "Hello World!");
 		secureExt.sendSecureMassage("Hello world", uci, node);
 	}
 
@@ -107,7 +111,6 @@ public class SecurityTestMainNode implements SensibleThingsListener, SecurityLis
     	
 		return address.getHostAddress();
 	}
-
 
 
 	@Override

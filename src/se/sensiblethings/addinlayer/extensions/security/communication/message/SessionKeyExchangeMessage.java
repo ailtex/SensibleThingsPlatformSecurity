@@ -15,7 +15,7 @@ public class SessionKeyExchangeMessage extends SecureMessage{
 	
 	public SessionKeyExchangeMessage(String toUci, String fromUci, SensibleThingsNode toNode,
 			SensibleThingsNode fromNode) {
-		super(toUci, fromUci, fromNode, toNode);
+		super(toUci, fromUci, toNode, fromNode);
 	}
 
 	public byte[] getCertificatePayload() {

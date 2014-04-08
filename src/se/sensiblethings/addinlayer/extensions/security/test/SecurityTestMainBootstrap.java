@@ -31,6 +31,8 @@ public class SecurityTestMainBootstrap implements SensibleThingsListener, Securi
 	SensibleThingsPlatform platform = null;
 	SecurityExtension secureExt = null;
 	
+	final static String myUci = "sensiblethings@miun.se/bootstrap";
+			
 	public static void main(String arg[]){
 		SecurityTestMainBootstrap application = new SecurityTestMainBootstrap();
 		application.run();
@@ -39,7 +41,7 @@ public class SecurityTestMainBootstrap implements SensibleThingsListener, Securi
 	public SecurityTestMainBootstrap(){
 		
     	//Create the platform itself with a SensibleThingsListener
-		//platform = new SensibleThingsPlatform(this);
+		
 		KelipsLookup.bootstrap = true;
 		KelipsLookup.bootstrapIp = getLocalHostAddress();
 		
@@ -51,22 +53,14 @@ public class SecurityTestMainBootstrap implements SensibleThingsListener, Securi
     	secureExt = new SecurityExtension(this, new SecurityConfiguration("config/SecurityConfiguration.xml", 1));
     	addInManager.loadAddIn(secureExt);
     	
-    	//SslCommunication.initCommunicationPort = 9009;
-    	
-    	//Create the platform itself with a SensibleThingsListener      
-        //platform = new SensibleThingsPlatform(this);
-    	//platform = new SensibleThingsPlatform(LookupService.KELIPS, Communication.RUDP, this);
-    	
-    	
-    	//platform_ssl = new SensibleThingsPlatform(LookupService.KELIPS, Communication.SSL, this);
-
 	}
 	
 	public void run(){
     	try {	    	    		
     		System.out.println("[Bootstrap Node] booted! ");
 
-    		secureExt.securityRegister("sensiblethings@miun.se/bootstrap");
+    		// platform.register(myUci);
+    		secureExt.securityRegister(myUci);
     		
     		System.out.println("[Bootstrap Node] Security Registering Successfully !");
     		
@@ -97,8 +91,6 @@ public class SecurityTestMainBootstrap implements SensibleThingsListener, Securi
 	public void getEvent(SensibleThingsNode source, String uci) {
 		System.out.println("[Bootstrap Node : GetEvent] " + uci + ": " + source);
 
-		platform.notify(source, uci, "World!");
-		
 	}
 
 	@Override
@@ -107,7 +99,6 @@ public class SecurityTestMainBootstrap implements SensibleThingsListener, Securi
 		
 	}
 	
-
 
 	@Override
 	public void receivedSecureMessageEvent(String message, String uci,

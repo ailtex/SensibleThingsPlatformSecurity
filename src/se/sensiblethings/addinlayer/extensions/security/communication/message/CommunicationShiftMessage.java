@@ -15,7 +15,7 @@ public class CommunicationShiftMessage extends SecureMessage{
 	
 	public CommunicationShiftMessage(String toUci, String fromUci, SensibleThingsNode toNode,
 			SensibleThingsNode fromNode) {
-		super(toUci, fromUci, fromNode, toNode);
+		super(toUci, fromUci, toNode, fromNode);
 	}
 
 	public String getSignal() {

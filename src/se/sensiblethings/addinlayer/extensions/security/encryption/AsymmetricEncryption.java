@@ -11,7 +11,10 @@ import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;   
 import java.security.spec.PKCS8EncodedKeySpec;   
 import java.security.spec.X509EncodedKeySpec;   
+
 import javax.crypto.Cipher;   
+
+import org.apache.commons.lang.ArrayUtils;
 
   
 
@@ -63,9 +66,13 @@ public class AsymmetricEncryption {
     public static byte[] encrypt(PublicKey publicKey, byte[] data, String algorithm) {   
         if (publicKey != null) {   
             try {   
+            	if(algorithm.equals("RSA")) algorithm = "RSA/ECB/PKCS1Padding";
+            	
                 Cipher cipher = Cipher.getInstance(algorithm);
                 cipher.init(Cipher.ENCRYPT_MODE, publicKey);
-                return cipher.doFinal(data);   
+
+                return cipher.doFinal(data);
+               
             } catch (Exception e) {   
                 e.printStackTrace();   
             }   
@@ -77,8 +84,11 @@ public class AsymmetricEncryption {
     public static byte[] decrypt(PrivateKey privateKey, byte[] raw, String algorithm) {   
         if (privateKey != null) {   
             try {   
+            	if(algorithm.equals("RSA")) algorithm = "RSA/ECB/PKCS1Padding";
+            	
             	Cipher cipher = Cipher.getInstance(algorithm);
                 cipher.init(Cipher.DECRYPT_MODE, privateKey);   
+                
                 return cipher.doFinal(raw);   
             } catch (Exception e) {   
                 e.printStackTrace();   

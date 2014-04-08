@@ -12,7 +12,7 @@ public class RegistrationRequestMessage extends SecureMessage{
 	
 	public RegistrationRequestMessage(String toUci, String fromUci, SensibleThingsNode toNode,
 			SensibleThingsNode fromNode){
-		super(toUci, fromUci, fromNode, toNode);
+		super(toUci, fromUci, toNode, fromNode);
 
 	}
 	

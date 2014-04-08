@@ -11,6 +11,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.Security;
 import java.security.SignatureException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
@@ -51,11 +52,13 @@ public class SecurityManager {
 	private PublicKey publicKey = null;
 	
 	private KeyStoreJCEKS keyStore = null;
-	private Map<String, Object> noncePool = new HashMap<String, Object>();
+	private Map<String, Object> noncePool = null;
 	private SecurityConfiguration config = null;
 	
 	public SecurityManager(SecurityConfiguration config){
 		this.config = config;
+		
+		noncePool = new HashMap<String, Object>();
 	}
 	
 	public void initializeKeyStore(String uci){
@@ -101,11 +104,14 @@ public class SecurityManager {
 	}
 	
 	public Object getFromNoncePool(String name){
-		if(noncePool.containsKey(name)){
-			return noncePool.get(name);
-		}else{
-			return null;
-		}
+		
+		return noncePool.get(name);
+		
+//		if(noncePool.containsKey(name)){
+//			return noncePool.get(name);
+//		}else{
+//			return null;
+//		}
 	}
 	
 	public boolean removeFromNoncePool(String name){
@@ -134,8 +140,13 @@ public class SecurityManager {
 	
 	
 	public boolean isRegisted(String bootstrapUci){
+		if(keyStore.getIssuredCertificate(bootstrapUci) == null){
+			System.out.println("[" + myUci + "]" + "No issuered Certificate !");
+			return false;
+		}
+		
 		return keyStore.hasCertificate(bootstrapUci) && 
-				keyStore.getIssuredCertificate(bootstrapUci).getIssuerX500Principal().getName().equals("CN="+bootstrapUci);
+				keyStore.getIssuredCertificate(bootstrapUci).getIssuerX500Principal().getName().equals(bootstrapUci);
 	}
 	
 	public String decapsulateSecureMessage(SecureMessage sm){
@@ -204,9 +215,11 @@ public class SecurityManager {
 	public boolean isCeritificateSigningRequestValid(
 		PKCS10CertificationRequest certRequest, String fromUci) {
 		
+		Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
 		// check the signature and the ID
 		try {
-			if (certRequest.verify("BC")
+			// verify the request using the BC provider
+			if (certRequest.verify()
 					&& certRequest.getCertificationRequestInfo().getSubject().equals(fromUci)) {
 				return true;
 			}
@@ -325,9 +338,6 @@ public class SecurityManager {
 	}
 	
 	public void storeCertificate(String uci, Certificate cert, String password){
-		// it may get collision or exception if the SecrekeyEntry with the same uci exist
-		// so here it adds the suffix with "/certificate" 
-		// uci = uci + "/certificate";
 		
 		try {
 			keyStore.storeCertificate(uci, cert, password.toCharArray());

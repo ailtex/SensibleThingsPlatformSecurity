@@ -336,7 +336,13 @@ public class KeyStoreJCEKS implements IKeyStore{
 	}
 	
 	public X509Certificate getIssuredCertificate(String alias){
-		return (X509Certificate) getCertificateChain(alias)[0];
+		Certificate[] chain = getCertificateChain(alias);
+		
+		if(chain != null){
+			return (X509Certificate) chain[0];
+		}else{
+			return null;
+		}
 	}
 	
 	
