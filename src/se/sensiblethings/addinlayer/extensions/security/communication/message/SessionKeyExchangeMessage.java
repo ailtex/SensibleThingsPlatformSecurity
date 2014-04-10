@@ -12,6 +12,7 @@ public class SessionKeyExchangeMessage extends SecureMessage{
 	private static final long serialVersionUID = -8794411419942450449L;
 		
 	private byte[] certificatePayload;
+	private byte[] secretKeyPayload;
 	
 	public SessionKeyExchangeMessage(String toUci, String fromUci, SensibleThingsNode toNode,
 			SensibleThingsNode fromNode) {
@@ -26,4 +27,12 @@ public class SessionKeyExchangeMessage extends SecureMessage{
 		this.certificatePayload = certificatePayload;
 	}
 
+	public byte[] getSecretKeyPayload() {
+		return secretKeyPayload;
+	}
+
+	public void setSecretKeyPayload(byte[] secretKeyPayload) {
+		this.secretKeyPayload = secretKeyPayload;
+	}
+	
 }

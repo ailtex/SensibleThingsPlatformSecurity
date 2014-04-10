@@ -30,6 +30,7 @@ import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
+import javax.crypto.spec.IvParameterSpec;
 
 import org.bouncycastle.crypto.tls.SecurityParameters;
 import org.bouncycastle.jce.PKCS10CertificationRequest;
@@ -139,19 +140,19 @@ public class SecurityManager {
 	}
 	
 	
-	public boolean isRegisted(String bootstrapUci){
-		if(keyStore.getIssuredCertificate(bootstrapUci) == null){
+	public boolean isRegisted(String myUci, String bootstrapUci){
+		if(keyStore.getIssuredCertificate(myUci) == null){
 			System.out.println("[" + myUci + "]" + "No issuered Certificate !");
 			return false;
 		}
 		
-		return keyStore.hasCertificate(bootstrapUci) && 
-				keyStore.getIssuredCertificate(bootstrapUci).getIssuerX500Principal().getName().equals(bootstrapUci);
+		return keyStore.getIssuredCertificate(myUci).getIssuerX500Principal().getName().equals("CN="+bootstrapUci);
 	}
 	
 	public String decapsulateSecureMessage(SecureMessage sm){
+		byte[] iv = symmetricDecryptIVparameter(sm.fromUci, sm.getIv());
 		byte[] payload = symmetricDecryptMessage(sm.fromUci, 
-				sm.getPayload(), config.getSymmetricAlgorithm());
+				sm.getPayload(), iv, config.getSymmetricMode());
 		
 		return new String(payload);
 	}
@@ -164,9 +165,14 @@ public class SecurityManager {
 			while(it.hasNext()){
 				SecureMessage sm = it.next();
 				byte[] message = sm.getPayload();
-				sm.setPayload(symmetricEncryptMessage(toUci, message, config.getSymmetricAlgorithm()));
-				sm.setSignature(this.signMessage(message, config.getSignatureAlgorithm()));
+				System.out.println("[Encapsulate secure message] " + new String(message));
+				
+				sm.setPayload(symmetricEncryptMessage(toUci, message, config.getSymmetricMode()));
+				sm.setSignature(signMessage(message, config.getSignatureAlgorithm()));
 				sm.setSignatureAlgorithm(config.getSignatureAlgorithm());
+				
+				byte[] iv = getIVparameter();
+				sm.setIv(symmetricEncryptIVParameter(toUci, iv));
 			}
 		}
 	}
@@ -194,7 +200,7 @@ public class SecurityManager {
 		// generate the self signed X509 v1 certificate
 		// setting the subject name of the certificate
 		// String subjectName = "CN=" + uci + ",OU=ComputerColleage,O=MIUN,C=Sweden";
-		String subjectName = uci;
+		String subjectName = "CN=" + uci;
 		
 		// set the life time to 1 year
 		Certificate cert = CertificateOperations.generateSelfSignedcertificate(subjectName, 
@@ -215,12 +221,14 @@ public class SecurityManager {
 	public boolean isCeritificateSigningRequestValid(
 		PKCS10CertificationRequest certRequest, String fromUci) {
 		
+		// add the BouncyCastleProvider
 		Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
+		
 		// check the signature and the ID
 		try {
 			// verify the request using the BC provider
 			if (certRequest.verify()
-					&& certRequest.getCertificationRequestInfo().getSubject().equals(fromUci)) {
+					&& certRequest.getCertificationRequestInfo().getSubject().toString().equals("CN="+fromUci)) {
 				return true;
 			}
 		} catch (InvalidKeyException | NoSuchAlgorithmException
@@ -317,7 +325,7 @@ public class SecurityManager {
 	
 	@SuppressWarnings("deprecation")
 	public PKCS10CertificationRequest getCertificateSigingRequest(String uci){
-		String subjectName = "CN=" + uci + ",OU=ComputerColleage,O=MIUN,C=Sweden";
+		String subjectName = "CN=" + uci;
 		
 		KeyPair keyPair = new KeyPair((PublicKey)keyStore.getPublicKey(uci), 
 									  (PrivateKey)keyStore.getPrivateKey(uci,  "password".toCharArray()));
@@ -457,17 +465,34 @@ public class SecurityManager {
 	 *                           Symmetric Encrypt Part
 	 ********************************************************************************/
 	
-	public String symmetricEncryptMessage(String toUci, String message, String algorithm){
-		
-		return new String(symmetricEncryptMessage(toUci, message.getBytes(), algorithm));
+	public byte[] symmetricEncryptIVParameter(String toUci, byte[] iv){
+		return symmetricEncryptMessage(toUci, iv, "AES/ECB/PKCS5Padding");
 	}
 	
-	public byte[] symmetricEncryptMessage(String toUci, byte[] message, String algorithm){
+	public byte[] symmetricDecryptIVparameter(String fromUci, byte[] raw){
+		return symmetricDecryptMessage(fromUci, raw, "AES/ECB/PKCS5Padding");
+	}
+	
+	public byte[] symmetricDecryptIVparameter(byte[] secretKey, byte[] raw){
+		return symmetricDecryptMessage(secretKey, raw, "AES/ECB/PKCS5Padding");
+	}
+	
+	
+	public byte[] getIVparameter(){
+		return SymmetricEncryption.getIVparameter().getIV();
+	}
+	
+	public String symmetricEncryptMessage(String toUci, String message, String algorithmModePadding){
+		
+		return new String(symmetricEncryptMessage(toUci, message.getBytes(), algorithmModePadding));
+	}
+	
+	public byte[] symmetricEncryptMessage(String toUci, byte[] message, String algorithmModePadding){
 		// symmetric encryption
 		SecretKey secretKey = (SecretKey) keyStore.getSecretKey(toUci, "password".toCharArray());
 		byte[] plainText = null;
 		try {
-			plainText = SymmetricEncryption.encrypt(secretKey, message, config.getSymmetricMode());
+			plainText = SymmetricEncryption.encrypt(secretKey, message, algorithmModePadding);
 			
 		} catch (InvalidKeyException | NoSuchAlgorithmException
 				| NoSuchPaddingException | IllegalBlockSizeException
@@ -478,17 +503,16 @@ public class SecurityManager {
 		return plainText;
 	}
 	
-	public String symmetricDecryptMessage(String fromUci, String message, String algorithm){
+	public String symmetricDecryptMessage(String fromUci, String message, String algorithmModePadding){
 		
-		return new String(symmetricDecryptMessage(fromUci, message.getBytes(), algorithm));
+		return new String(symmetricDecryptMessage(fromUci, message.getBytes(), algorithmModePadding));
 	}
 	
-	public byte[] symmetricDecryptMessage(String fromUci, byte[] message, String algorithm){
-		SecretKey secretKey = (SecretKey) keyStore.getSecretKey(fromUci, "password".toCharArray());
+	public byte[] symmetricDecryptMessage(SecretKey secretKey, byte[] message, String algorithmModePadding){
 		
 		byte[] plainText = null;
 		try {
-			plainText = SymmetricEncryption.decrypt(secretKey, message, config.getSymmetricMode());
+			plainText = SymmetricEncryption.decrypt(secretKey, message, algorithmModePadding);
 			
 		} catch (InvalidKeyException | NoSuchAlgorithmException
 				| NoSuchPaddingException | IllegalBlockSizeException
@@ -499,21 +523,17 @@ public class SecurityManager {
 		return plainText;
 	}
 	
-	public byte[] symmetricDecryptMessage(byte[] secretKey, byte[] message, String algorithm){
-		// load the secret key
-		SecretKey key = symmetricLoadKey(secretKey, algorithm);
+	public byte[] symmetricDecryptMessage(String fromUci, byte[] message, String algorithmModePadding){
+		SecretKey secretKey = (SecretKey) keyStore.getSecretKey(fromUci, "password".toCharArray());
 		
-		byte[] plainText = null;
-		try {
-			plainText = SymmetricEncryption.decrypt(key, message, config.getSymmetricMode());
-			
-		} catch (InvalidKeyException | NoSuchAlgorithmException
-				| NoSuchPaddingException | IllegalBlockSizeException
-				| BadPaddingException e2) {
-			e2.printStackTrace();
-		}
-
-		return plainText;
+		return symmetricDecryptMessage(secretKey, message, algorithmModePadding);
+	}
+		
+	public byte[] symmetricDecryptMessage(byte[] secretKey, byte[] message, String algorithmModePadding){
+		// load the secret key
+		SecretKey key = symmetricLoadKey(secretKey, algorithmModePadding.split("/")[0]);
+		
+		return symmetricDecryptMessage(key, message, algorithmModePadding);
 	}
 	
 	private SecretKey symmetricLoadKey(byte[] secretKey, String algorithm){
@@ -524,14 +544,41 @@ public class SecurityManager {
 		return key;
 	}
 	
-	public boolean generateSymmetricSecurityKey(String uci){
+	public byte[] symmetricDecryptMessage(SecretKey secretKey, byte[] message, byte[] iv, String algorithmModePadding){
+		
+		byte[] plainText = null;
+		try {
+			plainText = SymmetricEncryption.decrypt(secretKey, message, algorithmModePadding, new IvParameterSpec(iv));
+			
+		} catch (InvalidKeyException | NoSuchAlgorithmException
+				| NoSuchPaddingException | IllegalBlockSizeException
+				| BadPaddingException | InvalidAlgorithmParameterException e) {
+			e.printStackTrace();
+		}
+
+		return plainText;
+	}
+	
+	public byte[] symmetricDecryptMessage(String fromUci, byte[] message, byte[] iv, String algorithmModePadding){
+		SecretKey secretKey = (SecretKey) keyStore.getSecretKey(fromUci, "password".toCharArray());
+		
+		return symmetricDecryptMessage(secretKey, message, iv, algorithmModePadding);
+	}
+	
+	public byte[] symmetricDecryptMessage(byte[] secretKey, byte[] message, byte[] iv, String algorithmModePadding){
+		// load the secret key
+		SecretKey key = symmetricLoadKey(secretKey, algorithmModePadding.split("/")[0]);
+		
+		return symmetricDecryptMessage(key, message, iv, algorithmModePadding);
+	}
+	
+	public boolean generateSymmetricSecurityKey(String uci, String algorithm, int length){
 		
 		// generate the symmetric key
 		SecretKey secretKey = null;
 		
 		try {
-			secretKey = SymmetricEncryption.generateKey(config.getSymmetricAlgorithm(),  
-					config.getSymmetricKeyLength());
+			secretKey = SymmetricEncryption.generateKey(algorithm, length);
 			
 			// store the security key
 			storeSecretKey(uci, secretKey, "password");
@@ -558,7 +605,7 @@ public class SecurityManager {
 		SecretKey key = symmetricLoadKey(secretKey, algorithm);
 		storeSecretKey(uci, key, password);
 	}
-	
+		
 	public Key getSecretKey(String uci, char[] password) {
 
 		return keyStore.getSecretKey(uci, password);

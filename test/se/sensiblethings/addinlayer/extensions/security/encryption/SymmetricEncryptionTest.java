@@ -67,7 +67,7 @@ public class SymmetricEncryptionTest {
 			byte[] text = "LULU".getBytes();
 			byte[] cipherText1 = SymmetricEncryption.encrypt(secretKey, text, SymmetricEncryption.AES_CBC_PKCS5);
 			byte[] plainText1 = SymmetricEncryption.decrypt(secretKey, cipherText1, 
-					SymmetricEncryption.AES_CBC_PKCS5, SymmetricEncryption.initializationVector);
+					SymmetricEncryption.AES_CBC_PKCS5, SymmetricEncryption.getIVparameter());
 			
 			assertEquals("[Text encrypt]", new String(text), new String(plainText1));
 			
@@ -77,22 +77,22 @@ public class SymmetricEncryptionTest {
 			
 			byte[] cipherText3 = SymmetricEncryption.encrypt(secretKey, text, SymmetricEncryption.AES_CFB_PKCS5);
 			byte[] plainText3 = SymmetricEncryption.decrypt(secretKey, cipherText3, 
-					SymmetricEncryption.AES_CFB_PKCS5, SymmetricEncryption.initializationVector);
+					SymmetricEncryption.AES_CFB_PKCS5, SymmetricEncryption.getIVparameter());
 			assertEquals("[Text encrypt]", new String(text), new String(plainText3));
 			
 			byte[] cipherText4 = SymmetricEncryption.encrypt(secretKey, text, SymmetricEncryption.AES_OFB_PKCS5);
 			byte[] plainText4 = SymmetricEncryption.decrypt(secretKey, cipherText4, 
-					SymmetricEncryption.AES_OFB_PKCS5, SymmetricEncryption.initializationVector);
+					SymmetricEncryption.AES_OFB_PKCS5, SymmetricEncryption.getIVparameter());
 			assertEquals("[Text encrypt]", new String(text), new String(plainText4));
 			
 			byte[] cipherText5 = SymmetricEncryption.encrypt(secretKey, text, SymmetricEncryption.AES_CTR_PKCS5);
 			byte[] plainText5 = SymmetricEncryption.decrypt(secretKey, cipherText5, 
-					SymmetricEncryption.AES_CTR_PKCS5, SymmetricEncryption.initializationVector);
+					SymmetricEncryption.AES_CTR_PKCS5, SymmetricEncryption.getIVparameter());
 			assertEquals("[Text encrypt]", new String(text), new String(plainText5));
 			
 			byte[] cipherText6 = SymmetricEncryption.encrypt(secretKey, text, SymmetricEncryption.AES_PCBC_PKCS5);
 			byte[] plainText6 = SymmetricEncryption.decrypt(secretKey, cipherText6, 
-					SymmetricEncryption.AES_PCBC_PKCS5, SymmetricEncryption.initializationVector);
+					SymmetricEncryption.AES_PCBC_PKCS5, SymmetricEncryption.getIVparameter());
 			assertEquals("[Text encrypt]", new String(text), new String(plainText6));
 			
 		} catch (NoSuchAlgorithmException | InvalidKeyException | NoSuchPaddingException |

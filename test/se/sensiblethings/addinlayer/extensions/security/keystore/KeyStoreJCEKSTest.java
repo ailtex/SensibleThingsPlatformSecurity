@@ -209,7 +209,7 @@ public class KeyStoreJCEKSTest {
 			start = System.currentTimeMillis();
 			cipherText = SymmetricEncryption.encrypt(secretKey, text, SymmetricEncryption.AES_CBC_PKCS5);
 			plainText = SymmetricEncryption.decrypt(secretKey, cipherText, SymmetricEncryption.AES_CBC_PKCS5,
-					SymmetricEncryption.initializationVector);
+					SymmetricEncryption.getIVparameter());
 			
 			end = System.currentTimeMillis();
 			System.out.println("CBC = " + (end - start));
@@ -221,7 +221,7 @@ public class KeyStoreJCEKSTest {
 			start = System.currentTimeMillis();
 			cipherText = SymmetricEncryption.encrypt(secretKey, text, "AES/CTR/PKCS5Padding");
 			plainText = SymmetricEncryption.decrypt(secretKey, cipherText, "AES/CTR/PKCS5Padding",
-					SymmetricEncryption.initializationVector);
+					SymmetricEncryption.getIVparameter());
 			
 			end = System.currentTimeMillis();
 			System.out.println("CTR = " + (end - start));
@@ -233,7 +233,7 @@ public class KeyStoreJCEKSTest {
 			start = System.currentTimeMillis();
 			cipherText = SymmetricEncryption.encrypt(secretKey, text, "AES/CFB/PKCS5Padding");
 			plainText = SymmetricEncryption.decrypt(secretKey, cipherText, "AES/CFB/PKCS5Padding",
-					SymmetricEncryption.initializationVector);
+					SymmetricEncryption.getIVparameter());
 			
 			end = System.currentTimeMillis();
 			System.out.println("CFB = " + (end - start));
@@ -245,7 +245,7 @@ public class KeyStoreJCEKSTest {
 			start = System.currentTimeMillis();
 			cipherText = SymmetricEncryption.encrypt(secretKey, text, "AES/OFB/PKCS5Padding");
 			plainText = SymmetricEncryption.decrypt(secretKey, cipherText, "AES/OFB/PKCS5Padding",
-					SymmetricEncryption.initializationVector);
+					SymmetricEncryption.getIVparameter());
 			
 			end = System.currentTimeMillis();
 			System.out.println("OFB = " + (end - start));
@@ -257,7 +257,7 @@ public class KeyStoreJCEKSTest {
 			start = System.currentTimeMillis();
 			cipherText = SymmetricEncryption.encrypt(secretKey, text, "AES/PCBC/PKCS5Padding");
 		    plainText = SymmetricEncryption.decrypt(secretKey, cipherText, "AES/PCBC/PKCS5Padding",
-			SymmetricEncryption.initializationVector);
+		    		SymmetricEncryption.getIVparameter());
 				
 		    end = System.currentTimeMillis();
 			System.out.println("PCBC = " + (end - start));

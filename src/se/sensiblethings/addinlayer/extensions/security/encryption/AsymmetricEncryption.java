@@ -66,7 +66,7 @@ public class AsymmetricEncryption {
     public static byte[] encrypt(PublicKey publicKey, byte[] data, String algorithm) {   
         if (publicKey != null) {   
             try {   
-            	if(algorithm.equals("RSA")) algorithm = "RSA/ECB/PKCS1Padding";
+            	//if(algorithm.equals("RSA")) algorithm = "RSA/ECB/PKCS1Padding";
             	
                 Cipher cipher = Cipher.getInstance(algorithm);
                 cipher.init(Cipher.ENCRYPT_MODE, publicKey);
@@ -84,7 +84,7 @@ public class AsymmetricEncryption {
     public static byte[] decrypt(PrivateKey privateKey, byte[] raw, String algorithm) {   
         if (privateKey != null) {   
             try {   
-            	if(algorithm.equals("RSA")) algorithm = "RSA/ECB/PKCS1Padding";
+            	//if(algorithm.equals("RSA")) algorithm = "RSA/ECB/PKCS1Padding";
             	
             	Cipher cipher = Cipher.getInstance(algorithm);
                 cipher.init(Cipher.DECRYPT_MODE, privateKey);   

@@ -96,10 +96,10 @@ public class CertificateOperations {
 		// STREET Street
 		// T Title
 		// 
-		
-		if(subjectName != null)
+
+		if(subjectName == null)
 			subjectName = "CN="+ subjectName + ",OU=ComputerColleage,O=MIUN,C=Sweden";
-		
+
 		certGen.setIssuerDN(new X500Principal(subjectName));
 		
 	    certGen.setNotBefore(new Date(System.currentTimeMillis() )); // time from which certificate is valid

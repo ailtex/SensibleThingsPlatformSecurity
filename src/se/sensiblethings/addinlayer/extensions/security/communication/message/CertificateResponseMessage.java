@@ -14,9 +14,6 @@ public class CertificateResponseMessage extends SecureMessage{
 	// contain the session symmetric key encrypt by the public key of applicant
 	private byte[] encryptSecretKey = null;
 	
-	public String fromUci;
-	public String toUci;
-	
 	public CertificateResponseMessage(String toUci, String fromUci, SensibleThingsNode toNode,
 			SensibleThingsNode fromNode) {
 		super(toUci, fromUci, toNode, fromNode);

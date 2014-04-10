@@ -35,7 +35,7 @@ public class SymmetricEncryption {
 	public static final String AES_PCBC_PKCS5 = "AES/PCBC/PKCS5Padding";
 	public static final String AES_CTR_PKCS5 = "AES/CTR/PKCS5Padding";
 	
-	public static IvParameterSpec initializationVector = null;
+	private static IvParameterSpec initializationVector = null;
 	
 	public static SecretKey generateKey(String algorithm, int keyLength) throws NoSuchAlgorithmException{
 		KeyGenerator keyGenerator = KeyGenerator.getInstance(algorithm);
@@ -128,5 +128,7 @@ public class SymmetricEncryption {
         return new IvParameterSpec(ivBytes);
 	}
 	
-	
+	public static IvParameterSpec getIVparameter(){
+		return initializationVector;
+	}
 }

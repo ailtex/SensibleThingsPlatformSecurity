@@ -84,6 +84,13 @@ public class SecurityTestMainNode implements SensibleThingsListener, SecurityLis
 	public void resolveResponse(String uci, SensibleThingsNode node) {
 		System.out.println("[Node#1 : ResolveResponse] " + uci + ": " + node);
 		//platform.notify(node, uci, "Hello World!");
+		
+		try {
+			Thread.sleep(1000);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		secureExt.sendSecureMassage("Hello world", uci, node);
 	}
 

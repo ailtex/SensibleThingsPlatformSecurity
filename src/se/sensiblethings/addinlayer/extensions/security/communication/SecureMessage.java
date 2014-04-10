@@ -10,6 +10,8 @@ public class SecureMessage extends Message{
 	
 	private byte[] payload;
 	private byte[] signature;
+	// initialization vector for the block encryption
+	private byte[] iv;
 	private String signatureAlgorithm;
 	
 	
@@ -44,6 +46,13 @@ public class SecureMessage extends Message{
 	public void setSignatureAlgorithm(String signatureAlgorithm) {
 		this.signatureAlgorithm = signatureAlgorithm;
 	}
-	
+
+	public byte[] getIv() {
+		return iv;
+	}
+
+	public void setIv(byte[] iv) {
+		this.iv = iv;
+	}
 	
 }

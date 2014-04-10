@@ -14,6 +14,7 @@ public class CertificatePayload extends MessagePayload{
 	
 	private Certificate cert = null;
 	
+	
 	public CertificatePayload(String fromUci, String toUci) {
 		super(fromUci, toUci);
 	}
@@ -25,5 +26,7 @@ public class CertificatePayload extends MessagePayload{
 	public void setCert(Certificate cert) {
 		this.cert = cert;
 	}
+
+
 	
 }
