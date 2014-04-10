@@ -54,11 +54,12 @@ public class SecurityTestMainNode implements SensibleThingsListener, SecurityLis
 		try {	    	
 			System.out.println("[Node#1] Start to Register...!");
 			
-			secureExt.securityRegister("sensiblethings@miun.se/node#1");
+			secureExt.securityRegister(myUci);
 			
-			// platform.resolve();
+			Thread.sleep(10000);
+			
+			platform.resolve(myUci);
 			platform.resolve("sensiblethings@miun.se/bootstrap");
-			
 			
 	        System.out.println("Press any key to shut down");
 	        BufferedReader in = new BufferedReader(new InputStreamReader(System.in));    	

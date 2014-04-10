@@ -64,6 +64,9 @@ public class SecurityTestMainBootstrap implements SensibleThingsListener, Securi
     		
     		System.out.println("[Bootstrap Node] Security Registering Successfully !");
     		
+    		
+    		platform.resolve(myUci);
+    		
 	        System.out.println("Press any key to shut down");
 	        BufferedReader in = new BufferedReader(new InputStreamReader(System.in));    	
 			in.readLine();

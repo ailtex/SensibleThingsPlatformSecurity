@@ -101,6 +101,7 @@ public class SecurityCommunication {
 			e.printStackTrace();
 		}
 		*/
+		
 		transformCommunication("SSL");
 		
 	}
@@ -673,7 +674,6 @@ public class SecurityCommunication {
 			return;
 		}
 		
-		System.out.println("[Handle Certificate ExchangeMessage] Certificate: " + cert);
 		
 		// verify the certificate
 		if (securityManager.isCertificateValid(cert, cxm.fromUci)) {
@@ -774,36 +774,68 @@ public class SecurityCommunication {
 		System.out.println("[" + securityManager.getMyUci() + 
 				" : Communication] communication type shift to "+ communicationType + " mode");
 		
-//		if(communicationType.equals("SSL")){
-//			
-//			SslCommunication.initCommunicationPort = communication.getLocalSensibleThingsNode().getPort();
-//			platform.changeCommunicationTo(communication.SSL);
-//			
-////			if(platform.isBehindNat()){
-////				System.out.println("[System] Proxy SSL");
-////				platform.changeCommunicationTo(communication.PROXY_SSL);
-////			}else{
-////				// SslCommunication.initCommunicationPort = 9009;
-////				platform.changeCommunicationTo(communication.SSL);
-////			}
-//			
-//			
-//		}else if(communicationType.equals("RUDP")){
-//			RUDPCommunication.initCommunicationPort = communication.getLocalSensibleThingsNode().getPort();
-//			platform.changeCommunicationTo(communication.RUDP);
-//			
-////			if(platform.isBehindNat()){
-////				platform.changeCommunicationTo(communication.PROXY_RUDP);
-////			}else{
-////				platform.changeCommunicationTo(communication.RUDP);
-////			}
-//		}
-//		
-//		// this.core = platform.getDisseminationCore();
-//		// this.communication = core.getCommunication();
-//		
-//		System.out.println("[" + securityManager.getMyUci() + 
-//				" : Communication] " + communication.getLocalSensibleThingsNode().getPort());
+		try {
+			Thread.sleep(1000);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		Communication origin = communication;
+		
+		if(communicationType.equals("SSL")){
+			
+			SslCommunication.initCommunicationPort = communication.getLocalSensibleThingsNode().getPort();
+			
+			Class<?> communicationLoader;
+			try {
+				communicationLoader = Class.forName(Communication.SSL);
+				communication = (Communication) communicationLoader.newInstance();
+			} catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+			
+			communication.setMessageListeners(origin.getMessageListeners()); 
+			
+			
+//			if(platform.isBehindNat()){
+//				System.out.println("[System] Proxy SSL");
+//				platform.changeCommunicationTo(communication.PROXY_SSL);
+//			}else{
+//				// SslCommunication.initCommunicationPort = 9009;
+//				platform.changeCommunicationTo(communication.SSL);
+//			}
+			
+			
+		}else if(communicationType.equals("RUDP")){
+			RUDPCommunication.initCommunicationPort = communication.getLocalSensibleThingsNode().getPort();
+			
+			Class<?> communicationLoader;
+			try {
+				communicationLoader = Class.forName(Communication.RUDP);
+				communication = (Communication) communicationLoader.newInstance();
+			} catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+			communication.setMessageListeners(origin.getMessageListeners()); 
+			
+//			if(platform.isBehindNat()){
+//				platform.changeCommunicationTo(communication.PROXY_RUDP);
+//			}else{
+//				platform.changeCommunicationTo(communication.RUDP);
+//			}
+		}
+		
+		origin.shutdown();
+		System.out.println("[Communication] shutdown !");
+		
+		System.out.println("[" + securityManager.getMyUci() + 
+				" : Communication] port = " + communication.getLocalSensibleThingsNode().getPort());
+
 	}
 	
 	
