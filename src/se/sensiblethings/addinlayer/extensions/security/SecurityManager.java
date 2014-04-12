@@ -165,7 +165,7 @@ public class SecurityManager {
 			while(it.hasNext()){
 				SecureMessage sm = it.next();
 				byte[] message = sm.getPayload();
-				System.out.println("[Encapsulate secure message] " + new String(message));
+//				System.out.println("[Encapsulate secure message] " + new String(message));
 				
 				sm.setPayload(symmetricEncryptMessage(toUci, message, config.getSymmetricMode()));
 				sm.setSignature(signMessage(message, config.getSignatureAlgorithm()));

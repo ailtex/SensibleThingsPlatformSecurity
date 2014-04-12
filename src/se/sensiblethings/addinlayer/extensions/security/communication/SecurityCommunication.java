@@ -123,7 +123,7 @@ public class SecurityCommunication {
 	 * @param fromUci itself uci that will be registered
 	 */
 	public void register(String toUci, SensibleThingsNode node){
-		System.out.println("[Register] " + securityManager.getMyUci() + " --> " + toUci);
+//		System.out.println("[Register] " + securityManager.getMyUci() + " --> " + toUci);
 		
 		RegistrationRequestMessage message = new RegistrationRequestMessage(toUci, securityManager.getMyUci(), 
 				node, communication.getLocalSensibleThingsNode());
@@ -152,7 +152,7 @@ public class SecurityCommunication {
 	public void handleRegistrationRequestMessage(
 			RegistrationRequestMessage rrm) {
 		
-		System.out.println("[Handle Registration Request Message] " + " from "+ rrm.fromUci);
+//		System.out.println("[Handle Registration Request Message] " + " from "+ rrm.fromUci);
 		
 		RegistrationResponseMessage registrationResponseMessage = 
 				new RegistrationResponseMessage(rrm.fromUci, securityManager.getMyUci(), 
@@ -183,7 +183,7 @@ public class SecurityCommunication {
 	 */
 	public void handleRegistrationResponseMessage(
 			RegistrationResponseMessage rrm) {
-		System.out.println("[Handle Registration Response Message ]" + " from " + rrm.fromUci);
+//		System.out.println("[Handle Registration Response Message ]" + " from " + rrm.fromUci);
 		
 	  	// verify the signature with the given certificate from bootstrap
 		if(securityManager.verifySignature((byte[])securityManager.getFromNoncePool("RegistrationRequest"), 
@@ -251,7 +251,7 @@ public class SecurityCommunication {
 	 * @param crm
 	 */
 	public void handleCertificateRequestMessage(CertificateRequestMessage crm) {
-		System.out.println("[Handle Certificate Request Message ]" + " from " + crm.fromUci);
+//		System.out.println("[Handle Certificate Request Message ]" + " from " + crm.fromUci);
 		
 //		byte[] cipherText = crm.getPayload();
 		
@@ -327,7 +327,7 @@ public class SecurityCommunication {
 	 */
 	public void handleCertificateResponseMessage(
 			CertificateResponseMessage crm) {
-		System.out.println("[Handle Certificate Response Message ]" + " from " + crm.fromUci + " to " + crm.toUci);
+//		System.out.println("[Handle Certificate Response Message ]" + " from " + crm.fromUci + " to " + crm.toUci);
 		
 		byte[] encryptSecretKey = crm.getEncryptSecretKey();
 		// decrypt the secret key
@@ -388,7 +388,7 @@ public class SecurityCommunication {
 	public void handleCertificateAcceptedResponseMessage(
 			CertificateAcceptedResponseMessage carm) {
 		
-		System.out.println("[Handle Certificate Accepted Response Message ]" + " from " + carm.fromUci);
+//		System.out.println("[Handle Certificate Accepted Response Message ]" + " from " + carm.fromUci);
 		
 		byte[] iv = securityManager.symmetricDecryptIVparameter(carm.fromUci, carm.getIv());
 		
@@ -760,11 +760,11 @@ public class SecurityCommunication {
 				sendMessage(it.next());
 				
 				// let the sender wait every 20ms 
-				try {
-					Thread.sleep(20);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
+//				try {
+//					Thread.sleep(20);
+//				} catch (InterruptedException e) {
+//					e.printStackTrace();
+//				}
 			}
 			postOffice.get(toUci).removeAllElements();
 		}
@@ -772,7 +772,7 @@ public class SecurityCommunication {
 	
 	private void transformCommunication(String communicationType){
 		System.out.println("[" + securityManager.getMyUci() + 
-				" : Communication] communication type shift to "+ communicationType + " mode");
+				" : Communication] communication type shift from "+ communication +  " to "+ communicationType + " mode");
 		
 		try {
 			Thread.sleep(1000);
@@ -808,6 +808,8 @@ public class SecurityCommunication {
 //				platform.changeCommunicationTo(communication.SSL);
 //			}
 			
+			origin.shutdown();
+			System.out.println("[Communication] shutdown !");
 			
 		}else if(communicationType.equals("RUDP")){
 			RUDPCommunication.initCommunicationPort = communication.getLocalSensibleThingsNode().getPort();
@@ -830,12 +832,13 @@ public class SecurityCommunication {
 //			}
 		}
 		
-		origin.shutdown();
-		System.out.println("[Communication] shutdown !");
+		// reset the communication in lookup service
+		core.getLookupService().setCommunication(communication);
 		
+//		System.out.println("[" + securityManager.getMyUci() + 
+//				" : Communication] port = " + communication.getLocalSensibleThingsNode().getPort());
 		System.out.println("[" + securityManager.getMyUci() + 
-				" : Communication] port = " + communication.getLocalSensibleThingsNode().getPort());
-
+				" : Communication] communication shift to " + communication );
 	}
 	
 	

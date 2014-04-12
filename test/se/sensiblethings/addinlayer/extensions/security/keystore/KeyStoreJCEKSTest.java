@@ -380,7 +380,7 @@ public class KeyStoreJCEKSTest {
 			KeyPair keyPair = AsymmetricEncryption.generateKey("RSA", 1024);
 			Certificate cert = CertificateOperations.generateSelfSignedcertificate("CN="+uci, keyPair, 1000000);
 		
-			keyStore.storeCertificate(uci, cert, password);
+			// keyStore.storeCertificate(uci, cert, password);
 			System.out.println(keyStore.hasCertificate(uci));
 			
 			//System.out.println("[Certificate] " + keyStore.getCreationData(uci));

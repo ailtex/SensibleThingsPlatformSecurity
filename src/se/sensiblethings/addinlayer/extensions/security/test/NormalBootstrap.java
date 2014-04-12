@@ -5,12 +5,7 @@ import java.io.File;
 import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
 import java.util.Random;
-import java.util.Vector;
 
 import org.bouncycastle.util.encoders.Base64;
 
@@ -27,99 +22,81 @@ import se.sensiblethings.interfacelayer.SensibleThingsListener;
 import se.sensiblethings.interfacelayer.SensibleThingsNode;
 import se.sensiblethings.interfacelayer.SensibleThingsPlatform;
 
-
-
-
-public class SecurityTestMainBootstrap implements SensibleThingsListener, SecurityListener{
+public class NormalBootstrap implements SensibleThingsListener, Runnable{
 	
 	SensibleThingsPlatform platform = null;
-	SecurityExtension secureExt = null;
 	
 	final static String myUci = "sensiblethings@miun.se/bootstrap";
-	int messageLength = 64;
+	int messageLength;
 	
 	public static void main(String arg[]){
-		SecurityTestMainBootstrap application = new SecurityTestMainBootstrap();
+		NormalBootstrap application = new NormalBootstrap(64);
 		application.run();
 	}
 	
-	public SecurityTestMainBootstrap(){
+	
+	public NormalBootstrap(int messageLength){
+		this.messageLength = messageLength;
 		
-    	//Create the platform itself with a SensibleThingsListener
-		
+		//Create the platform itself with a SensibleThingsListener
 		KelipsLookup.bootstrap = true;
 		KelipsLookup.bootstrapIp = getLocalHostAddress();
 		
-    	RUDPCommunication.initCommunicationPort = 9009;
-    	platform = new SensibleThingsPlatform(LookupService.KELIPS, Communication.RUDP, this);
-    	
-    	AddInManager addInManager = platform.getAddInManager();
-    	
-    	secureExt = new SecurityExtension(this, new SecurityConfiguration("config/SecurityConfiguration.xml", 1));
-    	addInManager.loadAddIn(secureExt);
-    	
+		SslCommunication.initCommunicationPort = 9009;
+		platform = new SensibleThingsPlatform(LookupService.KELIPS, Communication.SSL, this);
+		
 	}
 	
+	@Override
 	public void run(){
     	try {	    	    		
     		System.out.println("[Bootstrap Node] booted! ");
-
-    		// platform.register(myUci);
-    		secureExt.securityRegister(myUci);
     		
-    		System.out.println("[Bootstrap Node] Security Registering Successfully !");
+    		platform.register(myUci);
     		
+    		//platform.resolve(myUci);
     		
-//			// when jvm exist, delete the keyStore file
-//			File keystore = new File("resources/sensiblethings@miun.se_bootstrap_KeyStore.db");
-//			keystore.deleteOnExit();
-			
-	        System.out.println("Press any key to shut down");
-	        BufferedReader in = new BufferedReader(new InputStreamReader(System.in));    	
-			in.readLine();
-			
-			//Shutdown all background tasks
-			platform.shutdown();
-			
-
+//	        System.out.println("Press any key to shut down");
+//	        BufferedReader in = new BufferedReader(new InputStreamReader(System.in));    	
+//			in.readLine();
+//			
+//			//Shutdown all background tasks
+//			platform.shutdown();
 			
 		} catch (Exception e) {
 			e.printStackTrace();
 		}    	
     }
+	
+	public void shutdown(){
+		platform.shutdown();
+	}
 
 	@Override
-	public void getResponse(String uci, String value, SensibleThingsNode fromNode) {
-		System.out.println("[Bootstrap Node : GetResponse] " + uci + ": " + fromNode + " : " + value);
+	public void getResponse(String uci, String value,
+			SensibleThingsNode fromNode) {
+		// System.out.println("[Bootstrap Node : GetResponse] " + uci + ": " + fromNode + " : " + value);
 		
+		String message = generateMessage(messageLength);
+		platform.notify(fromNode, uci, message);
 	}
 
 	@Override
 	public void resolveResponse(String uci, SensibleThingsNode node) {
 		System.out.println("[Bootstrap Node : ResolveResponse] " + uci + ": " + node);
+		
 	}
 
 	@Override
 	public void getEvent(SensibleThingsNode source, String uci) {
 		System.out.println("[Bootstrap Node : GetEvent] " + uci + ": " + source);
-
+		
 	}
 
 	@Override
 	public void setEvent(SensibleThingsNode fromNode, String uci, String value) {
 		System.out.println("[Bootstrap Node : SetEvent] " + uci + ": " + value + " : " + fromNode);
 		
-	}
-	
-
-	@Override
-	public void receivedSecureMessageEvent(String message, String uci,
-			SensibleThingsNode fromNode) {
-//		System.out.println("[Bootstrap Node : Received SecureMessage Event] " + uci + ": " + message + " : " + fromNode);
-		
-		String value = generateMessage(messageLength);
-		
-		secureExt.sendSecureMassage(value, uci, fromNode);
 	}
 	
 	/*
@@ -137,7 +114,7 @@ public class SecurityTestMainBootstrap implements SensibleThingsListener, Securi
     	
 		return address.getHostAddress();
 	}
-
+    
     private String generateMessage(int length){
     	Random random = new Random(System.currentTimeMillis());
     	byte[] message = new byte[length];
@@ -146,4 +123,3 @@ public class SecurityTestMainBootstrap implements SensibleThingsListener, Securi
     	return Base64.toBase64String(message);
     }
 }
-
