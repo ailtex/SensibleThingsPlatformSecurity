@@ -20,6 +20,7 @@ public class SymmetricEncryption {
 	public static final String AES = "AES";
 	public static final String DES = "DES";
 	public static final String DESede = "DESede";
+	public static final String RC4 = "ARCFOUR";
 	
 	// These are  encryption modes with different same padding
 	public static final String DES_ECB_PKCS5 = "DES/ECB/PKCS5Padding";
@@ -54,12 +55,18 @@ public class SymmetricEncryption {
 	NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, 
 	BadPaddingException, InvalidAlgorithmParameterException{
 		
-		String mode = algorithmModePadding.split("/")[1];
+		String mode = null;
+		if(algorithmModePadding.contains("/")){
+			 mode = algorithmModePadding.split("/")[1];
+		}else{
+			mode = algorithmModePadding;
+		}
 		
-		if(mode.equalsIgnoreCase("ECB")){
+		if(mode.equalsIgnoreCase("ECB") ||
+				mode.equalsIgnoreCase("ARCFOUR")){
+			
 			Cipher cipher = Cipher.getInstance(algorithmModePadding);
 			cipher.init(Cipher.ENCRYPT_MODE, key, new SecureRandom());
-			//cipher.init(Cipher.ENCRYPT_MODE, key);
 			return cipher.doFinal(data);
 			
 		}else if(mode.equalsIgnoreCase("CBC") || 
@@ -84,12 +91,18 @@ public class SymmetricEncryption {
 	public static byte[] decrypt(SecretKey key, byte[] data, String algorithmModePadding) throws 
 	NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
 		
-		String mode = algorithmModePadding.split("/")[1];
+		String mode = null;
+		if(algorithmModePadding.contains("/")){
+			 mode = algorithmModePadding.split("/")[1];
+		}else{
+			mode = algorithmModePadding;
+		}
 		
-		if(mode.equalsIgnoreCase("ECB")){
+		if(mode.equalsIgnoreCase("ECB") ||
+				mode.equalsIgnoreCase("ARCFOUR")){
+			
 			Cipher cipher = Cipher.getInstance(algorithmModePadding);
 			cipher.init(Cipher.DECRYPT_MODE, key, new SecureRandom());
-			//cipher.init(Cipher.ENCRYPT_MODE, key);
 			return cipher.doFinal(data);
 			
 		}else{

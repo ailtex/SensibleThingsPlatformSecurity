@@ -95,6 +95,7 @@ public class SymmetricEncryptionTest {
 					SymmetricEncryption.AES_PCBC_PKCS5, SymmetricEncryption.getIVparameter());
 			assertEquals("[Text encrypt]", new String(text), new String(plainText6));
 			
+			
 		} catch (NoSuchAlgorithmException | InvalidKeyException | NoSuchPaddingException |
 				IllegalBlockSizeException | BadPaddingException | InvalidAlgorithmParameterException e) {
 			// TODO Auto-generated catch block
@@ -106,6 +107,22 @@ public class SymmetricEncryptionTest {
 	@Test
 	public void testDecryptSecretKeyByteArrayString() {
 		// same as encrypt test
+		
+		try {
+			SecretKey secretKey = SymmetricEncryption.generateKey("ARCFOUR", 128);
+			byte[] text = "LULU".getBytes();
+			byte[] cipherText1 = SymmetricEncryption.encrypt(secretKey, text, SymmetricEncryption.RC4);
+			byte[] plainText1 = SymmetricEncryption.decrypt(secretKey, cipherText1, 
+					SymmetricEncryption.RC4);
+			System.out.println("[RC4]" + new String(plainText1));
+			
+			assertEquals("[Text encrypt]", new String(text), new String(plainText1));
+			
+		} catch (NoSuchAlgorithmException | InvalidKeyException | NoSuchPaddingException |
+				IllegalBlockSizeException | BadPaddingException | InvalidAlgorithmParameterException e) {
+			e.printStackTrace();
+		}
+		
 	}
 
 

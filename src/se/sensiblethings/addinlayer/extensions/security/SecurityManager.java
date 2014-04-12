@@ -150,10 +150,18 @@ public class SecurityManager {
 	}
 	
 	public String decapsulateSecureMessage(SecureMessage sm){
-		byte[] iv = symmetricDecryptIVparameter(sm.fromUci, sm.getIv());
-		byte[] payload = symmetricDecryptMessage(sm.fromUci, 
-				sm.getPayload(), iv, config.getSymmetricMode());
+		byte[] iv = null;
+		byte[] payload = null;
 		
+		if( sm.getIv() != null){
+			iv = symmetricDecryptIVparameter(sm.fromUci, sm.getIv());
+			payload = symmetricDecryptMessage(sm.fromUci, 
+					sm.getPayload(), iv, config.getSymmetricMode());
+		}else{
+			payload = symmetricDecryptMessage(sm.fromUci, 
+					sm.getPayload(), config.getSymmetricMode());
+		}
+			
 		return new String(payload);
 	}
 	
@@ -161,9 +169,12 @@ public class SecurityManager {
 	
 	public void encapsulateSecueMessage(Map<String, Vector<SecureMessage>> postOffice, String toUci) {
 		if(postOffice.containsKey(toUci)){
-			Iterator<SecureMessage> it = postOffice.get(toUci).iterator();
-			while(it.hasNext()){
-				SecureMessage sm = it.next();
+			Vector<SecureMessage> msgs = postOffice.get(toUci);
+			
+			for(int i = 0 ; i < msgs.size(); i++){
+				SecureMessage sm = msgs.get(i);
+				msgs.remove(i);
+				
 				byte[] message = sm.getPayload();
 //				System.out.println("[Encapsulate secure message] " + new String(message));
 				
@@ -172,8 +183,27 @@ public class SecurityManager {
 				sm.setSignatureAlgorithm(config.getSignatureAlgorithm());
 				
 				byte[] iv = getIVparameter();
-				sm.setIv(symmetricEncryptIVParameter(toUci, iv));
+				if(iv != null){
+					sm.setIv(symmetricEncryptIVParameter(toUci, iv));
+				}
+				
+				msgs.add(sm);
 			}
+			
+//			Iterator<SecureMessage> it = postOffice.get(toUci).iterator();
+//			while(it.hasNext()){
+//				SecureMessage sm = it.next();
+//				byte[] message = sm.getPayload();
+//			
+//				sm.setPayload(symmetricEncryptMessage(toUci, message, config.getSymmetricMode()));
+//				sm.setSignature(signMessage(message, config.getSignatureAlgorithm()));
+//				sm.setSignatureAlgorithm(config.getSignatureAlgorithm());
+//				
+//				byte[] iv = getIVparameter();
+//				if(iv != null){
+//					sm.setIv(symmetricEncryptIVParameter(toUci, iv));
+//				}
+//			}
 		}
 	}
 	
@@ -479,6 +509,8 @@ public class SecurityManager {
 	
 	
 	public byte[] getIVparameter(){
+		if(SymmetricEncryption.getIVparameter() == null)
+			return null;
 		return SymmetricEncryption.getIVparameter().getIV();
 	}
 	

@@ -55,7 +55,7 @@ public class SecurityTestMainBootstrap implements SensibleThingsListener, Securi
     	
     	AddInManager addInManager = platform.getAddInManager();
     	
-    	secureExt = new SecurityExtension(this, new SecurityConfiguration("config/SecurityConfiguration.xml", 1));
+    	secureExt = new SecurityExtension(this, new SecurityConfiguration("config/SecurityConfiguration.xml", 2));
     	addInManager.loadAddIn(secureExt);
     	
 	}

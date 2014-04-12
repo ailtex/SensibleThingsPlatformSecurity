@@ -31,7 +31,7 @@ public class NormalNode implements SensibleThingsListener, Runnable{
 	int count = 0;
 	
 	public static void main(String arg[]){
-		NormalNode application = new NormalNode(64, 100);
+		NormalNode application = new NormalNode(64, 10);
 		application.run();
 	}
 

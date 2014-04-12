@@ -28,7 +28,7 @@ public class SecurityTestMainNode implements SensibleThingsListener,
 
 	final static String myUci = "sensiblethings@miun.se/node#1";
 	int messageLength = 64;
-	int messageCnt = 100;
+	int messageCnt = 10;
 
 	long[] timestamp;
 	int count = 0;
@@ -54,7 +54,7 @@ public class SecurityTestMainNode implements SensibleThingsListener,
 		AddInManager addInManager = platform.getAddInManager();
 
 		secureExt = new SecurityExtension(this, new SecurityConfiguration(
-				"config/SecurityConfiguration.xml", 1));
+				"config/SecurityConfiguration.xml", 2));
 		addInManager.loadAddIn(secureExt);
 		// platform = new SensibleThingsPlatform(LookupService.KELIPS,
 		// Communication.SSL, this);

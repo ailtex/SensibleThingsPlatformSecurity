@@ -306,7 +306,9 @@ public class SecurityCommunication {
 					SerializationUtils.serialize(responsePayload), config.getSymmetricMode());
 			
 			byte[] iv = securityManager.getIVparameter();
-			certRespMesg.setIv(securityManager.symmetricEncryptIVParameter(crm.fromUci, iv));
+			if(iv != null){
+				certRespMesg.setIv(securityManager.symmetricEncryptIVParameter(crm.fromUci, iv));
+			}
 			
 			certRespMesg.setPayload(encryptPayload);
 			
@@ -333,13 +335,20 @@ public class SecurityCommunication {
 		// decrypt the secret key
 		byte[] secretKey = securityManager.asymmetricDecryptMessage(encryptSecretKey, 
 				config.getAsymmetricAlgorithm());
+		
 		// decrypt the iv
-		byte[] iv = securityManager.symmetricDecryptIVparameter(secretKey, crm.getIv());
-		
-		// decrypt the certificates and nonces
-		byte[] payload = securityManager.symmetricDecryptMessage(secretKey, crm.getPayload(), iv, 
-				config.getSymmetricMode());
-		
+		byte[] iv = null;
+		byte[] payload = null;
+		if(crm.getIv() != null){
+			iv = securityManager.symmetricDecryptIVparameter(secretKey, crm.getIv());
+			// decrypt the certificates and nonces
+			payload = securityManager.symmetricDecryptMessage(secretKey, crm.getPayload(), iv, 
+					config.getSymmetricMode());
+		}else{
+			payload = securityManager.symmetricDecryptMessage(secretKey, crm.getPayload(), 
+					config.getSymmetricMode());
+		}
+
 		// deserialize
 		CertificateResponsePayload responsePayload = (CertificateResponsePayload)
 				SerializationUtils.deserialize(payload);
@@ -365,7 +374,9 @@ public class SecurityCommunication {
 					String.valueOf(nonce).getBytes(), config.getSymmetricMode()));
 			
 			byte[] ivParameter = securityManager.getIVparameter();
-			carm.setIv(securityManager.symmetricEncryptIVParameter(crm.fromUci, ivParameter));
+			if(ivParameter != null){
+				carm.setIv(securityManager.symmetricEncryptIVParameter(crm.fromUci, ivParameter));
+			}
 			
 			sendMessage(carm);
 			
@@ -389,11 +400,16 @@ public class SecurityCommunication {
 			CertificateAcceptedResponseMessage carm) {
 		
 //		System.out.println("[Handle Certificate Accepted Response Message ]" + " from " + carm.fromUci);
-		
-		byte[] iv = securityManager.symmetricDecryptIVparameter(carm.fromUci, carm.getIv());
-		
-		byte[] payload = securityManager.symmetricDecryptMessage(
-				carm.fromUci, carm.getPayload(), iv, config.getSymmetricMode());
+		byte[] iv = null;
+		byte[] payload = null;
+		if(carm.getIv() != null){
+			iv = securityManager.symmetricDecryptIVparameter(carm.fromUci, carm.getIv());
+			payload = securityManager.symmetricDecryptMessage(
+					carm.fromUci, carm.getPayload(), iv, config.getSymmetricMode());
+		}else{
+			payload = securityManager.symmetricDecryptMessage(
+					carm.fromUci, carm.getPayload(), config.getSymmetricMode());
+		}
 		
 		// convert byte array to integer
 		int nonce = Integer.valueOf(new String(payload));
@@ -486,9 +502,11 @@ public class SecurityCommunication {
 		byte[] payload = SerializationUtils.serialize(secretKeyPayload);
 		skxm.setSecretKeyPayload(securityManager.symmetricEncryptMessage(toUci, payload, config.getSymmetricMode()));
 		
-		// set the iv
+		// set the iv, only for AES
 		byte[] iv = securityManager.getIVparameter();
-		skxm.setIv(securityManager.symmetricEncryptIVParameter(toUci, iv));
+		if(iv != null){
+			skxm.setIv(securityManager.symmetricEncryptIVParameter(toUci, iv));
+		}
 		
 		// set the certificatePayload
 		CertificatePayload certPayload = new CertificatePayload(securityManager.getMyUci(), toUci);
@@ -547,10 +565,19 @@ public class SecurityCommunication {
 				return;
 			}
 			
-			byte[] iv = securityManager.symmetricDecryptIVparameter(secretKey, skxm.getIv());
-			byte[] payload = securityManager.symmetricDecryptMessage(secretKey, 
-					skxm.getSecretKeyPayload(),iv, config.getSymmetricMode());
-					
+			byte[] iv = null;
+			byte[] payload = null;
+			
+			// if RC4 not used
+			if(skxm.getIv() != null){
+				iv = securityManager.symmetricDecryptIVparameter(secretKey, skxm.getIv());
+				payload = securityManager.symmetricDecryptMessage(secretKey, 
+						skxm.getSecretKeyPayload(),iv, config.getSymmetricMode());
+			}else{
+				payload = securityManager.symmetricDecryptMessage(secretKey, 
+						skxm.getSecretKeyPayload(),config.getSymmetricMode());
+			}
+			
 			SecretKeyPayload secretKeyPayload = (SecretKeyPayload) SerializationUtils.deserialize(payload);
 			
 			// check the id
@@ -591,7 +618,9 @@ public class SecurityCommunication {
 			
 			// set the iv parameter
 			byte[] ivParameter =  securityManager.getIVparameter();
-			responseMessage.setIv(securityManager.symmetricEncryptIVParameter(skxm.fromUci, ivParameter));
+			if(ivParameter != null){
+				responseMessage.setIv(securityManager.symmetricEncryptIVParameter(skxm.fromUci, ivParameter));
+			}
 			
 			sendMessage(responseMessage);
 		}
@@ -606,9 +635,17 @@ public class SecurityCommunication {
 	 */
 	public void handleSessionKeyResponseMessage(SessionKeyResponseMessage skrm) {
 		
-		byte[] iv = securityManager.symmetricDecryptIVparameter(skrm.fromUci, skrm.getIv());
-		byte[] payload = securityManager.symmetricDecryptMessage(skrm.fromUci, skrm.getPayload(), iv,
-				config.getSymmetricAlgorithm());
+		byte[] iv = null;
+		byte[] payload = null;
+		if(skrm.getIv() != null){
+			iv = securityManager.symmetricDecryptIVparameter(skrm.fromUci, skrm.getIv());
+			payload = securityManager.symmetricDecryptMessage(skrm.fromUci, skrm.getPayload(), iv,
+					config.getSymmetricAlgorithm());
+		}else{
+			payload = securityManager.symmetricDecryptMessage(skrm.fromUci, skrm.getPayload(),
+					config.getSymmetricAlgorithm());
+		}
+
 		
 		// verify the signature
 		if(securityManager.verifySignature(payload, skrm.getSignature(), skrm.fromUci, skrm.getSignatureAlgorithm())){
@@ -691,7 +728,7 @@ public class SecurityCommunication {
 			
 			byte[] cxrmPayload = SerializationUtils.serialize(cxp);
 			
-			System.out.println("[Handle Certificate Exchange Message] payload size: " + cxrmPayload.length );
+//			System.out.println("[Handle Certificate Exchange Message] payload size: " + cxrmPayload.length );
 			
 			// set the payload
 			cxrm.setPayload(securityManager.asymmetricEncryptMessage(cxm.fromUci, cxrmPayload, config.getAsymmetricAlgorithm()));
