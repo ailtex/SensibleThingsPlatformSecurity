@@ -112,30 +112,7 @@ public class SecurityExtension implements Extension, MessageListener{
 	}
 	
 	public void securityRegister(String uci){
-		core.register(uci);
-		
-		this.myUci = uci;
-		
-		// Initialize the key Store, with generating its key pair and self signed certificate
-		securityManager.initializeKeyStore(myUci);
-		
-		// Check if it's has the signed certificate
-		// if it's not, it should connect to the Bootstrap and get the signed
-		// certificate
-	
-		if (!securityManager.isRegisted(myUci, config.getBootstrapUci()) && !myUci.equals(config.getBootstrapUci()) ) {
-			
-//			SensibleThingsNode bootstrapNode = new SensibleThingsNode(
-//					config.getBootstrapIP(), Integer.valueOf(config.getBootstrapPort()));
-			
-			SensibleThingsNode bootstrapNode = new SensibleThingsNode(KelipsLookup.bootstrapIp, 
-					Integer.valueOf(config.getBootstrapPort()));
-			
-			securityCommunication.createSslConnection(config.getBootstrapUci(),bootstrapNode);
-
-			securityCommunication.register(config.getBootstrapUci(), bootstrapNode);
-		}
-
+		securityCommunication.securityRegister(uci);
 	}
 	
 	public void setSecurityConfiguration(SecurityConfiguration config) {

@@ -50,9 +50,11 @@ public class SecurityManager {
 	
 	// the operator is the uci who owns
 	private String myUci = null;
-	private PublicKey publicKey = null;
 	
+	// the key store it uses to store the session keys and certificates, 
+	// as well as its private key
 	private KeyStoreJCEKS keyStore = null;
+	
 	private Map<String, Object> noncePool = null;
 	private SecurityConfiguration config = null;
 	
@@ -62,26 +64,24 @@ public class SecurityManager {
 		noncePool = new HashMap<String, Object>();
 	}
 	
-	public void initializeKeyStore(String uci){
+	public void initializeKeyStore(String uci, char[] privateKeyPassword, char[] keyStorePassword){
 		setMyUci(uci);
 		
-		String prefix = uci.split("/")[0] + "_" + uci.split("/")[1];
+		// transform the uci to formal file name without "/"
+		String prefix = uci.replace("/", "_");
 		
-		String filePath = config.getKeyStoreFileDirectory() + prefix
-				+ "_" + config.getKeyStoreFileName();
+		String filePath = config.getKeyStoreFileDirectory() + prefix + "_" + config.getKeyStoreFileName();
 		
 		try {
-			keyStore = new KeyStoreJCEKS(filePath, "password".toCharArray());
-			
+			keyStore = new KeyStoreJCEKS(filePath, keyStorePassword);
 		} catch (IOException e) {
-			// it may fail to load the key store
 			e.printStackTrace();
 		}
 		
 		// check weather the store has the KeyPair
 		if(!keyStore.hasKey(uci)){
 			// if not, create the key pair
-			CreateKeyPairAndCertificate(uci);
+			CreateKeyPairAndCertificate(uci, privateKeyPassword, keyStorePassword);
 		}
 		
 	}
@@ -149,17 +149,17 @@ public class SecurityManager {
 		return keyStore.getIssuredCertificate(myUci).getIssuerX500Principal().getName().equals("CN="+bootstrapUci);
 	}
 	
-	public String decapsulateSecureMessage(SecureMessage sm){
+	public String decapsulateSecureMessage(SecureMessage sm, char[] secretKeyPassword){
 		byte[] iv = null;
 		byte[] payload = null;
 		
 		if( sm.getIv() != null){
-			iv = symmetricDecryptIVparameter(sm.fromUci, sm.getIv());
+			iv = symmetricDecryptIVparameter(sm.fromUci, sm.getIv(), secretKeyPassword);
 			payload = symmetricDecryptMessage(sm.fromUci, 
-					sm.getPayload(), iv, config.getSymmetricMode());
+					sm.getPayload(), iv, config.getSymmetricMode(), secretKeyPassword);
 		}else{
 			payload = symmetricDecryptMessage(sm.fromUci, 
-					sm.getPayload(), config.getSymmetricMode());
+					sm.getPayload(), config.getSymmetricMode(), secretKeyPassword);
 		}
 			
 		return new String(payload);
@@ -167,7 +167,8 @@ public class SecurityManager {
 	
 	
 	
-	public void encapsulateSecueMessage(Map<String, Vector<SecureMessage>> postOffice, String toUci) {
+	public void encapsulateSecueMessage(Map<String, Vector<SecureMessage>> postOffice, String toUci, char[] secretKeyPassword,
+			char[] privateKeyPassword) {
 		if(postOffice.containsKey(toUci)){
 			Vector<SecureMessage> msgs = postOffice.get(toUci);
 			
@@ -178,13 +179,13 @@ public class SecurityManager {
 				byte[] message = sm.getPayload();
 //				System.out.println("[Encapsulate secure message] " + new String(message));
 				
-				sm.setPayload(symmetricEncryptMessage(toUci, message, config.getSymmetricMode()));
-				sm.setSignature(signMessage(message, config.getSignatureAlgorithm()));
+				sm.setPayload(symmetricEncryptMessage(toUci, message, config.getSymmetricMode(), secretKeyPassword));
+				sm.setSignature(signMessage(message, config.getSignatureAlgorithm(), privateKeyPassword));
 				sm.setSignatureAlgorithm(config.getSignatureAlgorithm());
 				
 				byte[] iv = getIVparameter();
 				if(iv != null){
-					sm.setIv(symmetricEncryptIVParameter(toUci, iv));
+					sm.setIv(symmetricEncryptIVParameter(toUci, iv, secretKeyPassword));
 				}
 				
 				msgs.add(sm);
@@ -212,7 +213,7 @@ public class SecurityManager {
 	 *                           Certificate Part
 	 ********************************************************************************/
 	
-	protected void CreateKeyPairAndCertificate(String uci){
+	protected void CreateKeyPairAndCertificate(String uci, char[] privateKeyPassword, char[] keyStorePassword){
 		// sun.security.X509 package provides many APIs to use
 		// e.g. CertAndKeyGen gen = new CertAndKeyGen(keyAlgName, sigAlgName, providerName);
 		// it can generate the RSA keypair and self signed certificate
@@ -236,16 +237,9 @@ public class SecurityManager {
 		Certificate cert = CertificateOperations.generateSelfSignedcertificate(subjectName, 
 				keyPair, config.getAsymmetricKeyLifetime());
 		
-		try {
-			// store the private key with the self signed certificate
-			keyStore.storePrivateKey(uci, keyPair.getPrivate(), "password".toCharArray(), 
-					"password".toCharArray(), new Certificate[]{cert});
-			
-			// store the self signed certificate
-			// keyStore.storeCertificate(uci, cert, "password".toCharArray());
-		} catch (KeyStoreException e) {
-			e.printStackTrace();
-		}
+		// store the private key with the self signed certificate
+		storePrivateKey(uci, keyPair.getPrivate(), privateKeyPassword, keyStorePassword, new Certificate[]{cert});
+		
 	}
 	
 	public boolean isCeritificateSigningRequestValid(
@@ -301,9 +295,10 @@ public class SecurityManager {
 		return keyStore.containAlias(fromUci);
 	}
 	
-	public Certificate[] signCertificateSigningRequest(PKCS10CertificationRequest certRequest, String uci){
+	public Certificate[] signCertificateSigningRequest(PKCS10CertificationRequest certRequest, String uci,
+			char[] privateKeyPassword, char[] keyStorePassword){
 		KeyPair keyPair = new KeyPair((PublicKey)keyStore.getPublicKey(myUci), 
-									  (PrivateKey)keyStore.getPrivateKey(myUci, "password".toCharArray()));
+									  (PrivateKey)keyStore.getPrivateKey(myUci, privateKeyPassword));
 		Certificate[] certs = null;
 		
 		try {
@@ -311,7 +306,7 @@ public class SecurityManager {
 					config.getAsymmetricKeyLifetime());
 			
 			// store the issued certificate into keystore
-			keyStore.storeCertificate(uci, certs[0], "password".toCharArray());
+			keyStore.storeCertificate(uci, certs[0], keyStorePassword);
 			
 		} catch (InvalidKeyException | CertificateParsingException
 				| NoSuchAlgorithmException | NoSuchProviderException
@@ -358,31 +353,37 @@ public class SecurityManager {
 	}
 	
 	@SuppressWarnings("deprecation")
-	public PKCS10CertificationRequest getCertificateSigingRequest(String uci){
+	public PKCS10CertificationRequest getCertificateSigingRequest(String uci, char[] privateKeyPassword){
 		String subjectName = "CN=" + uci;
 		
 		KeyPair keyPair = new KeyPair((PublicKey)keyStore.getPublicKey(uci), 
-									  (PrivateKey)keyStore.getPrivateKey(uci,  "password".toCharArray()));
+									  (PrivateKey)keyStore.getPrivateKey(uci,  privateKeyPassword));
 		
 		return CertificateOperations.generateCertificateSigningRequest(subjectName, keyPair);
 	}
 	
-	public void storeCertificateChain(String uci, Certificate[] certs, String password){
+	public void storeCertificateChain(String uci, Certificate[] certs, char[] privateKeyPassword, 
+			char[] keyStorePassword){
 		
+		storePrivateKey(uci, (PrivateKey)keyStore.getPrivateKey(uci, privateKeyPassword), 
+				privateKeyPassword, keyStorePassword, certs);
+		
+	}
+	
+	public void storePrivateKey(String uci, PrivateKey privateKey, char[] privateKeyPassword, 
+			char[] keyStorePassword, Certificate[] certs){
 		try {
-			
-			keyStore.storePrivateKey(uci, (PrivateKey)keyStore.getPrivateKey(uci, password.toCharArray()),
-					password.toCharArray(),password.toCharArray(), certs);
+			keyStore.storePrivateKey(uci, privateKey, privateKeyPassword, keyStorePassword, certs);
+
 		} catch (KeyStoreException e) {
-			
 			e.printStackTrace();
 		}
 	}
 	
-	public void storeCertificate(String uci, Certificate cert, String password){
+	public void storeCertificate(String uci, Certificate cert, char[] keyStorePassword){
 		
 		try {
-			keyStore.storeCertificate(uci, cert, password.toCharArray());
+			keyStore.storeCertificate(uci, cert, keyStorePassword);
 		} catch (KeyStoreException e) {
 			e.printStackTrace();
 		}
@@ -394,14 +395,14 @@ public class SecurityManager {
 	 ********************************************************************************/
 	
 	
-	public String signMessage(String message, String algorithm){
+	public String signMessage(String message, String algorithm, char[] privateKeyPassword){
 		
-		return new String(signMessage(message.getBytes(), algorithm));
+		return new String(signMessage(message.getBytes(), algorithm, privateKeyPassword));
 	}
 	
-	public byte[] signMessage(byte[] message, String algorithm){
+	public byte[] signMessage(byte[] message, String algorithm, char[] privateKeyPassword){
 		// load the private key
-		PrivateKey privateKey = (PrivateKey) keyStore.getPrivateKey(myUci, "password".toCharArray());
+		PrivateKey privateKey = (PrivateKey) keyStore.getPrivateKey(myUci,  privateKeyPassword);
 		
 		byte[] signature = null;
 		try {
@@ -473,15 +474,15 @@ public class SecurityManager {
 	 * @param message
 	 * @return
 	 */
-	public String asymmetricDecryptMessage(String message, String algorithm){
-		return new String(asymmetricDecryptMessage(message.getBytes(), algorithm));
+	public String asymmetricDecryptMessage(String message, String algorithm, char[] privateKeyPassword){
+		return new String(asymmetricDecryptMessage(message.getBytes(), algorithm, privateKeyPassword));
 		
 	}
 	
 	
-	public byte[] asymmetricDecryptMessage(byte[] message, String algorithm){
+	public byte[] asymmetricDecryptMessage(byte[] message, String algorithm, char[] privateKeyPassword){
 		// load the private key
-		PrivateKey privateKey = (PrivateKey)keyStore.getPrivateKey(myUci, "password".toCharArray());
+		PrivateKey privateKey = (PrivateKey)keyStore.getPrivateKey(myUci, privateKeyPassword);
 		
 		return AsymmetricEncryption.decrypt(privateKey, message, algorithm);
 	}
@@ -499,12 +500,12 @@ public class SecurityManager {
 	 *                           Symmetric Encrypt Part
 	 ********************************************************************************/
 	
-	public byte[] symmetricEncryptIVParameter(String toUci, byte[] iv){
-		return symmetricEncryptMessage(toUci, iv, "AES/ECB/PKCS5Padding");
+	public byte[] symmetricEncryptIVParameter(String toUci, byte[] iv, char[] secreKeyPassword){
+		return symmetricEncryptMessage(toUci, iv, "AES/ECB/PKCS5Padding", secreKeyPassword);
 	}
 	
-	public byte[] symmetricDecryptIVparameter(String fromUci, byte[] raw){
-		return symmetricDecryptMessage(fromUci, raw, "AES/ECB/PKCS5Padding");
+	public byte[] symmetricDecryptIVparameter(String fromUci, byte[] raw, char[] secreKeyPassword){
+		return symmetricDecryptMessage(fromUci, raw, "AES/ECB/PKCS5Padding", secreKeyPassword);
 	}
 	
 	public byte[] symmetricDecryptIVparameter(byte[] secretKey, byte[] raw){
@@ -518,14 +519,14 @@ public class SecurityManager {
 		return SymmetricEncryption.getIVparameter().getIV();
 	}
 	
-	public String symmetricEncryptMessage(String toUci, String message, String algorithmModePadding){
+	public String symmetricEncryptMessage(String toUci, String message, String algorithmModePadding, char[] secreKeyPassword){
 		
-		return new String(symmetricEncryptMessage(toUci, message.getBytes(), algorithmModePadding));
+		return new String(symmetricEncryptMessage(toUci, message.getBytes(), algorithmModePadding, secreKeyPassword));
 	}
 	
-	public byte[] symmetricEncryptMessage(String toUci, byte[] message, String algorithmModePadding){
+	public byte[] symmetricEncryptMessage(String toUci, byte[] message, String algorithmModePadding, char[] secreKeyPassword){
 		// symmetric encryption
-		SecretKey secretKey = (SecretKey) keyStore.getSecretKey(toUci, "password".toCharArray());
+		SecretKey secretKey = (SecretKey) keyStore.getSecretKey(toUci, secreKeyPassword);
 		byte[] plainText = null;
 		try {
 			plainText = SymmetricEncryption.encrypt(secretKey, message, algorithmModePadding);
@@ -539,9 +540,9 @@ public class SecurityManager {
 		return plainText;
 	}
 	
-	public String symmetricDecryptMessage(String fromUci, String message, String algorithmModePadding){
+	public String symmetricDecryptMessage(String fromUci, String message, String algorithmModePadding, char[] secreKeyPassword){
 		
-		return new String(symmetricDecryptMessage(fromUci, message.getBytes(), algorithmModePadding));
+		return new String(symmetricDecryptMessage(fromUci, message.getBytes(), algorithmModePadding, secreKeyPassword));
 	}
 	
 	public byte[] symmetricDecryptMessage(SecretKey secretKey, byte[] message, String algorithmModePadding){
@@ -559,8 +560,8 @@ public class SecurityManager {
 		return plainText;
 	}
 	
-	public byte[] symmetricDecryptMessage(String fromUci, byte[] message, String algorithmModePadding){
-		SecretKey secretKey = (SecretKey) keyStore.getSecretKey(fromUci, "password".toCharArray());
+	public byte[] symmetricDecryptMessage(String fromUci, byte[] message, String algorithmModePadding, char[] secreKeyPassword){
+		SecretKey secretKey = (SecretKey) keyStore.getSecretKey(fromUci, secreKeyPassword);
 		
 		return symmetricDecryptMessage(secretKey, message, algorithmModePadding);
 	}
@@ -595,8 +596,8 @@ public class SecurityManager {
 		return plainText;
 	}
 	
-	public byte[] symmetricDecryptMessage(String fromUci, byte[] message, byte[] iv, String algorithmModePadding){
-		SecretKey secretKey = (SecretKey) keyStore.getSecretKey(fromUci, "password".toCharArray());
+	public byte[] symmetricDecryptMessage(String fromUci, byte[] message, byte[] iv, String algorithmModePadding, char[] secreKeyPassword){
+		SecretKey secretKey = (SecretKey) keyStore.getSecretKey(fromUci, secreKeyPassword);
 		
 		return symmetricDecryptMessage(secretKey, message, iv, algorithmModePadding);
 	}
@@ -608,7 +609,8 @@ public class SecurityManager {
 		return symmetricDecryptMessage(key, message, iv, algorithmModePadding);
 	}
 	
-	public boolean generateSymmetricSecurityKey(String uci, String algorithm, int length){
+	public boolean generateSymmetricSecurityKey(String uci, String algorithm, 
+			int length, char[] secreKeyPassword, char[] keyStorePassword){
 		
 		// generate the symmetric key
 		SecretKey secretKey = null;
@@ -617,7 +619,7 @@ public class SecurityManager {
 			secretKey = SymmetricEncryption.generateKey(algorithm, length);
 			
 			// store the security key
-			storeSecretKey(uci, secretKey, "password".toCharArray());
+			storeSecretKey(uci, secretKey, secreKeyPassword, keyStorePassword);
 			
 			return true;
 		} catch (NoSuchAlgorithmException e) {
@@ -627,9 +629,9 @@ public class SecurityManager {
 		return false;
 	}
 	
-	public void storeSecretKey(String uci, SecretKey secretKey, char[] password){
+	public void storeSecretKey(String uci, SecretKey secretKey, char[] secretKeyPassword, char[] keyStorePassword){
 		try {
-			keyStore.storeSecretKey(uci, secretKey, password, password);
+			keyStore.storeSecretKey(uci, secretKey, secretKeyPassword, keyStorePassword);
 		} catch (InvalidKeyException | KeyStoreException
 				| NoSuchAlgorithmException | InvalidKeySpecException e) {
 			
@@ -637,14 +639,14 @@ public class SecurityManager {
 		}
 	}
 	
-	public void storeSecretKey(String uci, byte[] secretKey, String algorithm, char[] password){
+	public void storeSecretKey(String uci, byte[] secretKey, String algorithm, char[] secretKeyPassword, char[] keyStorePassword){
 		SecretKey key = symmetricLoadKey(secretKey, algorithm);
-		storeSecretKey(uci, key, password);
+		storeSecretKey(uci, key, secretKeyPassword, keyStorePassword);
 	}
 		
-	public Key getSecretKey(String uci, char[] password) {
+	public Key getSecretKey(String uci, char[] secretKeyPassword) {
 
-		return keyStore.getSecretKey(uci, password);
+		return keyStore.getSecretKey(uci, secretKeyPassword);
 	}
 	
 	public boolean hasSecretKey(String uci){

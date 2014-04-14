@@ -75,9 +75,9 @@ public class SecurityNode1 implements SensibleThingsListener,
 
 			platform.resolve("sensiblethings@miun.se/node2");
 
-//			// when jvm exist, delete the keyStore file
-//			File keystore = new File("resources/sensiblethings@miun.se_node1_KeyStore.db");
-//			keystore.deleteOnExit();
+			// when jvm exist, delete the keyStore file
+			File keystore = new File("resources/sensiblethings@miun.se_node1_KeyStore.db");
+			keystore.deleteOnExit();
 
 			System.out.println("Press any key to shut down");
 			BufferedReader in = new BufferedReader(new InputStreamReader(
