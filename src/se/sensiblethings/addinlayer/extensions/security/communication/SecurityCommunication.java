@@ -359,9 +359,11 @@ public class SecurityCommunication {
 			securityManager.removeFromNoncePool(crm.fromUci);
 			
 			// store the secret key
-			securityManager.storeSecretKey(crm.fromUci, secretKey, config.getSymmetricAlgorithm(), "password");
+			securityManager.storeSecretKey(crm.fromUci, secretKey, config.getSymmetricAlgorithm(), "password".toCharArray());
 			
 			securityManager.storeCertificateChain(securityManager.getMyUci(), responsePayload.getCertChain(), "password");
+			
+			//System.out.println("[Handle Certificate Response Message]"+ responsePayload.getCertChain()[0]);
 			
 			//send back CertificateAcceptedResponseMessage
 			CertificateAcceptedResponseMessage carm = 
@@ -481,7 +483,7 @@ public class SecurityCommunication {
 		
 		SessionKeyExchangeMessage skxm = new SessionKeyExchangeMessage(toUci, securityManager.getMyUci(),
 				toNode, communication.getLocalSensibleThingsNode());
-		
+		System.out.println("[Exchange Session Key] " + skxm);
 		// generate the symmetric security key
 		securityManager.generateSymmetricSecurityKey(toUci, config.getSymmetricAlgorithm(), config.getSymmetricKeyLength());
 		
@@ -530,6 +532,9 @@ public class SecurityCommunication {
 	 * @param skxm
 	 */
 	public void handleSessionKeyExchangeMessage(SessionKeyExchangeMessage skxm) {
+		
+//		System.out.println("[Handle Session Key Exchange Message] " + skxm);
+		
 		// 1, check the source id
 		// 2, check if the ID exist
 		// 3, check if the certificate valid
@@ -587,9 +592,10 @@ public class SecurityCommunication {
 			}
 				
 			// store the session key
-			securityManager.storeSecretKey(skxm.fromUci, secretKey, config.getSymmetricAlgorithm(),  "Password");
-
+			securityManager.storeSecretKey(skxm.fromUci, secretKey, config.getSymmetricAlgorithm(),  "password".toCharArray());
 			
+			System.out.println(skxm.fromUci);
+			System.out.println("[Handle Session Key Exchange Message] has session key or not: " + securityManager.hasSecretKey(skxm.fromUci));
 			
 			// send back an response message
 			SessionKeyResponseMessage responseMessage = new SessionKeyResponseMessage(skxm.fromUci,
@@ -611,10 +617,11 @@ public class SecurityCommunication {
 			
 			responseMessage.setSignature(securityManager.signMessage(responsePayloadInByte, 
 					config.getSignatureAlgorithm()));
-
+			responseMessage.setSignatureAlgorithm(config.getSignatureAlgorithm());
+			
 			responseMessage.setPayload(securityManager.symmetricEncryptMessage(
 							skxm.fromUci, responsePayloadInByte,
-							config.getSymmetricAlgorithm()));
+							config.getSymmetricMode()));
 			
 			// set the iv parameter
 			byte[] ivParameter =  securityManager.getIVparameter();
@@ -634,16 +641,17 @@ public class SecurityCommunication {
 	 * @param skrm
 	 */
 	public void handleSessionKeyResponseMessage(SessionKeyResponseMessage skrm) {
+		System.out.println("[Handle Session Key Response Message] " + skrm);
 		
 		byte[] iv = null;
 		byte[] payload = null;
 		if(skrm.getIv() != null){
 			iv = securityManager.symmetricDecryptIVparameter(skrm.fromUci, skrm.getIv());
 			payload = securityManager.symmetricDecryptMessage(skrm.fromUci, skrm.getPayload(), iv,
-					config.getSymmetricAlgorithm());
+					config.getSymmetricMode());
 		}else{
 			payload = securityManager.symmetricDecryptMessage(skrm.fromUci, skrm.getPayload(),
-					config.getSymmetricAlgorithm());
+					config.getSymmetricMode());
 		}
 
 		
@@ -676,7 +684,7 @@ public class SecurityCommunication {
 	private void exchangeCertificate(String toUci, SensibleThingsNode toNode) {
 		CertificateExchangeMessage cxm = new CertificateExchangeMessage(toUci, securityManager.getMyUci(),
 				toNode, communication.getLocalSensibleThingsNode());
-		
+		System.out.println("[Exchange Certificate] " + cxm);
 		CertificateExchangePayload cxp = new CertificateExchangePayload(securityManager.getMyUci(), toUci);
 		cxp.setCert(securityManager.getCertificate());
 		cxp.setTimeStamp(System.currentTimeMillis());
@@ -695,11 +703,12 @@ public class SecurityCommunication {
 	 * 
 	 * (3.2) D : verify the CertificateC
 	 *    
-	 *     D->C : E(PUC, Payload) || E(PRC, H(Payload))
-	 *            Payload = IDD || CertificateD || TS1 
+	 *     D->C : E(PUC, Payload) || E(PRC, H(Payload)) || CertificateD
+	 *            Payload = IDD || TS1 
 	 * @param cxm
 	 */
 	public void handleCertificateExchangeMessage(CertificateExchangeMessage cxm) {
+		System.out.println("[Handle Certificate Exchange Message] " + cxm);
 		//Decapsulte the Certificate
 		byte[] payload = cxm.getPayload();
 		CertificateExchangePayload cxp = (CertificateExchangePayload)SerializationUtils.deserialize(payload);
@@ -711,6 +720,7 @@ public class SecurityCommunication {
 			return;
 		}
 		
+		// System.out.println("[Handle Certificate Exchange Message] " + cert);
 		
 		// verify the certificate
 		if (securityManager.isCertificateValid(cert, cxm.fromUci)) {
@@ -721,22 +731,23 @@ public class SecurityCommunication {
 			CertificateExchangeResponseMessage cxrm = new CertificateExchangeResponseMessage(cxm.fromUci,
 					securityManager.getMyUci(), cxm.getFromNode(), communication.getLocalSensibleThingsNode());
 			
-			// reuse the CertificateExchangePayload
-			cxp.setFromUci(securityManager.getMyUci());
-			cxp.setToUci(cxm.fromUci);
-			cxp.setCert(securityManager.getCertificate());
+			cxrm.setCert(securityManager.getCertificate());
+			cxrm.setUci(securityManager.asymmetricEncryptMessage(cxm.fromUci, 
+					securityManager.getMyUci().getBytes(), config.getAsymmetricAlgorithm()));
 			
-			byte[] cxrmPayload = SerializationUtils.serialize(cxp);
+			byte[] cxrmPayload = String.valueOf(cxp.getTimeStamp()).getBytes();
+			
+			cxrm.setPayload(securityManager.asymmetricEncryptMessage(cxm.fromUci, 
+					cxrmPayload, config.getAsymmetricAlgorithm()));
+			cxrm.setSignature(securityManager.signMessage(cxrmPayload, config.getSignatureAlgorithm()));
+			cxrm.setSignatureAlgorithm(config.getSignatureAlgorithm());
 			
 //			System.out.println("[Handle Certificate Exchange Message] payload size: " + cxrmPayload.length );
 			
-			// set the payload
-			cxrm.setPayload(securityManager.asymmetricEncryptMessage(cxm.fromUci, cxrmPayload, config.getAsymmetricAlgorithm()));
-			// set the signature
-			cxrm.setSignature(securityManager.signMessage(cxrmPayload, cxm.getSignatureAlgorithm()));
-			
 			// send
 			sendMessage(cxrm);
+		}else{
+			System.out.println("[Handle Certificate Exchange Message] Certificate Error!");
 		}
 		
 	}
@@ -750,12 +761,17 @@ public class SecurityCommunication {
 	 */
 	public void handleCertificateExchangeResponseMessage(
 			CertificateExchangeResponseMessage cxrm) {
-		//Decapsulte the Certificate
-		byte[] encryptPayload = cxrm.getPayload();
-		byte[] payload = securityManager.asymmetricDecryptMessage(encryptPayload, config.getAsymmetricAlgorithm());
+		System.out.println("[Handle Certificate Exchange Response Message] " + cxrm);
 		
-		CertificateExchangePayload cxp = (CertificateExchangePayload)SerializationUtils.deserialize(payload);
-		Certificate cert = cxp.getCert();
+//		//Decapsulte the Certificate
+//		byte[] encryptPayload = cxrm.getPayload();
+//		byte[] payload = securityManager.asymmetricDecryptMessage(encryptPayload, config.getAsymmetricAlgorithm());
+//		
+//		CertificateExchangePayload cxp = (CertificateExchangePayload)SerializationUtils.deserialize(payload);
+//		Certificate cert = cxp.getCert();
+//		
+		byte[] payload = securityManager.asymmetricDecryptMessage(cxrm.getPayload(), config.getAsymmetricAlgorithm());
+		Certificate cert = cxrm.getCert();
 		
 		// check signature
 		if(!securityManager.verifySignature(payload, cxrm.getSignature(), cert, cxrm.getSignatureAlgorithm())){
@@ -763,8 +779,10 @@ public class SecurityCommunication {
 			return;
 		}
 		
+		String fromUci = new String(securityManager.asymmetricDecryptMessage(cxrm.getUci(), config.getAsymmetricAlgorithm()));
+		
 		// check the source ID and 
-		if(!cxp.getFromUci().equals(cxrm.fromUci) || !cxp.getToUci().equals(cxrm.toUci)){
+		if(!fromUci.equals(cxrm.fromUci)){
 			System.out.println("[Handle Certificate Exchange Response Message] ID Error!");
 			return;
 		}
@@ -774,7 +792,9 @@ public class SecurityCommunication {
 			// store the certificate
 			securityManager.storeCertificate(cxrm.fromUci, cert, "password");
 			
-			exchangeSessionKey(cxrm.toUci, cxrm.getFromNode());
+			exchangeSessionKey(cxrm.fromUci, cxrm.getFromNode());
+		}else{
+			System.out.println("[Handle Certificate Exchange Message] Certificate Error!");
 		}
 	}
 	
@@ -808,76 +828,59 @@ public class SecurityCommunication {
 	}
 	
 	private void transformCommunication(String communicationType){
-		System.out.println("[" + securityManager.getMyUci() + 
-				" : Communication] communication type shift from "+ communication +  " to "+ communicationType + " mode");
+//		System.out.println("[" + securityManager.getMyUci() + 
+//				" : Communication] communication type shift from "+ communication +  " to "+ communicationType + " mode");
 		
-		try {
-			Thread.sleep(1000);
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+//		try {
+//			Thread.sleep(1000);
+//		} catch (InterruptedException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
 		
 		Communication origin = communication;
 		
-		if(communicationType.equals("SSL")){
-			
-			SslCommunication.initCommunicationPort = communication.getLocalSensibleThingsNode().getPort();
-			
-			Class<?> communicationLoader;
-			try {
-				communicationLoader = Class.forName(Communication.SSL);
-				communication = (Communication) communicationLoader.newInstance();
-			} catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			
-			
-			communication.setMessageListeners(origin.getMessageListeners()); 
-			
-			
-//			if(platform.isBehindNat()){
-//				System.out.println("[System] Proxy SSL");
-//				platform.changeCommunicationTo(communication.PROXY_SSL);
-//			}else{
-//				// SslCommunication.initCommunicationPort = 9009;
-//				platform.changeCommunicationTo(communication.SSL);
+//		if(platform.isBehindNat()){
+//			System.out.println("[Proxy]");
+//			if(communicationType.equals("SSL")){
+//				toNewCommunicaiton(Communication.PROXY_SSL);
+//			}else if(communicationType.equals("RUDP")){
+//				toNewCommunicaiton(Communication.PROXY_RUDP);
 //			}
-			
-			origin.shutdown();
-			System.out.println("[Communication] shutdown !");
-			
-		}else if(communicationType.equals("RUDP")){
-			RUDPCommunication.initCommunicationPort = communication.getLocalSensibleThingsNode().getPort();
-			
-			Class<?> communicationLoader;
-			try {
-				communicationLoader = Class.forName(Communication.RUDP);
-				communication = (Communication) communicationLoader.newInstance();
-			} catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+//		}else{
+			if(communicationType.equals("SSL")){
+				
+				SslCommunication.initCommunicationPort = communication.getLocalSensibleThingsNode().getPort();
+				toNewCommunicaiton(Communication.SSL);
+				
+			}else if(communicationType.equals("RUDP")){
+				
+				RUDPCommunication.initCommunicationPort = communication.getLocalSensibleThingsNode().getPort();
+				toNewCommunicaiton(Communication.RUDP);
+								
 			}
-			
-			communication.setMessageListeners(origin.getMessageListeners()); 
-			
-//			if(platform.isBehindNat()){
-//				platform.changeCommunicationTo(communication.PROXY_RUDP);
-//			}else{
-//				platform.changeCommunicationTo(communication.RUDP);
-//			}
-		}
+//		}
 		
+		// shutdown the old communication
+		origin.shutdown();
+		communication.setMessageListeners(origin.getMessageListeners()); 
+				
 		// reset the communication in lookup service
 		core.getLookupService().setCommunication(communication);
 		
 //		System.out.println("[" + securityManager.getMyUci() + 
-//				" : Communication] port = " + communication.getLocalSensibleThingsNode().getPort());
-		System.out.println("[" + securityManager.getMyUci() + 
-				" : Communication] communication shift to " + communication );
+//				" : Communication] communication shift to " + communication );
 	}
 	
+	private void toNewCommunicaiton(String communicationType){
+		Class<?> communicationLoader;
+		try {
+			communicationLoader = Class.forName(communicationType);
+			communication = (Communication) communicationLoader.newInstance();
+		} catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
+			e.printStackTrace();
+		}
+	}
 	
 	private void sendMessage(Message message){
 		try {

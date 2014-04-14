@@ -5,12 +5,14 @@ import static org.junit.Assert.*;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.util.Random;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 
+import org.bouncycastle.util.encoders.Base64;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -105,21 +107,28 @@ public class SymmetricEncryptionTest {
 	}
 
 	@Test
-	public void testDecryptSecretKeyByteArrayString() {
+	public void testDecryptSecretKeyByteArrayString(){
 		// same as encrypt test
 		
 		try {
 			SecretKey secretKey = SymmetricEncryption.generateKey("ARCFOUR", 128);
-			byte[] text = "LULU".getBytes();
-			byte[] cipherText1 = SymmetricEncryption.encrypt(secretKey, text, SymmetricEncryption.RC4);
+			//byte[] text = "LULU".getBytes();
+			byte[] test = new byte[64];
+			new Random().nextBytes(test);
+			
+			long start = System.currentTimeMillis();
+			
+			byte[] cipherText1 = SymmetricEncryption.decrypt(secretKey, test, SymmetricEncryption.RC4);
 			byte[] plainText1 = SymmetricEncryption.decrypt(secretKey, cipherText1, 
 					SymmetricEncryption.RC4);
-			System.out.println("[RC4]" + new String(plainText1));
 			
-			assertEquals("[Text encrypt]", new String(text), new String(plainText1));
+			long end = System.currentTimeMillis();
+			System.out.println("[Time] = " + (end - start));
+			
+			assertEquals("[Text encrypt]", Base64.toBase64String(test), Base64.toBase64String(plainText1));
 			
 		} catch (NoSuchAlgorithmException | InvalidKeyException | NoSuchPaddingException |
-				IllegalBlockSizeException | BadPaddingException | InvalidAlgorithmParameterException e) {
+				IllegalBlockSizeException | BadPaddingException e) {
 			e.printStackTrace();
 		}
 		

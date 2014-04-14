@@ -35,7 +35,6 @@ public class NormalNode implements SensibleThingsListener, Runnable{
 		application.run();
 	}
 
-	
 	public NormalNode(int messageLength, int messageCnt){
 		
 		this.messageLength = messageLength;
@@ -47,6 +46,7 @@ public class NormalNode implements SensibleThingsListener, Runnable{
 		//KelipsLookup.bootstrap = true;
 		
 		KelipsLookup.bootstrapIp = getLocalHostAddress();
+		KelipsLookup.bootstrap = false;
 		
 		SslCommunication.initCommunicationPort = 49860;
 		platform = new SensibleThingsPlatform(LookupService.KELIPS, Communication.SSL, this);
@@ -55,21 +55,23 @@ public class NormalNode implements SensibleThingsListener, Runnable{
 	
 	@Override
 	public void run(){
-    	try {	    	    		
+    	try {
     		System.out.println("[Node#1 Node] booted! ");
     		
     		platform.register(myUci);
     		
     		count = 0;
-//    		platform.resolve(myUci);
+    		
     		platform.resolve("sensiblethings@miun.se/bootstrap");
     		
-//	        System.out.println("Press any key to shut down");
-//	        BufferedReader in = new BufferedReader(new InputStreamReader(System.in));    	
-//			in.readLine();
-//			
-//			//Shutdown all background tasks
-//			platform.shutdown();
+    		KelipsLookup.bootstrap = true;
+    		
+	        System.out.println("[Node#1 Node] Press any key to shut down");
+	        BufferedReader in = new BufferedReader(new InputStreamReader(System.in));    	
+			in.readLine();
+			
+			//Shutdown all background tasks
+			platform.shutdown();
 			
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -84,15 +86,30 @@ public class NormalNode implements SensibleThingsListener, Runnable{
 	public void getResponse(String uci, String value,
 			SensibleThingsNode fromNode) {
 		
-		timestamp[++count] = System.currentTimeMillis(); 
-		System.out.println("[Node#1 : Get Response] " + uci + ": " + fromNode + " : time : " + (timestamp[count] - timestamp[count-1]));
+		timestamp[count] = System.currentTimeMillis() - timestamp[count]; 
+		System.out.println("[Node#1 : Get Response] "+ "#" + (count+1) + " " + uci + ": " + fromNode + " : time : " + timestamp[count]);
 		
-		if(count <= messageCnt){
+		try {
+			Thread.sleep(1000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		
+		count++;
+		
+		if(count < messageCnt){
 			String message = generateMessage(messageLength);
 			
+			timestamp[count] = System.currentTimeMillis();
 			platform.notify(fromNode, uci, message);
 		}else{
-			System.out.println("[Transmission] Ended ! + Total time : " + (timestamp[count-1] - timestamp[0])  );
+			
+			long total = 0;
+			for(int i=0;i<messageCnt;i++){
+				total += timestamp[i];
+			}
+			
+			System.out.println("[Transmission] Ended... Total time : " + total );
 		}
 	}
 
@@ -128,7 +145,7 @@ public class NormalNode implements SensibleThingsListener, Runnable{
     	
     	try {
     		address = InetAddress.getLocalHost();
-			//System.out.println(address);
+
 		} catch (UnknownHostException e) {
 			System.out.println("Could not find this computer's address.");
 		}

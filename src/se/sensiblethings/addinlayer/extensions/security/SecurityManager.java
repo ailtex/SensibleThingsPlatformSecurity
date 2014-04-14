@@ -283,14 +283,18 @@ public class SecurityManager {
 			return false;
 		}
 		
-		if(! X509Cert.getSubjectX500Principal().getName().equals(fromUci))
+		if(! X509Cert.getSubjectX500Principal().getName().equals(toX500Name(fromUci)))
 			return false;
 		
-		if(! X509Cert.getIssuerX500Principal().getName().equals(config.getBootstrapUci())){
+		if(! X509Cert.getIssuerX500Principal().getName().equals(toX500Name(config.getBootstrapUci()))){
 			return false;
 		}
 			
 		return true;
+	}
+	
+	private String toX500Name(String name){
+		return "CN=" + name;
 	}
 	
 	public boolean isContactedBefore(String fromUci){
@@ -613,7 +617,7 @@ public class SecurityManager {
 			secretKey = SymmetricEncryption.generateKey(algorithm, length);
 			
 			// store the security key
-			storeSecretKey(uci, secretKey, "password");
+			storeSecretKey(uci, secretKey, "password".toCharArray());
 			
 			return true;
 		} catch (NoSuchAlgorithmException e) {
@@ -623,9 +627,9 @@ public class SecurityManager {
 		return false;
 	}
 	
-	public void storeSecretKey(String uci, SecretKey secretKey, String password){
+	public void storeSecretKey(String uci, SecretKey secretKey, char[] password){
 		try {
-			keyStore.storeSecretKey(uci, secretKey, password.toCharArray(), password.toCharArray());
+			keyStore.storeSecretKey(uci, secretKey, password, password);
 		} catch (InvalidKeyException | KeyStoreException
 				| NoSuchAlgorithmException | InvalidKeySpecException e) {
 			
@@ -633,7 +637,7 @@ public class SecurityManager {
 		}
 	}
 	
-	public void storeSecretKey(String uci, byte[] secretKey, String algorithm, String password){
+	public void storeSecretKey(String uci, byte[] secretKey, String algorithm, char[] password){
 		SecretKey key = symmetricLoadKey(secretKey, algorithm);
 		storeSecretKey(uci, key, password);
 	}

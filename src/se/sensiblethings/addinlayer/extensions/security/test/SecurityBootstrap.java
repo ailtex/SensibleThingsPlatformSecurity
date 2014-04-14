@@ -30,7 +30,7 @@ import se.sensiblethings.interfacelayer.SensibleThingsPlatform;
 
 
 
-public class SecurityTestMainBootstrap implements SensibleThingsListener, SecurityListener{
+public class SecurityBootstrap implements SensibleThingsListener, SecurityListener{
 	
 	SensibleThingsPlatform platform = null;
 	SecurityExtension secureExt = null;
@@ -39,11 +39,11 @@ public class SecurityTestMainBootstrap implements SensibleThingsListener, Securi
 	int messageLength = 64;
 	
 	public static void main(String arg[]){
-		SecurityTestMainBootstrap application = new SecurityTestMainBootstrap();
+		SecurityBootstrap application = new SecurityBootstrap();
 		application.run();
 	}
 	
-	public SecurityTestMainBootstrap(){
+	public SecurityBootstrap(){
 		
     	//Create the platform itself with a SensibleThingsListener
 		
@@ -67,7 +67,7 @@ public class SecurityTestMainBootstrap implements SensibleThingsListener, Securi
     		// platform.register(myUci);
     		secureExt.securityRegister(myUci);
     		
-    		System.out.println("[Bootstrap Node] Security Registering Successfully !");
+    		System.out.println("[Bootstrap Node] Security Register Successfully !");
     		
     		
 //			// when jvm exist, delete the keyStore file

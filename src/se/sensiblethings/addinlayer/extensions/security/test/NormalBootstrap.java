@@ -49,19 +49,17 @@ public class NormalBootstrap implements SensibleThingsListener, Runnable{
 	
 	@Override
 	public void run(){
-    	try {	    	    		
+    	try {	  
     		System.out.println("[Bootstrap Node] booted! ");
     		
     		platform.register(myUci);
     		
-    		//platform.resolve(myUci);
-    		
-//	        System.out.println("Press any key to shut down");
-//	        BufferedReader in = new BufferedReader(new InputStreamReader(System.in));    	
-//			in.readLine();
-//			
-//			//Shutdown all background tasks
-//			platform.shutdown();
+	        System.out.println("[Bootstrap Node] Press any key to shut down");
+	        BufferedReader in = new BufferedReader(new InputStreamReader(System.in));    	
+			in.readLine();
+			
+			//Shutdown all background tasks
+			platform.shutdown();
 			
 		} catch (Exception e) {
 			e.printStackTrace();
