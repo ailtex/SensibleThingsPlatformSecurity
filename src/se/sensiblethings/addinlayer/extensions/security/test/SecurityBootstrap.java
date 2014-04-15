@@ -115,10 +115,10 @@ public class SecurityBootstrap implements SensibleThingsListener, SecurityListen
 	@Override
 	public void receivedSecureMessageEvent(String message, String uci,
 			SensibleThingsNode fromNode) {
-//		System.out.println("[Bootstrap Node : Received SecureMessage Event] " + uci + ": " + message + " : " + fromNode);
+		System.out.println("[Bootstrap Node : Received SecureMessage Event] " + uci + ": " + message + " : " + fromNode);
 		
-		String value = generateMessage(messageLength);
-		
+		//String value = generateMessage(messageLength);
+		String value = "Welcome Back !";
 		secureExt.sendSecureMassage(value, uci, fromNode);
 	}
 	

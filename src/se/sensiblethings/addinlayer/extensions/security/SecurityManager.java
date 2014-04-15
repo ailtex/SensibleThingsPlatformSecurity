@@ -150,17 +150,9 @@ public class SecurityManager {
 	}
 	
 	public String decapsulateSecureMessage(SecureMessage sm, char[] secretKeyPassword){
-		byte[] iv = null;
-		byte[] payload = null;
 		
-		if( sm.getIv() != null){
-			iv = symmetricDecryptIVparameter(sm.fromUci, sm.getIv(), secretKeyPassword);
-			payload = symmetricDecryptMessage(sm.fromUci, 
-					sm.getPayload(), iv, config.getSymmetricMode(), secretKeyPassword);
-		}else{
-			payload = symmetricDecryptMessage(sm.fromUci, 
-					sm.getPayload(), config.getSymmetricMode(), secretKeyPassword);
-		}
+		byte[] payload = decryptPayload(sm.fromUci, sm.getIv(), 
+				sm.getPayload(), config.getSymmetricMode(), secretKeyPassword);
 			
 		return new String(payload);
 	}
@@ -499,6 +491,23 @@ public class SecurityManager {
 	 * 
 	 *                           Symmetric Encrypt Part
 	 ********************************************************************************/
+	public byte[] decryptPayload(byte[] secretKey, byte[] iv, byte[] payload, String symmetricMode){
+		if(iv != null){
+			byte[] IV = symmetricDecryptIVparameter(secretKey, iv);
+			return symmetricDecryptMessage(secretKey, payload, IV, symmetricMode);
+		}else{
+			return symmetricDecryptMessage(secretKey, payload, symmetricMode);
+		}
+	}
+	
+	public byte[] decryptPayload(String fromUci, byte[] iv, byte[] payload, String symmetricMode, char[] password){
+		if(iv != null){
+			byte[] IV = symmetricDecryptIVparameter(fromUci, iv, password);
+			return symmetricDecryptMessage(fromUci, payload, IV, symmetricMode, password);
+		}else{
+			return symmetricDecryptMessage(fromUci, payload, symmetricMode, password);
+		}
+	}
 	
 	public byte[] symmetricEncryptIVParameter(String toUci, byte[] iv, char[] secreKeyPassword){
 		return symmetricEncryptMessage(toUci, iv, "AES/ECB/PKCS5Padding", secreKeyPassword);
@@ -650,7 +659,7 @@ public class SecurityManager {
 	}
 	
 	public boolean hasSecretKey(String uci){
-		return keyStore.hasKey(uci);
+		return keyStore.hasSecretKey(uci);
 	}
 	
 	/********************************************************************************

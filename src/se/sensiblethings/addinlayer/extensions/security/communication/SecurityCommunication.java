@@ -310,7 +310,7 @@ public class SecurityCommunication {
 			
 			certRespMesg.setEncryptSecretKey(securityManager.asymmetricEncryptMessage(
 								crm.fromUci, 
-								securityManager.getSecretKey(crm.fromUci, "password".toCharArray()).getEncoded(),
+								securityManager.getSecretKey(crm.fromUci, password).getEncoded(),
 								config.getAsymmetricAlgorithm()));
 			
 			CertificateResponsePayload responsePayload = 
@@ -361,19 +361,10 @@ public class SecurityCommunication {
 		byte[] secretKey = securityManager.asymmetricDecryptMessage(encryptSecretKey, 
 				config.getAsymmetricAlgorithm(), password);
 		
-		// decrypt the iv
-		byte[] iv = null;
-		byte[] payload = null;
-		if(crm.getIv() != null){
-			iv = securityManager.symmetricDecryptIVparameter(secretKey, crm.getIv());
-			// decrypt the certificates and nonces
-			payload = securityManager.symmetricDecryptMessage(secretKey, crm.getPayload(), iv, 
-					config.getSymmetricMode());
-		}else{
-			payload = securityManager.symmetricDecryptMessage(secretKey, crm.getPayload(), 
-					config.getSymmetricMode());
-		}
-
+		// decrypt the payload
+		byte[] payload = securityManager.decryptPayload(secretKey,  crm.getIv(),
+				crm.getPayload(), config.getSymmetricMode());
+		
 		// deserialize
 		CertificateResponsePayload responsePayload = (CertificateResponsePayload)
 				SerializationUtils.deserialize(payload);
@@ -427,17 +418,10 @@ public class SecurityCommunication {
 			CertificateAcceptedResponseMessage carm) {
 		
 //		System.out.println("[Handle Certificate Accepted Response Message ]" + " from " + carm.fromUci);
-		byte[] iv = null;
-		byte[] payload = null;
-		if(carm.getIv() != null){
-			iv = securityManager.symmetricDecryptIVparameter(carm.fromUci, carm.getIv(), password);
-			payload = securityManager.symmetricDecryptMessage(
-					carm.fromUci, carm.getPayload(), iv, config.getSymmetricMode(), password);
-		}else{
-			payload = securityManager.symmetricDecryptMessage(
-					carm.fromUci, carm.getPayload(), config.getSymmetricMode(), password);
-		}
 		
+		byte[] payload = securityManager.decryptPayload(carm.fromUci, carm.getIv(), 
+				carm.getPayload(), config.getSymmetricMode(), password);
+				
 		// convert byte array to integer
 		int nonce = Integer.valueOf(new String(payload));
 		
@@ -508,7 +492,7 @@ public class SecurityCommunication {
 		
 		SessionKeyExchangeMessage skxm = new SessionKeyExchangeMessage(toUci, securityManager.getMyUci(),
 				toNode, communication.getLocalSensibleThingsNode());
-		System.out.println("[Exchange Session Key] " + skxm);
+//		System.out.println("[Exchange Session Key] " + skxm);
 		// generate the symmetric security key
 		securityManager.generateSymmetricSecurityKey(toUci, config.getSymmetricAlgorithm(), config.getSymmetricKeyLength(), password, password);
 		
@@ -575,7 +559,7 @@ public class SecurityCommunication {
 		}else{
 			CertificatePayload certPayload = (CertificatePayload)SerializationUtils.deserialize(skxm.getCertificatePayload());
 			
-			System.out.println("[Handle session key exchange message] " + certPayload.getCert());
+//			System.out.println("[Handle session key exchange message] " + certPayload.getCert());
 			
 			if(securityManager.isCertificateValid(certPayload.getCert(), skxm.fromUci)){
 				isValid = true;
@@ -595,18 +579,8 @@ public class SecurityCommunication {
 				return;
 			}
 			
-			byte[] iv = null;
-			byte[] payload = null;
-			
-			// if RC4 not used
-			if(skxm.getIv() != null){
-				iv = securityManager.symmetricDecryptIVparameter(secretKey, skxm.getIv());
-				payload = securityManager.symmetricDecryptMessage(secretKey, 
-						skxm.getSecretKeyPayload(),iv, config.getSymmetricMode());
-			}else{
-				payload = securityManager.symmetricDecryptMessage(secretKey, 
-						skxm.getSecretKeyPayload(),config.getSymmetricMode());
-			}
+			byte[] payload = securityManager.decryptPayload(secretKey, skxm.getIv(),
+					skxm.getSecretKeyPayload(), config.getSymmetricMode());
 			
 			SecretKeyPayload secretKeyPayload = (SecretKeyPayload) SerializationUtils.deserialize(payload);
 			
@@ -618,9 +592,6 @@ public class SecurityCommunication {
 				
 			// store the session key
 			securityManager.storeSecretKey(skxm.fromUci, secretKey, config.getSymmetricAlgorithm(),  password, password);
-			
-			System.out.println(skxm.fromUci);
-			System.out.println("[Handle Session Key Exchange Message] has session key or not: " + securityManager.hasSecretKey(skxm.fromUci));
 			
 			// send back an response message
 			SessionKeyResponseMessage responseMessage = new SessionKeyResponseMessage(skxm.fromUci,
@@ -666,19 +637,12 @@ public class SecurityCommunication {
 	 * @param skrm
 	 */
 	public void handleSessionKeyResponseMessage(SessionKeyResponseMessage skrm) {
-		System.out.println("[Handle Session Key Response Message] " + skrm);
+//		System.out.println("[Handle Session Key Response Message] " + skrm);
 		
-		byte[] iv = null;
-		byte[] payload = null;
-		if(skrm.getIv() != null){
-			iv = securityManager.symmetricDecryptIVparameter(skrm.fromUci, skrm.getIv(), password);
-			payload = securityManager.symmetricDecryptMessage(skrm.fromUci, skrm.getPayload(), iv,
-					config.getSymmetricMode(), password);
-		}else{
-			payload = securityManager.symmetricDecryptMessage(skrm.fromUci, skrm.getPayload(),
-					config.getSymmetricMode(), password);
-		}
-
+		
+		byte[] payload = securityManager.decryptPayload(skrm.fromUci, skrm.getIv(),
+				skrm.getPayload(), config.getSymmetricMode(), password);
+		
 		
 		// verify the signature
 		if(securityManager.verifySignature(payload, skrm.getSignature(), skrm.fromUci, skrm.getSignatureAlgorithm())){
@@ -709,7 +673,7 @@ public class SecurityCommunication {
 	private void exchangeCertificate(String toUci, SensibleThingsNode toNode) {
 		CertificateExchangeMessage cxm = new CertificateExchangeMessage(toUci, securityManager.getMyUci(),
 				toNode, communication.getLocalSensibleThingsNode());
-		System.out.println("[Exchange Certificate] " + cxm);
+//		System.out.println("[Exchange Certificate] " + cxm);
 		CertificateExchangePayload cxp = new CertificateExchangePayload(securityManager.getMyUci(), toUci);
 		cxp.setCert(securityManager.getCertificate());
 		cxp.setTimeStamp(System.currentTimeMillis());
@@ -733,7 +697,7 @@ public class SecurityCommunication {
 	 * @param cxm
 	 */
 	public void handleCertificateExchangeMessage(CertificateExchangeMessage cxm) {
-		System.out.println("[Handle Certificate Exchange Message] " + cxm);
+//		System.out.println("[Handle Certificate Exchange Message] " + cxm);
 		//Decapsulte the Certificate
 		byte[] payload = cxm.getPayload();
 		CertificateExchangePayload cxp = (CertificateExchangePayload)SerializationUtils.deserialize(payload);
@@ -745,8 +709,7 @@ public class SecurityCommunication {
 			return;
 		}
 		
-		// System.out.println("[Handle Certificate Exchange Message] " + cert);
-		
+
 		// verify the certificate
 		if (securityManager.isCertificateValid(cert, cxm.fromUci)) {
 			// store the certificate
@@ -767,9 +730,6 @@ public class SecurityCommunication {
 			cxrm.setSignature(securityManager.signMessage(cxrmPayload, config.getSignatureAlgorithm(), password));
 			cxrm.setSignatureAlgorithm(config.getSignatureAlgorithm());
 			
-//			System.out.println("[Handle Certificate Exchange Message] payload size: " + cxrmPayload.length );
-			
-			// send
 			sendMessage(cxrm);
 		}else{
 			System.out.println("[Handle Certificate Exchange Message] Certificate Error!");
@@ -786,7 +746,7 @@ public class SecurityCommunication {
 	 */
 	public void handleCertificateExchangeResponseMessage(
 			CertificateExchangeResponseMessage cxrm) {
-		System.out.println("[Handle Certificate Exchange Response Message] " + cxrm);
+//		System.out.println("[Handle Certificate Exchange Response Message] " + cxrm);
 		
 //		//Decapsulte the Certificate
 //		byte[] encryptPayload = cxrm.getPayload();
