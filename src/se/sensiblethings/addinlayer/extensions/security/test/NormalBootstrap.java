@@ -28,6 +28,7 @@ public class NormalBootstrap implements SensibleThingsListener, Runnable{
 	
 	final static String myUci = "sensiblethings@miun.se/bootstrap";
 	int messageLength;
+	int cnt;
 	
 	public static void main(String arg[]){
 		NormalBootstrap application = new NormalBootstrap(64);
@@ -50,6 +51,8 @@ public class NormalBootstrap implements SensibleThingsListener, Runnable{
 	@Override
 	public void run(){
     	try {	  
+    		cnt = 0;
+    		
     		System.out.println("[Bootstrap Node] booted! ");
     		
     		platform.register(myUci);
@@ -75,8 +78,13 @@ public class NormalBootstrap implements SensibleThingsListener, Runnable{
 			SensibleThingsNode fromNode) {
 		// System.out.println("[Bootstrap Node : GetResponse] " + uci + ": " + fromNode + " : " + value);
 		
-		String message = generateMessage(messageLength);
-		platform.notify(fromNode, uci, message);
+		//String message = generateMessage(messageLength);
+		
+		long sendTime = Long.parseLong(value);
+		long receivedTime = System.currentTimeMillis();
+		System.out.println("[The "+ cnt + " packet ] time takes : " + (receivedTime - sendTime));
+		
+		platform.notify(fromNode, uci, value);
 	}
 
 	@Override

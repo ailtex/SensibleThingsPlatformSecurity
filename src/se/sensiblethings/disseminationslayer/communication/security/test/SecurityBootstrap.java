@@ -1,6 +1,7 @@
-package se.sensiblethings.addinlayer.extensions.security.test;
+package se.sensiblethings.disseminationslayer.communication.security.test;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -8,65 +9,53 @@ import java.util.Random;
 
 import org.bouncycastle.util.encoders.Base64;
 
+import se.sensiblethings.addinlayer.AddInManager;
 import se.sensiblethings.addinlayer.extensions.security.SecurityExtension;
+import se.sensiblethings.addinlayer.extensions.security.SecurityListener;
+import se.sensiblethings.addinlayer.extensions.security.configuration.SecurityConfiguration;
 import se.sensiblethings.disseminationlayer.communication.Communication;
+import se.sensiblethings.disseminationlayer.communication.rudp.RUDPCommunication;
 import se.sensiblethings.disseminationlayer.communication.ssl.SslCommunication;
 import se.sensiblethings.disseminationlayer.lookupservice.LookupService;
 import se.sensiblethings.disseminationlayer.lookupservice.kelips.KelipsLookup;
+import se.sensiblethings.disseminationslayer.communication.security.SecurityCommunication;
 import se.sensiblethings.interfacelayer.SensibleThingsListener;
 import se.sensiblethings.interfacelayer.SensibleThingsNode;
 import se.sensiblethings.interfacelayer.SensibleThingsPlatform;
 
-public class NormalNode implements SensibleThingsListener, Runnable{
+public class SecurityBootstrap implements SensibleThingsListener, Runnable{
 	
 	SensibleThingsPlatform platform = null;
-	SecurityExtension secureExt = null;
-
-	final static String myUci = "sensiblethings@miun.se/Node#1";
 	
-	int messageLength;
-	int messageCnt;
-
-	long[] timestamp; 
-	int count = 0;
+	final static String myUci = "sensiblethings@miun.se/bootstrap";
 	
 	public static void main(String arg[]){
-		NormalNode application = new NormalNode(64, 10);
+		SecurityBootstrap application = new SecurityBootstrap();
 		application.run();
 	}
+	
+	
+	public SecurityBootstrap(){
 
-	public NormalNode(int messageLength, int messageCnt){
-		
-		this.messageLength = messageLength;
-		this.messageCnt = messageCnt;
-		
-		timestamp = new long[messageCnt+10];
-		
 		//Create the platform itself with a SensibleThingsListener
-		//KelipsLookup.bootstrap = true;
-		
+		KelipsLookup.bootstrap = true;
 		KelipsLookup.bootstrapIp = getLocalHostAddress();
-		KelipsLookup.bootstrap = false;
 		
-		SslCommunication.initCommunicationPort = 49860;
-		platform = new SensibleThingsPlatform(LookupService.KELIPS, Communication.SSL, this);
+		SecurityCommunication.initCommunicationPort = 9009;
+		SecurityCommunication.uci = myUci;
+		
+		platform = new SensibleThingsPlatform(LookupService.KELIPS, Communication.SECURITY_COM, this);
 		
 	}
 	
 	@Override
 	public void run(){
-    	try {
-    		System.out.println("[Node#1 Node] booted! ");
+    	try {	  
+    		System.out.println("[Bootstrap Node] booted! ");
     		
     		platform.register(myUci);
     		
-    		count = 0;
-    		
-    		platform.resolve("sensiblethings@miun.se/bootstrap");
-    		
-    		KelipsLookup.bootstrap = true;
-    		
-	        System.out.println("[Node#1 Node] Press any key to shut down");
+	        System.out.println("[Bootstrap Node] Press any key to shut down");
 	        BufferedReader in = new BufferedReader(new InputStreamReader(System.in));    	
 			in.readLine();
 			
@@ -77,65 +66,34 @@ public class NormalNode implements SensibleThingsListener, Runnable{
 			e.printStackTrace();
 		}    	
     }
-
+	
 	public void shutdown(){
 		platform.shutdown();
 	}
-	
+
 	@Override
 	public void getResponse(String uci, String value,
 			SensibleThingsNode fromNode) {
+		// System.out.println("[Bootstrap Node : GetResponse] " + uci + ": " + fromNode + " : " + value);
 		
-		timestamp[count] = System.currentTimeMillis() - timestamp[count]; 
-		System.out.println("[Node#1 : Get Response] "+ "#" + (count+1) + " " + uci + ": " + fromNode + " : time : " + timestamp[count]);
-		
-		try {
-			Thread.sleep(1000);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-		
-		count++;
-		
-		if(count < messageCnt){
-			String message = generateMessage(messageLength);
-			
-			timestamp[count] = System.currentTimeMillis();
-			platform.notify(fromNode, uci, message);
-		}else{
-			
-			long total = 0;
-			for(int i=0;i<messageCnt;i++){
-				total += timestamp[i];
-			}
-			
-			System.out.println("[Transmission] Ended... Total time : " + total );
-		}
+		//platform.notify(fromNode, uci, "Hello world");
 	}
 
 	@Override
 	public void resolveResponse(String uci, SensibleThingsNode node) {
-		System.out.println("[Node#1 : ResolveResponse] " + uci + ": " + node);
-		
-		// start testing
-		// String value = generateMessage(messageLength);
-		String value = String.valueOf(System.currentTimeMillis());
-		
-		timestamp[count] = System.currentTimeMillis();
-		
-		platform.notify(node, uci, value);
+		System.out.println("[Bootstrap Node : ResolveResponse] " + uci + ": " + node);
 		
 	}
 
 	@Override
 	public void getEvent(SensibleThingsNode source, String uci) {
-		// TODO Auto-generated method stub
+		System.out.println("[Bootstrap Node : GetEvent] " + uci + ": " + source);
 		
 	}
 
 	@Override
 	public void setEvent(SensibleThingsNode fromNode, String uci, String value) {
-		// TODO Auto-generated method stub
+		System.out.println("[Bootstrap Node : SetEvent] " + uci + ": " + value + " : " + fromNode);
 		
 	}
 	
@@ -147,7 +105,7 @@ public class NormalNode implements SensibleThingsListener, Runnable{
     	
     	try {
     		address = InetAddress.getLocalHost();
-
+			//System.out.println(address);
 		} catch (UnknownHostException e) {
 			System.out.println("Could not find this computer's address.");
 		}

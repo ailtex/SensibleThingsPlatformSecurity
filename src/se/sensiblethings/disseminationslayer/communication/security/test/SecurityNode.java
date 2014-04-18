@@ -1,4 +1,4 @@
-package se.sensiblethings.addinlayer.extensions.security.test;
+package se.sensiblethings.disseminationslayer.communication.security.test;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -13,34 +13,25 @@ import se.sensiblethings.disseminationlayer.communication.Communication;
 import se.sensiblethings.disseminationlayer.communication.ssl.SslCommunication;
 import se.sensiblethings.disseminationlayer.lookupservice.LookupService;
 import se.sensiblethings.disseminationlayer.lookupservice.kelips.KelipsLookup;
+import se.sensiblethings.disseminationslayer.communication.security.SecurityCommunication;
 import se.sensiblethings.interfacelayer.SensibleThingsListener;
 import se.sensiblethings.interfacelayer.SensibleThingsNode;
 import se.sensiblethings.interfacelayer.SensibleThingsPlatform;
 
-public class NormalNode implements SensibleThingsListener, Runnable{
+public class SecurityNode implements SensibleThingsListener, Runnable{
 	
 	SensibleThingsPlatform platform = null;
 	SecurityExtension secureExt = null;
 
-	final static String myUci = "sensiblethings@miun.se/Node#1";
+	final static String myUci = "sensiblethings@miun.se/Node#11";
 	
-	int messageLength;
-	int messageCnt;
-
-	long[] timestamp; 
-	int count = 0;
 	
 	public static void main(String arg[]){
-		NormalNode application = new NormalNode(64, 10);
+		SecurityNode application = new SecurityNode();
 		application.run();
 	}
 
-	public NormalNode(int messageLength, int messageCnt){
-		
-		this.messageLength = messageLength;
-		this.messageCnt = messageCnt;
-		
-		timestamp = new long[messageCnt+10];
+	public SecurityNode(){
 		
 		//Create the platform itself with a SensibleThingsListener
 		//KelipsLookup.bootstrap = true;
@@ -48,25 +39,24 @@ public class NormalNode implements SensibleThingsListener, Runnable{
 		KelipsLookup.bootstrapIp = getLocalHostAddress();
 		KelipsLookup.bootstrap = false;
 		
-		SslCommunication.initCommunicationPort = 49860;
-		platform = new SensibleThingsPlatform(LookupService.KELIPS, Communication.SSL, this);
+		SecurityCommunication.initCommunicationPort = 49860;
+		SecurityCommunication.uci = myUci;
+		platform = new SensibleThingsPlatform(LookupService.KELIPS, Communication.SECURITY_COM, this);
 		
 	}
 	
 	@Override
 	public void run(){
     	try {
-    		System.out.println("[Node#1 Node] booted! ");
+    		System.out.println("[Node#11 Node] booted! ");
     		
     		platform.register(myUci);
-    		
-    		count = 0;
     		
     		platform.resolve("sensiblethings@miun.se/bootstrap");
     		
     		KelipsLookup.bootstrap = true;
     		
-	        System.out.println("[Node#1 Node] Press any key to shut down");
+	        System.out.println("[Node#11 Node] Press any key to shut down");
 	        BufferedReader in = new BufferedReader(new InputStreamReader(System.in));    	
 			in.readLine();
 			
@@ -86,45 +76,14 @@ public class NormalNode implements SensibleThingsListener, Runnable{
 	public void getResponse(String uci, String value,
 			SensibleThingsNode fromNode) {
 		
-		timestamp[count] = System.currentTimeMillis() - timestamp[count]; 
-		System.out.println("[Node#1 : Get Response] "+ "#" + (count+1) + " " + uci + ": " + fromNode + " : time : " + timestamp[count]);
 		
-		try {
-			Thread.sleep(1000);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-		
-		count++;
-		
-		if(count < messageCnt){
-			String message = generateMessage(messageLength);
-			
-			timestamp[count] = System.currentTimeMillis();
-			platform.notify(fromNode, uci, message);
-		}else{
-			
-			long total = 0;
-			for(int i=0;i<messageCnt;i++){
-				total += timestamp[i];
-			}
-			
-			System.out.println("[Transmission] Ended... Total time : " + total );
-		}
 	}
 
 	@Override
 	public void resolveResponse(String uci, SensibleThingsNode node) {
-		System.out.println("[Node#1 : ResolveResponse] " + uci + ": " + node);
+		System.out.println("[Node#11 : ResolveResponse] " + uci + ": " + node);
 		
-		// start testing
-		// String value = generateMessage(messageLength);
-		String value = String.valueOf(System.currentTimeMillis());
-		
-		timestamp[count] = System.currentTimeMillis();
-		
-		platform.notify(node, uci, value);
-		
+		platform.set(uci, "Hello world", node);
 	}
 
 	@Override
