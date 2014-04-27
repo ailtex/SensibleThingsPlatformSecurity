@@ -30,8 +30,8 @@ public class SecurityNode1 implements SensibleThingsListener,
 	int messageLength = 64;
 	int messageCnt = 10;
 
-	long[] timestamp;
-	int count = 0;
+	public long[] timestamp;
+	public int count = 0;
 
 	public static void main(String[] args) {
 
@@ -47,7 +47,7 @@ public class SecurityNode1 implements SensibleThingsListener,
 		// KelipsLookup.bootstrap = true;
 		KelipsLookup.bootstrapIp = getLocalHostAddress();
 
-		RUDPCommunication.initCommunicationPort = 49890;
+		RUDPCommunication.initCommunicationPort = 0;
 		platform = new SensibleThingsPlatform(LookupService.KELIPS,
 				Communication.RUDP, this);
 
@@ -73,11 +73,11 @@ public class SecurityNode1 implements SensibleThingsListener,
 
 			count = 0;
 
-			platform.resolve("sensiblethings@miun.se/node2");
+			platform.resolve("sensiblethings@miun.se/node3");
 
 			// when jvm exist, delete the keyStore file
-			File keystore = new File("resources/sensiblethings@miun.se_node1_KeyStore.db");
-			keystore.deleteOnExit();
+//			File keystore = new File("resources/sensiblethings@miun.se_node1_KeyStore.db");
+//			keystore.deleteOnExit();
 
 			System.out.println("Press any key to shut down");
 			BufferedReader in = new BufferedReader(new InputStreamReader(
@@ -106,9 +106,10 @@ public class SecurityNode1 implements SensibleThingsListener,
 		System.out.println("[Node#1 : ResolveResponse] " + uci + ": " + node);
 
 		// start testing
-		String value = generateMessage(messageLength);
+//		String value = generateMessage(messageLength);
+		String value = String.valueOf(System.currentTimeMillis());
 		timestamp[count] = System.currentTimeMillis();
-
+		
 		secureExt.sendSecureMassage(value, uci, node);
 	}
 
@@ -147,7 +148,8 @@ public class SecurityNode1 implements SensibleThingsListener,
 		count++;
 		
 		if(count < messageCnt){
-			String value = generateMessage(messageLength);
+//			String value = generateMessage(messageLength);
+			String value = String.valueOf(System.currentTimeMillis());
 			timestamp[count] = System.currentTimeMillis();
 			
 			secureExt.sendSecureMassage(value, uci, fromNode);

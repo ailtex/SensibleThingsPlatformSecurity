@@ -46,7 +46,7 @@ public class SecurityNode2 implements SensibleThingsListener,SecurityListener {
 		// KelipsLookup.bootstrap = true;
 		KelipsLookup.bootstrapIp = getLocalHostAddress();
 
-		RUDPCommunication.initCommunicationPort = 49891;
+		RUDPCommunication.initCommunicationPort = 0;
 		platform = new SensibleThingsPlatform(LookupService.KELIPS,
 				Communication.RUDP, this);
 
@@ -67,7 +67,7 @@ public class SecurityNode2 implements SensibleThingsListener,SecurityListener {
 			Thread.sleep(2000);
 			count = 0;
 
-			platform.resolve("sensiblethings@miun.se/bootstrap");
+//			platform.resolve("sensiblethings@miun.se/bootstrap");
 
 			// when jvm exist, delete the keyStore file
 			File keystore = new File("resources/sensiblethings@miun.se_node2_KeyStore.db");

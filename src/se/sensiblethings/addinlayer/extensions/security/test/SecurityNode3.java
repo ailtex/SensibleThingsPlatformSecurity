@@ -24,6 +24,8 @@ public class SecurityNode3 implements SensibleThingsListener,SecurityListener{
 
 	final static String myUci = "sensiblethings@miun.se/node3";
 	
+	private int cnt = 0;
+	
 	public static void main(String[] args) {
 
 		SecurityNode3 application = new SecurityNode3();
@@ -54,11 +56,13 @@ public class SecurityNode3 implements SensibleThingsListener,SecurityListener{
 			secureExt.securityRegister(myUci);
 			System.out.println("[Node#3] Registration Finished !");
 			
-			Thread.sleep(2000);
-			platform.resolve("sensiblethings@miun.se/bootstrap");
-
-			Thread.sleep(2000);
-			platform.resolve("sensiblethings@miun.se/node4");
+			cnt = 0;
+			
+//			Thread.sleep(2000);
+//			platform.resolve("sensiblethings@miun.se/bootstrap");
+//
+//			Thread.sleep(2000);
+//			platform.resolve("sensiblethings@miun.se/node4");
 			
 			// when jvm exist, delete the keyStore file
 			File keystore = new File("resources/sensiblethings@miun.se_node3_KeyStore.db");
@@ -89,6 +93,7 @@ public class SecurityNode3 implements SensibleThingsListener,SecurityListener{
 		System.out.println("[Node#3 : ResolveResponse] " + uci + ": " + node);
 	
 		secureExt.sendSecureMassage("Hello, I am " + myUci, uci, node);
+		
 	}
 
 	@Override
@@ -106,8 +111,12 @@ public class SecurityNode3 implements SensibleThingsListener,SecurityListener{
 	@Override
 	public void receivedSecureMessageEvent(String message, String uci,
 			SensibleThingsNode fromNode) {
-		System.out.println("[Node#3 : Received Secure Message] " + message );
+		long receivedT = System.currentTimeMillis();
+		long sendT = Long.parseLong(message);
 		
+		System.out.println("[Node#3 : " + (cnt++) + " packet] Time takes : " + (receivedT - sendT));
+		
+		secureExt.sendSecureMassage(message, uci, fromNode);
 	}
 	
 	private String getLocalHostAddress() {

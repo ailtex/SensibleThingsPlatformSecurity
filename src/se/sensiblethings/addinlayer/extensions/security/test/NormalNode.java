@@ -24,21 +24,19 @@ public class NormalNode implements SensibleThingsListener, Runnable{
 
 	final static String myUci = "sensiblethings@miun.se/Node#1";
 	
-	int messageLength;
-	int messageCnt;
+	public final static int messageLength = 10;
+	public final static int messageCnt = 10;
+	public final static long interval = 1000;
 
 	long[] timestamp; 
 	int count = 0;
 	
 	public static void main(String arg[]){
-		NormalNode application = new NormalNode(64, 10);
+		NormalNode application = new NormalNode();
 		application.run();
 	}
 
-	public NormalNode(int messageLength, int messageCnt){
-		
-		this.messageLength = messageLength;
-		this.messageCnt = messageCnt;
+	public NormalNode(){
 		
 		timestamp = new long[messageCnt+10];
 		
@@ -48,7 +46,7 @@ public class NormalNode implements SensibleThingsListener, Runnable{
 		KelipsLookup.bootstrapIp = getLocalHostAddress();
 		KelipsLookup.bootstrap = false;
 		
-		SslCommunication.initCommunicationPort = 49860;
+		SslCommunication.initCommunicationPort = 0;
 		platform = new SensibleThingsPlatform(LookupService.KELIPS, Communication.SSL, this);
 		
 	}
@@ -90,7 +88,7 @@ public class NormalNode implements SensibleThingsListener, Runnable{
 		System.out.println("[Node#1 : Get Response] "+ "#" + (count+1) + " " + uci + ": " + fromNode + " : time : " + timestamp[count]);
 		
 		try {
-			Thread.sleep(1000);
+			Thread.sleep(interval);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
@@ -98,6 +96,7 @@ public class NormalNode implements SensibleThingsListener, Runnable{
 		count++;
 		
 		if(count < messageCnt){
+//			String message = String.valueOf(System.currentTimeMillis()); 
 			String message = generateMessage(messageLength);
 			
 			timestamp[count] = System.currentTimeMillis();
@@ -118,8 +117,8 @@ public class NormalNode implements SensibleThingsListener, Runnable{
 		System.out.println("[Node#1 : ResolveResponse] " + uci + ": " + node);
 		
 		// start testing
-		// String value = generateMessage(messageLength);
-		String value = String.valueOf(System.currentTimeMillis());
+		String value = generateMessage(messageLength);
+//		String value = String.valueOf(System.currentTimeMillis());
 		
 		timestamp[count] = System.currentTimeMillis();
 		

@@ -459,13 +459,12 @@ public class SecurityCommunication {
 			sendToPostOffice(secureMessage);
 			securityManager.encapsulateSecueMessage(postOffice, toUci, password, password);
 			sendOutSecureMessage(toUci);
-			
 		}else if(securityManager.hasCertificate(toUci)){
 			exchangeSessionKey(toUci, toNode);			
 			sendToPostOffice(secureMessage);
 		}else{
 			exchangeCertificate(toUci, toNode);
-			sendToPostOffice(secureMessage);	
+			sendToPostOffice(secureMessage);
 		}
 	}
 	
@@ -798,15 +797,10 @@ public class SecurityCommunication {
 	private void sendOutSecureMessage(String toUci) {
 		if(postOffice.containsKey(toUci)){
 			Iterator<SecureMessage> it = postOffice.get(toUci).iterator();
+				
 			while(it.hasNext()){
 				sendMessage(it.next());
 				
-				// let the sender wait every 20ms 
-//				try {
-//					Thread.sleep(20);
-//				} catch (InterruptedException e) {
-//					e.printStackTrace();
-//				}
 			}
 			postOffice.get(toUci).removeAllElements();
 		}

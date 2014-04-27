@@ -161,6 +161,7 @@ public class SecurityManager {
 	
 	public void encapsulateSecueMessage(Map<String, Vector<SecureMessage>> postOffice, String toUci, char[] secretKeyPassword,
 			char[] privateKeyPassword) {
+		
 		if(postOffice.containsKey(toUci)){
 			Vector<SecureMessage> msgs = postOffice.get(toUci);
 			

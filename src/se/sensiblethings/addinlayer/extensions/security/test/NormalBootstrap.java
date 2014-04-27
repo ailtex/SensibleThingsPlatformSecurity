@@ -27,17 +27,16 @@ public class NormalBootstrap implements SensibleThingsListener, Runnable{
 	SensibleThingsPlatform platform = null;
 	
 	final static String myUci = "sensiblethings@miun.se/bootstrap";
-	int messageLength;
-	int cnt;
+	
+	private int cnt;
 	
 	public static void main(String arg[]){
-		NormalBootstrap application = new NormalBootstrap(64);
+		NormalBootstrap application = new NormalBootstrap();
 		application.run();
 	}
 	
 	
-	public NormalBootstrap(int messageLength){
-		this.messageLength = messageLength;
+	public NormalBootstrap(){
 		
 		//Create the platform itself with a SensibleThingsListener
 		KelipsLookup.bootstrap = true;
@@ -78,11 +77,7 @@ public class NormalBootstrap implements SensibleThingsListener, Runnable{
 			SensibleThingsNode fromNode) {
 		// System.out.println("[Bootstrap Node : GetResponse] " + uci + ": " + fromNode + " : " + value);
 		
-		//String message = generateMessage(messageLength);
-		
-		long sendTime = Long.parseLong(value);
-		long receivedTime = System.currentTimeMillis();
-		System.out.println("[The "+ cnt + " packet ] time takes : " + (receivedTime - sendTime));
+		System.out.println("[The "+ (cnt++) + " packet ] ");
 		
 		platform.notify(fromNode, uci, value);
 	}

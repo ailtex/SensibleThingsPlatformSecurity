@@ -7,6 +7,4 @@ encoding//src/se/sensiblethings/addinlayer/extensions/security/configuration/Sec
 encoding//src/se/sensiblethings/addinlayer/extensions/security/encryption/AsymmetricEncryption.java=UTF-8
 encoding//src/se/sensiblethings/addinlayer/extensions/security/encryption/SymmetricEncryption.java=UTF-8
 encoding//src/se/sensiblethings/addinlayer/extensions/security/test/NormalNode.java=UTF-8
-encoding//src/se/sensiblethings/disseminationslayer/communication/security/messagehandler/MessageHandler.java=UTF-8
-encoding//src/se/sensiblethings/disseminationslayer/communication/security/messagehandler/SecurityManager.java=UTF-8
 encoding//test/se/sensiblethings/addinlayer/extensions/security/keystore/KeyStoreJCEKSTest.java=UTF-8
